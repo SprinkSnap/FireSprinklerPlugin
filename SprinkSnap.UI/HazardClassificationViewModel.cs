@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Data;
@@ -16,6 +17,10 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private string hazardFilter = "All";
     private string selectedBatchHazard = HazardClassification.LightHazard;
     private string validationMessage = string.Empty;
+    private string staticPressurePsi = string.Empty;
+    private string residualPressurePsi = string.Empty;
+    private string flowGpm = string.Empty;
+    private WaterDemandInfo approvedWaterDemand = new WaterDemandInfo();
 
     public HazardClassificationViewModel(IEnumerable<RoomInfo> rooms)
     {
@@ -88,6 +93,26 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         get => validationMessage;
         set => SetField(ref validationMessage, value);
     }
+
+    public string StaticPressurePsi
+    {
+        get => staticPressurePsi;
+        set => SetField(ref staticPressurePsi, value);
+    }
+
+    public string ResidualPressurePsi
+    {
+        get => residualPressurePsi;
+        set => SetField(ref residualPressurePsi, value);
+    }
+
+    public string FlowGpm
+    {
+        get => flowGpm;
+        set => SetField(ref flowGpm, value);
+    }
+
+    public WaterDemandInfo ApprovedWaterDemand => approvedWaterDemand;
 
     public IReadOnlyList<RoomInfo> ApprovedRooms
     {
@@ -170,8 +195,72 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             return;
         }
 
+        if (!TryCreateWaterDemandInfo(out WaterDemandInfo waterDemandInfo))
+        {
+            return;
+        }
+
+        approvedWaterDemand = waterDemandInfo;
         ValidationMessage = string.Empty;
         RequestClose?.Invoke(this, true);
+    }
+
+    private bool TryCreateWaterDemandInfo(out WaterDemandInfo waterDemandInfo)
+    {
+        waterDemandInfo = new WaterDemandInfo();
+
+        if (!TryParseOptionalNonNegativeDouble(StaticPressurePsi, "Static pressure PSI", out double? staticPressure))
+        {
+            return false;
+        }
+
+        if (!TryParseOptionalNonNegativeDouble(ResidualPressurePsi, "Residual pressure PSI", out double? residualPressure))
+        {
+            return false;
+        }
+
+        if (!TryParseOptionalNonNegativeDouble(FlowGpm, "Flow GPM", out double? flow))
+        {
+            return false;
+        }
+
+        if (staticPressure.HasValue
+            && residualPressure.HasValue
+            && residualPressure.Value > staticPressure.Value)
+        {
+            ValidationMessage = "Residual pressure PSI cannot exceed static pressure PSI.";
+            return false;
+        }
+
+        waterDemandInfo.StaticPressurePsi = staticPressure;
+        waterDemandInfo.ResidualPressurePsi = residualPressure;
+        waterDemandInfo.FlowGpm = flow;
+        return true;
+    }
+
+    private bool TryParseOptionalNonNegativeDouble(string value, string label, out double? parsedValue)
+    {
+        parsedValue = null;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return true;
+        }
+
+        if (!double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out double numericValue))
+        {
+            ValidationMessage = label + " must be a numeric value.";
+            return false;
+        }
+
+        if (numericValue < 0.0)
+        {
+            ValidationMessage = label + " cannot be negative.";
+            return false;
+        }
+
+        parsedValue = numericValue;
+        return true;
     }
 
     private static bool Contains(string value, string search)

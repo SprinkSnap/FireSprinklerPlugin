@@ -81,7 +81,7 @@ public sealed class HazardClassificationCommand : IExternalCommand
 
             ShowMessage(
                 "SprinkSnap Hazard Classification Saved",
-                BuildSummary(approvedRooms, candidatesByRoom));
+                BuildSummary(approvedRooms, candidatesByRoom, viewModel.ApprovedWaterDemand));
 
             return Result.Succeeded;
         }
@@ -109,7 +109,8 @@ public sealed class HazardClassificationCommand : IExternalCommand
 
     private static string BuildSummary(
         IReadOnlyList<RoomInfo> rooms,
-        IDictionary<int, IReadOnlyList<SprinklerPlacementCandidate>> candidatesByRoom)
+        IDictionary<int, IReadOnlyList<SprinklerPlacementCandidate>> candidatesByRoom,
+        WaterDemandInfo waterDemandInfo)
     {
         StringBuilder builder = new StringBuilder();
         builder.AppendLine("Designer-approved room hazard classifications were saved.");
@@ -117,6 +118,11 @@ public sealed class HazardClassificationCommand : IExternalCommand
         builder.AppendLine("Rooms processed: " + rooms.Count);
         builder.AppendLine("Conceptual sprinkler placement candidate points prepared: "
             + candidatesByRoom.Values.Sum(candidates => candidates.Count));
+        builder.AppendLine();
+        builder.AppendLine("Water demand information:");
+        builder.AppendLine("Static pressure: " + FormatOptionalValue(waterDemandInfo.StaticPressurePsi, " PSI"));
+        builder.AppendLine("Residual pressure: " + FormatOptionalValue(waterDemandInfo.ResidualPressurePsi, " PSI"));
+        builder.AppendLine("Flow: " + FormatOptionalValue(waterDemandInfo.FlowGpm, " GPM"));
         builder.AppendLine();
         builder.AppendLine("Counts by hazard:");
 
@@ -138,6 +144,11 @@ public sealed class HazardClassificationCommand : IExternalCommand
         builder.AppendLine();
         builder.AppendLine("Sprinkler placement remains disabled until a future NFPA 13 placement engine validates spacing, obstructions, sprinkler type, and hydraulic criteria.");
         return builder.ToString();
+    }
+
+    private static string FormatOptionalValue(double? value, string unit)
+    {
+        return value.HasValue ? value.Value.ToString("N1") + unit : "Not provided";
     }
 
     private static void ShowMessage(string title, string message)
