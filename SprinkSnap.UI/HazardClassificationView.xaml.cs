@@ -11,9 +11,15 @@ public partial class HazardClassificationView : Window
         viewModel.RequestClose += OnRequestClose;
     }
 
+    public bool UseDialogResult { get; set; } = true;
+
     private void OnRequestClose(object sender, bool dialogResult)
     {
-        DialogResult = dialogResult;
+        if (UseDialogResult)
+        {
+            DialogResult = dialogResult;
+        }
+
         Close();
     }
 }

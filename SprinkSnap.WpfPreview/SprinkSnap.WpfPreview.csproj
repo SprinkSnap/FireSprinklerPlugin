@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\SprinkSnap.Core\**\*.cs" LinkBase="SprinkSnap.Core" />
+    <Compile Include="..\SprinkSnap.UI\HazardClassificationView.xaml.cs" Link="SprinkSnap.UI\HazardClassificationView.xaml.cs" />
+    <Compile Include="..\SprinkSnap.UI\HazardClassificationViewModel.cs" Link="SprinkSnap.UI\HazardClassificationViewModel.cs" />
+    <Page Include="..\SprinkSnap.UI\HazardClassificationView.xaml" Link="SprinkSnap.UI\HazardClassificationView.xaml" />
+  </ItemGroup>
+</Project>
+
