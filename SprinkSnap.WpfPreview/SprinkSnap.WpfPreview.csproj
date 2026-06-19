@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <StartupObject>FireSprinklerPlugin.SprinkSnap.WpfPreview.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
