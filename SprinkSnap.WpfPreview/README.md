@@ -15,6 +15,8 @@ From a Windows machine with Visual Studio 2022 and the **.NET desktop developmen
 You can also run it from the repository root:
 
 ```powershell
+dotnet restore .\SprinkSnap.WpfPreview\SprinkSnap.WpfPreview.csproj
+dotnet build .\SprinkSnap.WpfPreview\SprinkSnap.WpfPreview.csproj -c Release
 dotnet run --project .\SprinkSnap.WpfPreview\SprinkSnap.WpfPreview.csproj
 ```
 
@@ -28,7 +30,8 @@ Studio Installer to add the **.NET desktop development** workload.
 
 ## Notes
 
-- This preview links the existing `SprinkSnap.Core` and `SprinkSnap.UI` files.
+- This preview references `SprinkSnap.Core` and `SprinkSnap.UI` as normal projects so
+  Visual Studio WPF temporary builds can resolve all namespaces.
 - It does not reference Autodesk Revit API assemblies.
 - Save/Cancel closes the preview window only; no Revit parameters are written.
 - The production Revit command remains `SprinkSnap.Revit/HazardClassificationCommand.cs`.
