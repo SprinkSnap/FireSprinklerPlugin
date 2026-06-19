@@ -28,6 +28,16 @@ It is only a UI test harness and does not control the production Revit add-in ta
 If Visual Studio reports that the .NET SDK is missing, install the .NET 10 SDK or use the Visual
 Studio Installer to update the **.NET desktop development** workload.
 
+## Startup crash diagnostics
+
+If the preview exits immediately, it writes the startup exception to:
+
+```text
+%LOCALAPPDATA%\SprinkSnap\WpfPreview\startup-error.log
+```
+
+The app also displays the exception in a message box when possible.
+
 ## Notes
 
 - This preview references `SprinkSnap.Core` and `SprinkSnap.UI` as normal projects so
