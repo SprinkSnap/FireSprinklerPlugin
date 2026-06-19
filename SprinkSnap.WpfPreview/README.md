@@ -22,11 +22,11 @@ dotnet run --project .\SprinkSnap.WpfPreview\SprinkSnap.WpfPreview.csproj
 
 ## Target framework
 
-The preview targets `net8.0-windows` so it works with the current Visual Studio LTS tooling.
+The preview targets `net10.0-windows`.
 It is only a UI test harness and does not control the production Revit add-in target.
 
-If Visual Studio reports that the .NET SDK is missing, install the .NET 8 SDK or use the Visual
-Studio Installer to add the **.NET desktop development** workload.
+If Visual Studio reports that the .NET SDK is missing, install the .NET 10 SDK or use the Visual
+Studio Installer to update the **.NET desktop development** workload.
 
 ## Notes
 
