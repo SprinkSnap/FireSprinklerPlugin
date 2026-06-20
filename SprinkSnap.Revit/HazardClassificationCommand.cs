@@ -37,7 +37,6 @@ public sealed class HazardClassificationCommand : IExternalCommand
             IRoomBoundaryExtractor boundaryExtractor = new RoomBoundaryExtractor();
             IRoomAnalyzer roomAnalyzer = new RoomAnalyzer();
             IHazardClassifier hazardClassifier = new HazardClassifier();
-            ISprinklerPlacementCandidateGenerator candidateGenerator = new SprinklerPlacementCandidateGenerator();
             IRoomExtractor roomExtractor = new RoomExtractor(
                 boundaryExtractor,
                 roomAnalyzer,
@@ -77,7 +76,7 @@ public sealed class HazardClassificationCommand : IExternalCommand
 
             Dictionary<int, IReadOnlyList<SprinklerPlacementCandidate>> candidatesByRoom = approvedRooms.ToDictionary(
                 room => room.RevitElementId,
-                candidateGenerator.GenerateCandidates);
+                room => (IReadOnlyList<SprinklerPlacementCandidate>)room.ProposedSprinklers.ToList());
 
             ShowMessage(
                 "SprinkSnap Hazard Classification Saved",
@@ -116,7 +115,7 @@ public sealed class HazardClassificationCommand : IExternalCommand
         builder.AppendLine("Designer-approved room hazard classifications were saved.");
         builder.AppendLine();
         builder.AppendLine("Rooms processed: " + rooms.Count);
-        builder.AppendLine("Conceptual sprinkler placement candidate points prepared: "
+        builder.AppendLine("AI-assisted sprinkler placement candidate points prepared: "
             + candidatesByRoom.Values.Sum(candidates => candidates.Count));
         builder.AppendLine();
         builder.AppendLine("Water demand information:");
@@ -142,7 +141,7 @@ public sealed class HazardClassificationCommand : IExternalCommand
         }
 
         builder.AppendLine();
-        builder.AppendLine("Sprinkler placement remains disabled until a future NFPA 13 placement engine validates spacing, obstructions, sprinkler type, and hydraulic criteria.");
+        builder.AppendLine("Automatic placement is still preview-only in this command; unresolved exceptions must be reviewed before a future placement command writes sprinklers to Revit.");
         return builder.ToString();
     }
 

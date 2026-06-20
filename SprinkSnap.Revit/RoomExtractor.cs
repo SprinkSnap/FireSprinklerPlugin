@@ -20,6 +20,7 @@ public sealed class RoomExtractor : IRoomExtractor
     private readonly IRoomAnalyzer roomAnalyzer;
     private readonly IHazardClassifier hazardClassifier;
     private readonly IHazardClassificationParameterStorage parameterStorage;
+    private readonly ICeilingIntelligenceService ceilingIntelligenceService;
 
     public RoomExtractor(
         IRoomBoundaryExtractor boundaryExtractor,
@@ -31,6 +32,7 @@ public sealed class RoomExtractor : IRoomExtractor
         this.roomAnalyzer = roomAnalyzer;
         this.hazardClassifier = hazardClassifier;
         this.parameterStorage = parameterStorage;
+        ceilingIntelligenceService = new CeilingIntelligenceService();
     }
 
     public IReadOnlyList<RoomInfo> ExtractRooms(Document document)
@@ -57,6 +59,7 @@ public sealed class RoomExtractor : IRoomExtractor
 
             RoomInfo roomInfo = ExtractRoom(document, room, levels);
             roomAnalyzer.Analyze(roomInfo);
+            ApplyCeilingIntelligence(roomInfo);
 
             HazardClassificationResult suggestion = hazardClassifier.SuggestClassification(roomInfo);
             roomInfo.SuggestedHazardClassification = suggestion.SuggestedClassification;
@@ -115,8 +118,30 @@ public sealed class RoomExtractor : IRoomExtractor
             ElevationBelowDeckFeet = Math.Max(0.0, deckElevation - ceilingElevation),
             Boundaries = boundaryExtractor.ExtractBoundaryLoops(room).ToList(),
             PerimeterFeet = GetDoubleParameter(room, "Perimeter", 0.0),
+            ObstructionCount = CountPotentialObstructions(document, room),
             ExistingHazardClassification = parameterStorage.Read(room)
         };
+    }
+
+    private void ApplyCeilingIntelligence(RoomInfo roomInfo)
+    {
+        CeilingIntelligenceResult ceilingResult = ceilingIntelligenceService.Analyze(roomInfo);
+        roomInfo.CeilingClassification = ceilingResult.Classification;
+        roomInfo.CeilingIntelligenceSummary = ceilingResult.Summary;
+        roomInfo.LayoutConfidenceScore = ceilingResult.ConfidenceScore;
+        roomInfo.RequiresExceptionReview = roomInfo.RequiresExceptionReview || ceilingResult.RequiresReview;
+        if (ceilingResult.RequiresReview && string.IsNullOrWhiteSpace(roomInfo.ExceptionReason))
+        {
+            roomInfo.ExceptionReason = ceilingResult.Summary;
+        }
+
+        if (roomInfo.ObstructionCount > 0)
+        {
+            roomInfo.LayoutConfidenceScore = Math.Min(roomInfo.LayoutConfidenceScore, 0.55);
+            roomInfo.RequiresExceptionReview = true;
+            roomInfo.ExceptionReason = roomInfo.ObstructionCount
+                + " potential obstruction(s) detected from Revit categories. Obstruction clearance review is required.";
+        }
     }
 
     private static string GetParameterDisplayValue(Parameter parameter, string fallbackValue)
@@ -220,6 +245,52 @@ public sealed class RoomExtractor : IRoomExtractor
             .FirstOrDefault();
 
         return nextLevel == null ? 0.0 : nextLevel.Elevation - roomLevel.Elevation;
+    }
+
+    private static int CountPotentialObstructions(Document document, Room room)
+    {
+        BoundingBoxXYZ roomBox = room.get_BoundingBox(null);
+        if (roomBox == null)
+        {
+            return 0;
+        }
+
+        BuiltInCategory[] obstructionCategories =
+        {
+            BuiltInCategory.OST_StructuralFraming,
+            BuiltInCategory.OST_StructuralColumns,
+            BuiltInCategory.OST_DuctCurves,
+            BuiltInCategory.OST_PipeCurves,
+            BuiltInCategory.OST_MechanicalEquipment,
+            BuiltInCategory.OST_GenericModel
+        };
+
+        int count = 0;
+        foreach (BuiltInCategory category in obstructionCategories)
+        {
+            count += new FilteredElementCollector(document)
+                .OfCategory(category)
+                .WhereElementIsNotElementType()
+                .Where(element => BoundingBoxesIntersect(roomBox, element.get_BoundingBox(null)))
+                .Count();
+        }
+
+        return count;
+    }
+
+    private static bool BoundingBoxesIntersect(BoundingBoxXYZ first, BoundingBoxXYZ second)
+    {
+        if (first == null || second == null)
+        {
+            return false;
+        }
+
+        return first.Min.X <= second.Max.X
+            && first.Max.X >= second.Min.X
+            && first.Min.Y <= second.Max.Y
+            && first.Max.Y >= second.Min.Y
+            && first.Min.Z <= second.Max.Z
+            && first.Max.Z >= second.Min.Z;
     }
 
     private static double ConvertAreaToSquareMeters(double areaSquareFeet)

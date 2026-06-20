@@ -2,9 +2,10 @@
 
 Recommended command rename: `HazardClassificationCommand.cs`.
 
-The command owns Revit workflow orchestration only. Extraction, geometry analysis, hazard suggestion,
-parameter persistence, and designer review are split into services to keep the system testable and
-ready for future sprinkler layout and hydraulic modules.
+The command owns Revit workflow orchestration only. Extraction, geometry analysis, ceiling
+intelligence, hazard suggestion, listed-family selection, compliance validation, constrained layout
+optimization, parameter persistence, and designer review are split into services to keep the system
+testable and ready for future sprinkler layout and hydraulic modules.
 
 ```mermaid
 flowchart TD
@@ -16,13 +17,18 @@ flowchart TD
     VM --> RoomInfo[SprinkSnap.Core Models RoomInfo]
     Extractor --> Boundary[SprinkSnap.Revit RoomBoundaryExtractor]
     Extractor --> Analyzer[SprinkSnap.Core RoomAnalyzer]
+    Extractor --> Ceiling[SprinkSnap.Core CeilingIntelligenceService]
     Extractor --> Classifier[SprinkSnap.Core HazardClassifier]
+    VM --> Family[SprinkSnap.Core SprinklerFamilySelector]
+    VM --> Validator[SprinkSnap.Core LayoutComplianceValidator]
+    VM --> Optimizer[SprinkSnap.Core SprinklerLayoutOptimizer]
     Boundary --> Geometry[SprinkSnap.Core Geometry Primitives]
     Analyzer --> RoomInfo
+    Ceiling --> RoomInfo
     Classifier --> Rules[SprinkSnap.Core NFPA13Rules]
     Classifier --> Result[SprinkSnap.Core Models HazardClassificationResult]
-    Cmd --> Candidates[SprinkSnap.Core SprinklerPlacementCandidateGenerator]
-    Candidates --> Future[Future sprinkler spacing, branch line, and hydraulic engines]
+    Optimizer --> Validator
+    Optimizer --> Future[Future Revit sprinkler placement and hydraulic engines]
 ```
 
 ## Boundary rules
@@ -31,5 +37,7 @@ flowchart TD
 - `SprinkSnap.Revit` adapts Autodesk Revit API elements into Core models and writes approved data back to Revit.
 - `SprinkSnap.UI` owns designer review and approval state via MVVM.
 - Hazard classification remains suggestion-only; `SS_HazardClassification` stores the designer-approved value.
-- Sprinkler placement candidates are conceptual room data only. Final sprinkler placement and NFPA 13 compliance checks are future modules.
+- Automatic layout runs only after input compliance validation.
+- Rooms with missing critical geometry, uncertain ceiling classification, unsupported selected families, or detected obstructions are flagged for review instead of guessed.
+- Sprinkler placement candidates are preview data only. A future placement command should write Revit sprinklers after final approval.
 
