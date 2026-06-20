@@ -373,7 +373,7 @@
                                                   Focusable="False"
                                                   HorizontalAlignment="Right" />
                                     </DockPanel>
-                                    <ProgressBar Value="{Binding LayoutConfidenceScore}"
+                                    <ProgressBar Value="{Binding LayoutConfidenceScore, Mode=OneWay}"
                                                  Maximum="1"
                                                  Height="8"
                                                  Margin="0,8,0,4" />

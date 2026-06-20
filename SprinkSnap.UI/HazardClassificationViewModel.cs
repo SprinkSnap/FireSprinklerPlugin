@@ -529,7 +529,20 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
 
     public string LayoutStatus => Room.LayoutStatus;
 
-    public double LayoutConfidenceScore => Room.LayoutConfidenceScore;
+    public double LayoutConfidenceScore
+    {
+        get => Room.LayoutConfidenceScore;
+        set
+        {
+            if (Math.Abs(Room.LayoutConfidenceScore - value) < 0.0001)
+            {
+                return;
+            }
+
+            Room.LayoutConfidenceScore = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LayoutConfidenceScore)));
+        }
+    }
 
     public bool RequiresExceptionReview
     {
