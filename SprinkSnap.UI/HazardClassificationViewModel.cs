@@ -79,6 +79,49 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
     public ICommand CancelCommand { get; }
 
+    public int TotalRoomCount => Rooms.Count;
+
+    public int ExceptionRoomCount => Rooms.Count(room => room.RequiresExceptionReview);
+
+    public int AutoSolvedRoomCount => Rooms.Count(room =>
+        string.Equals(room.LayoutStatus, LayoutStatus.Compliant, StringComparison.Ordinal)
+        && !room.RequiresExceptionReview);
+
+    public string AverageConfidenceText
+    {
+        get
+        {
+            if (Rooms.Count == 0)
+            {
+                return "0%";
+            }
+
+            return Rooms.Average(room => room.LayoutConfidenceScore).ToString("P0", CultureInfo.CurrentCulture);
+        }
+    }
+
+    public string SelectedFamilyListingSummary
+    {
+        get
+        {
+            if (SelectedSprinklerFamily == null)
+            {
+                return "Select a listed sprinkler family before validating or generating layout candidates.";
+            }
+
+            return SelectedSprinklerFamily.FamilyName
+                + " | "
+                + SelectedSprinklerFamily.Orientation
+                + " | K"
+                + SelectedSprinklerFamily.KFactor.ToString("N1", CultureInfo.CurrentCulture)
+                + " | Max spacing "
+                + SelectedSprinklerFamily.MaxSpacingFeet.ToString("N0", CultureInfo.CurrentCulture)
+                + " ft | Max area "
+                + SelectedSprinklerFamily.MaxCoverageAreaSquareFeet.ToString("N0", CultureInfo.CurrentCulture)
+                + " sq ft";
+        }
+    }
+
     public string SearchText
     {
         get => searchText;
@@ -136,7 +179,13 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     public SprinklerFamilyInfo SelectedSprinklerFamily
     {
         get => selectedSprinklerFamily;
-        set => SetField(ref selectedSprinklerFamily, value);
+        set
+        {
+            if (SetField(ref selectedSprinklerFamily, value))
+            {
+                OnPropertyChanged(nameof(SelectedFamilyListingSummary));
+            }
+        }
     }
 
     public bool ReviewOnlyExceptions
@@ -254,6 +303,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         }
 
         RoomsView.Refresh();
+        NotifyDashboardState();
         ValidationMessage = "Validation complete. Enable 'Review only exceptions' to focus on unresolved rooms.";
     }
 
@@ -281,6 +331,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         }
 
         RoomsView.Refresh();
+        NotifyDashboardState();
         ValidationMessage = "Auto-layout complete. Confident rooms were solved automatically; exceptions remain for review.";
     }
 
@@ -303,6 +354,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         }
 
         RoomsView.Refresh();
+        NotifyDashboardState();
         ValidationMessage = count + " visible exception room(s) were overridden by the designer.";
     }
 
@@ -420,6 +472,14 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private void OnPropertyChanged([CallerMemberName] string propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    private void NotifyDashboardState()
+    {
+        OnPropertyChanged(nameof(TotalRoomCount));
+        OnPropertyChanged(nameof(ExceptionRoomCount));
+        OnPropertyChanged(nameof(AutoSolvedRoomCount));
+        OnPropertyChanged(nameof(AverageConfidenceText));
     }
 }
 
