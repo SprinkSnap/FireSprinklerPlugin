@@ -471,7 +471,20 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
 
     public double LayoutConfidenceScore => Room.LayoutConfidenceScore;
 
-    public bool RequiresExceptionReview => Room.RequiresExceptionReview;
+    public bool RequiresExceptionReview
+    {
+        get => Room.RequiresExceptionReview;
+        set
+        {
+            if (Room.RequiresExceptionReview == value)
+            {
+                return;
+            }
+
+            Room.RequiresExceptionReview = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RequiresExceptionReview)));
+        }
+    }
 
     public string ExceptionReason => Room.ExceptionReason;
 
