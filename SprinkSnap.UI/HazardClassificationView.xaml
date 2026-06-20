@@ -262,7 +262,7 @@
                                         SortMemberPath="IsApproved"
                                         Width="90" />
                 <DataGridCheckBoxColumn Header="Exception"
-                                        Binding="{Binding RequiresExceptionReview}"
+                                        Binding="{Binding RequiresExceptionReview, Mode=OneWay}"
                                         IsReadOnly="True"
                                         SortMemberPath="RequiresExceptionReview"
                                         Width="90" />
