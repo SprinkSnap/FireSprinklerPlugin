@@ -373,12 +373,12 @@
                                                   Focusable="False"
                                                   HorizontalAlignment="Right" />
                                     </DockPanel>
-                                    <ProgressBar Value="{Binding LayoutConfidenceScore, Mode=OneWay}"
+                                    <ProgressBar Value="{Binding Room.LayoutConfidenceScore, Mode=OneWay}"
                                                  Maximum="1"
                                                  Height="8"
                                                  Margin="0,8,0,4" />
                                     <TextBlock Style="{StaticResource MutedText}">
-                                        <Run Text="{Binding LayoutConfidenceScore, StringFormat=P0}" />
+                                        <Run Text="{Binding Room.LayoutConfidenceScore, StringFormat=P0}" />
                                         <Run Text=" confidence | " />
                                         <Run Text="{Binding ProposedSprinklerCount}" />
                                         <Run Text=" heads | " />
