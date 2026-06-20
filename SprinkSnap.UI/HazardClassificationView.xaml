@@ -35,10 +35,10 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,14">
-            <TextBlock Text="SprinkSnap NFPA 13 Hazard Classification Review"
+            <TextBlock Text="SprinkSnap AI-Assisted NFPA 13 Layout Review"
                        FontSize="22"
                        FontWeight="SemiBold" />
-            <TextBlock Text="Suggested classifications are rule-based only. Designer approval is mandatory before any sprinkler placement workflow can use this room data."
+            <TextBlock Text="The assistant auto-solves confident rooms and shows only exceptions where geometry, ceiling, obstruction, or listing constraints require designer review."
                        Foreground="#4B5563"
                        Margin="0,6,0,0" />
         </StackPanel>
@@ -141,12 +141,24 @@
                          Text="{Binding FlowGpm, UpdateSourceTrigger=PropertyChanged}"
                          ToolTip="Measured or available flow in gallons per minute" />
 
-                <TextBlock Grid.Column="6"
-                           Text="Water demand values are captured for future hydraulic calculation workflows."
-                           Foreground="#4B5563"
-                           VerticalAlignment="Center"
-                           Margin="18,0,0,0"
-                           TextWrapping="Wrap" />
+                <StackPanel Grid.Column="6"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="18,0,0,0">
+                    <TextBlock Text="Sprinkler Family:"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               Margin="0,0,6,0" />
+                    <ComboBox Width="280"
+                              Height="30"
+                              DisplayMemberPath="DisplayName"
+                              ItemsSource="{Binding SprinklerFamilies}"
+                              SelectedItem="{Binding SelectedSprinklerFamily}" />
+                    <CheckBox Content="Review only exceptions"
+                              IsChecked="{Binding ReviewOnlyExceptions}"
+                              VerticalAlignment="Center"
+                              Margin="18,0,0,0" />
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -198,6 +210,32 @@
                                     IsReadOnly="True"
                                     SortMemberPath="CeilingType"
                                     Width="140" />
+                <DataGridTextColumn Header="Ceiling Intelligence"
+                                    Binding="{Binding CeilingClassification}"
+                                    IsReadOnly="True"
+                                    SortMemberPath="CeilingClassification"
+                                    Width="150" />
+                <DataGridTextColumn Header="Layout Status"
+                                    Binding="{Binding LayoutStatus}"
+                                    IsReadOnly="True"
+                                    SortMemberPath="LayoutStatus"
+                                    Width="125" />
+                <DataGridTextColumn Header="Confidence"
+                                    Binding="{Binding LayoutConfidenceScore, StringFormat=P0}"
+                                    ElementStyle="{StaticResource RightAlignedCellText}"
+                                    IsReadOnly="True"
+                                    SortMemberPath="LayoutConfidenceScore"
+                                    Width="100" />
+                <DataGridTextColumn Header="Heads"
+                                    Binding="{Binding ProposedSprinklerCount}"
+                                    ElementStyle="{StaticResource RightAlignedCellText}"
+                                    IsReadOnly="True"
+                                    SortMemberPath="ProposedSprinklerCount"
+                                    Width="70" />
+                <DataGridTextColumn Header="Preview Markers"
+                                    Binding="{Binding PreviewMarkers}"
+                                    IsReadOnly="True"
+                                    Width="155" />
                 <DataGridTextColumn Header="Occupancy"
                                     Binding="{Binding OccupancyClassification}"
                                     IsReadOnly="True"
@@ -223,6 +261,19 @@
                                         Binding="{Binding IsApproved, UpdateSourceTrigger=PropertyChanged}"
                                         SortMemberPath="IsApproved"
                                         Width="90" />
+                <DataGridCheckBoxColumn Header="Exception"
+                                        Binding="{Binding RequiresExceptionReview}"
+                                        IsReadOnly="True"
+                                        SortMemberPath="RequiresExceptionReview"
+                                        Width="90" />
+                <DataGridTextColumn Header="Ceiling Summary"
+                                    Binding="{Binding CeilingIntelligenceSummary}"
+                                    IsReadOnly="True"
+                                    Width="2*" />
+                <DataGridTextColumn Header="Exception Reason"
+                                    Binding="{Binding ExceptionReason}"
+                                    IsReadOnly="True"
+                                    Width="2*" />
                 <DataGridTextColumn Header="Suggestion Basis"
                                     Binding="{Binding SuggestionReason}"
                                     IsReadOnly="True"
@@ -245,6 +296,13 @@
                     Command="{Binding AcceptAllSuggestionsCommand}" />
             <Button Content="Apply"
                     Command="{Binding ApplyCommand}" />
+            <Button Content="Validate"
+                    Command="{Binding ValidateCommand}" />
+            <Button Content="Auto-Layout"
+                    MinWidth="130"
+                    Command="{Binding AutoLayoutCommand}" />
+            <Button Content="Override"
+                    Command="{Binding OverrideCommand}" />
             <Button Content="Save"
                     IsDefault="True"
                     Background="#2563EB"

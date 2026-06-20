@@ -22,6 +22,9 @@ public sealed class RoomAnalyzer : IRoomAnalyzer
         if (polygon.Count < 3)
         {
             room.HasIrregularGeometry = true;
+            room.HasCriticalGeometry = false;
+            room.RequiresExceptionReview = true;
+            room.ExceptionReason = "Room boundary polygon is missing or incomplete.";
             room.RoomShape = "Unknown";
             return;
         }
@@ -42,6 +45,18 @@ public sealed class RoomAnalyzer : IRoomAnalyzer
         room.HasIrregularGeometry = IsIrregularRoom(polygon, room.AreaSquareFeet, width, length);
         room.RoomShape = DetermineRoomShape(room);
         room.ElevationBelowDeckFeet = Math.Max(0.0, room.DeckElevationFeet - room.CeilingElevationFeet);
+        room.HasCriticalGeometry = room.AreaSquareFeet > GeometryTolerance
+            && room.PerimeterFeet > GeometryTolerance
+            && room.WidthFeet > GeometryTolerance
+            && room.LengthFeet > GeometryTolerance
+            && room.CeilingHeightFeet > GeometryTolerance
+            && room.BoundaryPolygon.Count >= 3;
+
+        if (!room.HasCriticalGeometry)
+        {
+            room.RequiresExceptionReview = true;
+            room.ExceptionReason = "Critical room geometry, perimeter, or ceiling height is missing.";
+        }
     }
 
     private static IReadOnlyList<Point2D> GetPrimaryPolygon(RoomInfo room)

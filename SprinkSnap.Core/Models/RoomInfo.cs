@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FireSprinklerPlugin.SprinkSnap.Core;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Models;
 
@@ -69,6 +70,32 @@ public sealed class RoomInfo
     public bool HasIrregularGeometry { get; set; }
 
     public string RoomShape { get; set; } = "Unknown";
+
+    public bool CeilingGridDetected { get; set; }
+
+    public int ObstructionCount { get; set; }
+
+    public bool HasCriticalGeometry { get; set; }
+
+    public string CeilingClassification { get; set; } =
+        FireSprinklerPlugin.SprinkSnap.Core.Models.CeilingClassification.Uncertain;
+
+    public string CeilingIntelligenceSummary { get; set; } = string.Empty;
+
+    public string LayoutStatus { get; set; } =
+        FireSprinklerPlugin.SprinkSnap.Core.Models.LayoutStatus.NotStarted;
+
+    public double LayoutConfidenceScore { get; set; }
+
+    public bool RequiresExceptionReview { get; set; }
+
+    public string ExceptionReason { get; set; } = string.Empty;
+
+    public string SelectedSprinklerFamilyName { get; set; } = string.Empty;
+
+    public IList<SprinklerPlacementCandidate> ProposedSprinklers { get; set; } = new List<SprinklerPlacementCandidate>();
+
+    public IList<LayoutMarker> LayoutPreviewMarkers { get; set; } = new List<LayoutMarker>();
 
     public string ExistingHazardClassification { get; set; } = string.Empty;
 
