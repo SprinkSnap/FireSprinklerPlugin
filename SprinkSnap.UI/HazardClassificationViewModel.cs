@@ -501,33 +501,89 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
 
     public RoomInfo Room { get; }
 
-    public int RevitElementId => Room.RevitElementId;
+    public int RevitElementId
+    {
+        get => Room.RevitElementId;
+        set => Room.RevitElementId = value;
+    }
 
-    public string Number => Room.Number;
+    public string Number
+    {
+        get => Room.Number;
+        set => Room.Number = value;
+    }
 
-    public string Name => Room.Name;
+    public string Name
+    {
+        get => Room.Name;
+        set => Room.Name = value;
+    }
 
-    public double AreaSquareFeet => Room.AreaSquareFeet;
+    public double AreaSquareFeet
+    {
+        get => Room.AreaSquareFeet;
+        set => Room.AreaSquareFeet = value;
+    }
 
-    public double HeightFeet => Room.HeightFeet;
+    public double HeightFeet
+    {
+        get => Room.HeightFeet;
+        set => Room.HeightFeet = value;
+    }
 
-    public double CeilingHeightFeet => Room.CeilingHeightFeet;
+    public double CeilingHeightFeet
+    {
+        get => Room.CeilingHeightFeet;
+        set => Room.CeilingHeightFeet = value;
+    }
 
-    public string CeilingType => Room.CeilingType;
+    public string CeilingType
+    {
+        get => Room.CeilingType;
+        set => Room.CeilingType = value;
+    }
 
-    public string OccupancyClassification => Room.OccupancyClassification;
+    public string OccupancyClassification
+    {
+        get => Room.OccupancyClassification;
+        set => Room.OccupancyClassification = value;
+    }
 
-    public string SuggestedHazard => Room.SuggestedHazardClassification;
+    public string SuggestedHazard
+    {
+        get => Room.SuggestedHazardClassification;
+        set => Room.SuggestedHazardClassification = value;
+    }
 
-    public string SuggestionReason => Room.SuggestionReason;
+    public string SuggestionReason
+    {
+        get => Room.SuggestionReason;
+        set => Room.SuggestionReason = value;
+    }
 
-    public string ExistingHazard => Room.ExistingHazardClassification;
+    public string ExistingHazard
+    {
+        get => Room.ExistingHazardClassification;
+        set => Room.ExistingHazardClassification = value;
+    }
 
-    public string CeilingClassification => Room.CeilingClassification;
+    public string CeilingClassification
+    {
+        get => Room.CeilingClassification;
+        set => Room.CeilingClassification = value;
+    }
 
-    public string CeilingIntelligenceSummary => Room.CeilingIntelligenceSummary;
+    public string CeilingIntelligenceSummary
+    {
+        get => Room.CeilingIntelligenceSummary;
+        set => Room.CeilingIntelligenceSummary = value;
+    }
 
-    public string LayoutStatus => Room.LayoutStatus;
+    public string LayoutStatus
+    {
+        get => Room.LayoutStatus;
+        set => Room.LayoutStatus = value;
+    }
 
     public double LayoutConfidenceScore
     {
@@ -559,9 +615,20 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
         }
     }
 
-    public string ExceptionReason => Room.ExceptionReason;
+    public string ExceptionReason
+    {
+        get => Room.ExceptionReason;
+        set => Room.ExceptionReason = value;
+    }
 
-    public int ProposedSprinklerCount => Room.ProposedSprinklers.Count;
+    public int ProposedSprinklerCount
+    {
+        get => Room.ProposedSprinklers.Count;
+        set
+        {
+            // Display-only binding compatibility for WPF controls that attempt source updates.
+        }
+    }
 
     public string PreviewMarkers
     {
@@ -570,6 +637,11 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
             int compliant = Room.LayoutPreviewMarkers.Count(marker => marker.IsCompliant);
             int noncompliant = Room.LayoutPreviewMarkers.Count(marker => !marker.IsCompliant);
             return compliant + " compliant / " + noncompliant + " noncompliant";
+        }
+
+        set
+        {
+            // Display-only binding compatibility for WPF controls that attempt source updates.
         }
     }
 
