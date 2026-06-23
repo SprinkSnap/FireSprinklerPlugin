@@ -14,8 +14,15 @@ namespace FireSprinklerPlugin.SprinkSnap.UI;
 
 public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 {
+    private const string AllFilter = "All";
+
     private string searchText = string.Empty;
     private string hazardFilter = "All";
+    private string sprinklerSearchText = string.Empty;
+    private string selectedManufacturer = AllFilter;
+    private string selectedCategory = AllFilter;
+    private string selectedOrientation = AllFilter;
+    private string selectedKFactor = AllFilter;
     private string selectedBatchHazard = HazardClassification.LightHazard;
     private string validationMessage = string.Empty;
     private string staticPressurePsi = string.Empty;
@@ -24,14 +31,21 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private bool reviewOnlyExceptions;
     private SprinklerFamilyInfo selectedSprinklerFamily;
     private WaterDemandInfo approvedWaterDemand = new WaterDemandInfo();
+    private readonly IReadOnlyList<SprinklerFamilyInfo> allSprinklerFamilies;
     private readonly ICeilingIntelligenceService ceilingIntelligenceService = new CeilingIntelligenceService();
     private readonly ILayoutComplianceValidator complianceValidator = new LayoutComplianceValidator();
     private readonly ISprinklerLayoutOptimizer layoutOptimizer = new SprinklerLayoutOptimizer();
 
     public HazardClassificationViewModel(IEnumerable<RoomInfo> rooms)
     {
+        allSprinklerFamilies = new SprinklerFamilySelector().GetAvailableFamilies();
         SprinklerFamilies = new ObservableCollection<SprinklerFamilyInfo>(
-            new SprinklerFamilySelector().GetAvailableFamilies());
+            allSprinklerFamilies);
+        ManufacturerOptions = new ObservableCollection<string>();
+        CategoryOptions = new ObservableCollection<string>();
+        OrientationOptions = new ObservableCollection<string>();
+        KFactorOptions = new ObservableCollection<string>();
+        RebuildSprinklerFilterOptions();
         selectedSprinklerFamily = SprinklerFamilies.FirstOrDefault();
 
         Rooms = new ObservableCollection<RoomHazardReviewItem>(
@@ -64,6 +78,14 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     public ObservableCollection<string> HazardFilters { get; }
 
     public ObservableCollection<SprinklerFamilyInfo> SprinklerFamilies { get; }
+
+    public ObservableCollection<string> ManufacturerOptions { get; }
+
+    public ObservableCollection<string> CategoryOptions { get; }
+
+    public ObservableCollection<string> OrientationOptions { get; }
+
+    public ObservableCollection<string> KFactorOptions { get; }
 
     public ICommand AcceptAllSuggestionsCommand { get; }
 
@@ -111,6 +133,8 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
             return SelectedSprinklerFamily.FamilyName
                 + " | "
+                + SelectedSprinklerFamily.Category
+                + " | "
                 + SelectedSprinklerFamily.Orientation
                 + " | K"
                 + SelectedSprinklerFamily.KFactor.ToString("N1", CultureInfo.CurrentCulture)
@@ -119,6 +143,66 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
                 + " ft | Max area "
                 + SelectedSprinklerFamily.MaxCoverageAreaSquareFeet.ToString("N0", CultureInfo.CurrentCulture)
                 + " sq ft";
+        }
+    }
+
+    public string SprinklerSearchText
+    {
+        get => sprinklerSearchText;
+        set
+        {
+            if (SetField(ref sprinklerSearchText, value))
+            {
+                ApplySprinklerFamilyFilters();
+            }
+        }
+    }
+
+    public string SelectedManufacturer
+    {
+        get => selectedManufacturer;
+        set
+        {
+            if (SetField(ref selectedManufacturer, value))
+            {
+                ApplySprinklerFamilyFilters();
+            }
+        }
+    }
+
+    public string SelectedCategory
+    {
+        get => selectedCategory;
+        set
+        {
+            if (SetField(ref selectedCategory, value))
+            {
+                ApplySprinklerFamilyFilters();
+            }
+        }
+    }
+
+    public string SelectedOrientation
+    {
+        get => selectedOrientation;
+        set
+        {
+            if (SetField(ref selectedOrientation, value))
+            {
+                ApplySprinklerFamilyFilters();
+            }
+        }
+    }
+
+    public string SelectedKFactor
+    {
+        get => selectedKFactor;
+        set
+        {
+            if (SetField(ref selectedKFactor, value))
+            {
+                ApplySprinklerFamilyFilters();
+            }
         }
     }
 
@@ -213,6 +297,83 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             }
 
             return Rooms.Select(item => item.Room).ToList();
+        }
+    }
+
+    private void RebuildSprinklerFilterOptions()
+    {
+        ReplaceOptions(ManufacturerOptions, allSprinklerFamilies.Select(family => family.Manufacturer));
+        ReplaceOptions(CategoryOptions, allSprinklerFamilies.Select(family => family.Category));
+        ReplaceOptions(OrientationOptions, allSprinklerFamilies.Select(family => family.Orientation));
+        ReplaceOptions(
+            KFactorOptions,
+            allSprinklerFamilies
+                .Select(family => family.KFactor.ToString("N1", CultureInfo.CurrentCulture)));
+    }
+
+    private void ApplySprinklerFamilyFilters()
+    {
+        SprinklerFamilyInfo previousSelection = SelectedSprinklerFamily;
+        List<SprinklerFamilyInfo> filteredFamilies = allSprinklerFamilies
+            .Where(MatchesSprinklerFilters)
+            .OrderBy(family => family.Manufacturer)
+            .ThenBy(family => family.Category)
+            .ThenBy(family => family.KFactor)
+            .ThenBy(family => family.Model)
+            .ToList();
+
+        SprinklerFamilies.Clear();
+        foreach (SprinklerFamilyInfo family in filteredFamilies)
+        {
+            SprinklerFamilies.Add(family);
+        }
+
+        SelectedSprinklerFamily = previousSelection != null && filteredFamilies.Contains(previousSelection)
+            ? previousSelection
+            : SprinklerFamilies.FirstOrDefault();
+    }
+
+    private bool MatchesSprinklerFilters(SprinklerFamilyInfo family)
+    {
+        return MatchesFilter(SelectedManufacturer, family.Manufacturer)
+            && MatchesFilter(SelectedCategory, family.Category)
+            && MatchesFilter(SelectedOrientation, family.Orientation)
+            && MatchesFilter(
+                SelectedKFactor,
+                family.KFactor.ToString("N1", CultureInfo.CurrentCulture))
+            && MatchesSprinklerSearch(family);
+    }
+
+    private bool MatchesSprinklerSearch(SprinklerFamilyInfo family)
+    {
+        if (string.IsNullOrWhiteSpace(SprinklerSearchText))
+        {
+            return true;
+        }
+
+        string searchText = SprinklerSearchText;
+        return Contains(family.Manufacturer, searchText)
+            || Contains(family.Category, searchText)
+            || Contains(family.Model, searchText)
+            || Contains(family.Sin, searchText)
+            || Contains(family.FamilyName, searchText)
+            || Contains(family.Orientation, searchText);
+    }
+
+    private static bool MatchesFilter(string selectedValue, string candidateValue)
+    {
+        return string.IsNullOrWhiteSpace(selectedValue)
+            || string.Equals(selectedValue, AllFilter, StringComparison.Ordinal)
+            || string.Equals(selectedValue, candidateValue, StringComparison.Ordinal);
+    }
+
+    private static void ReplaceOptions(ObservableCollection<string> options, IEnumerable<string> values)
+    {
+        options.Clear();
+        options.Add(AllFilter);
+        foreach (string value in values.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct().OrderBy(value => value))
+        {
+            options.Add(value);
         }
     }
 
