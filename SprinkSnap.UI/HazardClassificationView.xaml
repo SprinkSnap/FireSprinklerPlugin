@@ -206,6 +206,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <TextBlock Text="Project sprinkler standard" Style="{StaticResource SectionTitle}" />
 
@@ -272,6 +273,11 @@
                                Text="SprinkSnap applies code/listing compatibility first, then project standard preference, then alternates for designer override."
                                Style="{StaticResource MutedText}"
                                Margin="0,6,0,0" />
+                    <CheckBox Grid.Row="5"
+                              Content="Allow compatible alternate manufacturers for room overrides"
+                              IsChecked="{Binding AllowAlternateManufacturers}"
+                              Margin="0,8,0,0"
+                              ToolTip="When checked, each room can be overridden to another manufacturer if the selected head is compatible with the room hazard, ceiling, and geometry." />
                 </Grid>
             </Border>
 
@@ -494,6 +500,9 @@
                         Command="{Binding ApplyCommand}" />
                 <Button Content="Override"
                         Command="{Binding OverrideCommand}" />
+                <Button Content="Reset Sprinklers"
+                        MinWidth="140"
+                        Command="{Binding ResetSprinklerOverridesCommand}" />
                 <Button Content="Save"
                         IsDefault="True"
                         Style="{StaticResource PrimaryButton}"

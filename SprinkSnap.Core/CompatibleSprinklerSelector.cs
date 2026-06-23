@@ -48,6 +48,7 @@ public sealed class CompatibleSprinklerSelector : ICompatibleSprinklerSelector
     {
         List<SprinklerFamilyInfo> compatibleFamilies = catalog
             .Where(family => IsCompatible(room, family))
+            .Where(family => ManufacturerIsAllowed(family, projectStandard))
             .OrderBy(family => RoomSuitabilityScore(room, family))
             .ThenBy(family => PreferenceScore(family, projectStandard))
             .ThenBy(family => family.Manufacturer)
@@ -131,6 +132,12 @@ public sealed class CompatibleSprinklerSelector : ICompatibleSprinklerSelector
         }
 
         return score;
+    }
+
+    private static bool ManufacturerIsAllowed(SprinklerFamilyInfo family, ProjectSprinklerStandard projectStandard)
+    {
+        return projectStandard.AllowAlternateManufacturers
+            || Matches(projectStandard.PreferredManufacturer, family.Manufacturer);
     }
 
     private static int RoomSuitabilityScore(RoomInfo room, SprinklerFamilyInfo family)
