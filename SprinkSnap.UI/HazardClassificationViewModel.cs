@@ -19,10 +19,10 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private string searchText = string.Empty;
     private string hazardFilter = "All";
     private string sprinklerSearchText = string.Empty;
-    private string selectedManufacturer = AllFilter;
-    private string selectedCategory = AllFilter;
-    private string selectedOrientation = AllFilter;
-    private string selectedKFactor = AllFilter;
+    private string selectedManufacturer = "Viking";
+    private string selectedCategory = "Standard Spray Quick Response";
+    private string selectedOrientation = "Pendent";
+    private string selectedKFactor = "5.6";
     private string selectedBatchHazard = HazardClassification.LightHazard;
     private string validationMessage = string.Empty;
     private string staticPressurePsi = string.Empty;
@@ -34,11 +34,14 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private readonly IReadOnlyList<SprinklerFamilyInfo> allSprinklerFamilies;
     private readonly ICeilingIntelligenceService ceilingIntelligenceService = new CeilingIntelligenceService();
     private readonly ILayoutComplianceValidator complianceValidator = new LayoutComplianceValidator();
+    private readonly ICompatibleSprinklerSelector compatibleSprinklerSelector = new CompatibleSprinklerSelector();
     private readonly ISprinklerLayoutOptimizer layoutOptimizer = new SprinklerLayoutOptimizer();
 
-    public HazardClassificationViewModel(IEnumerable<RoomInfo> rooms)
+    public HazardClassificationViewModel(
+        IEnumerable<RoomInfo> rooms,
+        IEnumerable<SprinklerFamilyInfo> sprinklerFamilies = null)
     {
-        allSprinklerFamilies = new SprinklerFamilySelector().GetAvailableFamilies();
+        allSprinklerFamilies = sprinklerFamilies?.ToList() ?? new SprinklerFamilySelector().GetAvailableFamilies();
         SprinklerFamilies = new ObservableCollection<SprinklerFamilyInfo>(
             allSprinklerFamilies);
         ManufacturerOptions = new ObservableCollection<string>();
@@ -46,7 +49,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         OrientationOptions = new ObservableCollection<string>();
         KFactorOptions = new ObservableCollection<string>();
         RebuildSprinklerFilterOptions();
-        selectedSprinklerFamily = SprinklerFamilies.FirstOrDefault();
+        ApplySprinklerFamilyFilters();
 
         Rooms = new ObservableCollection<RoomHazardReviewItem>(
             rooms.Select(PrepareRoomForAssistant).Select(room => new RoomHazardReviewItem(room)));
@@ -55,6 +58,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         HazardFilters = new ObservableCollection<string>(new[] { "All" }.Concat(HazardClassification.All));
         RoomsView = CollectionViewSource.GetDefaultView(Rooms);
         RoomsView.Filter = FilterRoom;
+        UpdateRoomSprinklerSelections();
 
         AcceptAllSuggestionsCommand = new RelayCommand(_ => AcceptAllSuggestions(), _ => Rooms.Count > 0);
         ApplyCommand = new RelayCommand(_ => ApplyBatchOrCurrentOverrides(), _ => Rooms.Count > 0);
@@ -132,17 +136,42 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             }
 
             return SelectedSprinklerFamily.FamilyName
-                + " | "
+                + Environment.NewLine
+                + "Manufacturer: "
+                + SelectedSprinklerFamily.Manufacturer
+                + " | Model/SIN: "
+                + SelectedSprinklerFamily.Model
+                + " / "
+                + SelectedSprinklerFamily.Sin
+                + Environment.NewLine
+                + "Type: "
                 + SelectedSprinklerFamily.Category
                 + " | "
                 + SelectedSprinklerFamily.Orientation
                 + " | K"
                 + SelectedSprinklerFamily.KFactor.ToString("N1", CultureInfo.CurrentCulture)
-                + " | Max spacing "
+                + " | "
+                + SelectedSprinklerFamily.ResponseType
+                + Environment.NewLine
+                + "Allowed hazards: "
+                + string.Join(", ", SelectedSprinklerFamily.SupportedHazardClassifications)
+                + Environment.NewLine
+                + "Max spacing: "
                 + SelectedSprinklerFamily.MaxSpacingFeet.ToString("N0", CultureInfo.CurrentCulture)
-                + " ft | Max area "
+                + " ft | Max coverage: "
                 + SelectedSprinklerFamily.MaxCoverageAreaSquareFeet.ToString("N0", CultureInfo.CurrentCulture)
-                + " sq ft";
+                + " sq ft"
+                + Environment.NewLine
+                + "Ceiling compatibility: "
+                + string.Join(", ", SelectedSprinklerFamily.SupportedCeilingClassifications)
+                + Environment.NewLine
+                + "Data sheet: "
+                + SelectedSprinklerFamily.TechnicalDataSheetUrl
+                + Environment.NewLine
+                + "Revit family: "
+                + SelectedSprinklerFamily.RevitFamilyPath
+                + " | Type: "
+                + SelectedSprinklerFamily.RevitTypeName;
         }
     }
 
@@ -268,6 +297,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             if (SetField(ref selectedSprinklerFamily, value))
             {
                 OnPropertyChanged(nameof(SelectedFamilyListingSummary));
+                UpdateRoomSprinklerSelections();
             }
         }
     }
@@ -303,7 +333,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private void RebuildSprinklerFilterOptions()
     {
         ReplaceOptions(ManufacturerOptions, allSprinklerFamilies.Select(family => family.Manufacturer));
-        ReplaceOptions(CategoryOptions, allSprinklerFamilies.Select(family => family.Category));
+        ReplaceOptions(CategoryOptions, allSprinklerFamilies.Select(family => family.Category).Concat(SprinklerFamilySelector.VikingCategories));
         ReplaceOptions(OrientationOptions, allSprinklerFamilies.Select(family => family.Orientation));
         ReplaceOptions(
             KFactorOptions,
@@ -331,6 +361,85 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         SelectedSprinklerFamily = previousSelection != null && filteredFamilies.Contains(previousSelection)
             ? previousSelection
             : SprinklerFamilies.FirstOrDefault();
+    }
+
+    private void UpdateRoomSprinklerSelections()
+    {
+        if (Rooms == null)
+        {
+            return;
+        }
+
+        ProjectSprinklerStandard projectStandard = CreateProjectSprinklerStandard();
+        foreach (RoomHazardReviewItem room in Rooms)
+        {
+            room.Room.ApprovedHazardClassification = room.UserOverride;
+            CompatibleSprinklerSelection selection = compatibleSprinklerSelector.SelectForRoom(
+                room.Room,
+                allSprinklerFamilies,
+                projectStandard);
+            ApplySprinklerSelection(room, selection);
+        }
+
+        RoomsView?.Refresh();
+    }
+
+    private ProjectSprinklerStandard CreateProjectSprinklerStandard()
+    {
+        return new ProjectSprinklerStandard
+        {
+            PreferredManufacturer = SelectedManufacturer,
+            PreferredCategory = SelectedCategory,
+            PreferredOrientation = SelectedOrientation,
+            PreferredKFactor = TryParseKFactor(SelectedKFactor),
+            AllowAlternateManufacturers = true
+        };
+    }
+
+    private static double? TryParseKFactor(string selectedKFactor)
+    {
+        if (string.IsNullOrWhiteSpace(selectedKFactor)
+            || string.Equals(selectedKFactor, AllFilter, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return double.TryParse(selectedKFactor, NumberStyles.Float, CultureInfo.CurrentCulture, out double value)
+            ? value
+            : null;
+    }
+
+    private static void ApplySprinklerSelection(
+        RoomHazardReviewItem room,
+        CompatibleSprinklerSelection selection)
+    {
+        room.Room.AutoSelectedSprinklerName = selection.SelectedFamily?.DisplayName ?? "No compatible sprinkler";
+        room.Room.SprinklerSelectionStatus = selection.Status;
+        room.Room.SprinklerSelectionReason = selection.Reason;
+        room.Room.CompatibleSprinklerCount = selection.CompatibleFamilies.Count;
+        room.Room.AlternateSprinklerSummary = selection.AlternateFamilies.Count == 0
+            ? "No alternates"
+            : string.Join(
+                Environment.NewLine,
+                selection.AlternateFamilies
+                    .Take(4)
+                    .Select(family => "- " + family.DisplayName));
+
+        if (selection.AlternateFamilies.Count > 4)
+        {
+            room.Room.AlternateSprinklerSummary += Environment.NewLine
+                + "+ "
+                + (selection.AlternateFamilies.Count - 4).ToString(CultureInfo.CurrentCulture)
+                + " more compatible alternates";
+        }
+
+        if (selection.SelectedFamily == null)
+        {
+            room.Room.RequiresExceptionReview = true;
+            room.Room.ExceptionReason = selection.Reason;
+        }
+
+        room.RefreshAssistantState();
     }
 
     private bool MatchesSprinklerFilters(SprinklerFamilyInfo family)
@@ -427,6 +536,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             room.IsApproved = true;
         }
 
+        UpdateRoomSprinklerSelections();
         ValidationMessage = "All suggested classifications were accepted. Review remains editable until Save.";
     }
 
@@ -448,6 +558,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             }
         }
 
+        UpdateRoomSprinklerSelections();
         ValidationMessage = updatedCount + " visible room(s) marked approved.";
     }
 
@@ -782,6 +893,36 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
         set => Room.ExceptionReason = value;
     }
 
+    public string AutoSelectedSprinklerName
+    {
+        get => Room.AutoSelectedSprinklerName;
+        set => Room.AutoSelectedSprinklerName = value;
+    }
+
+    public string SprinklerSelectionStatus
+    {
+        get => Room.SprinklerSelectionStatus;
+        set => Room.SprinklerSelectionStatus = value;
+    }
+
+    public string SprinklerSelectionReason
+    {
+        get => Room.SprinklerSelectionReason;
+        set => Room.SprinklerSelectionReason = value;
+    }
+
+    public int CompatibleSprinklerCount
+    {
+        get => Room.CompatibleSprinklerCount;
+        set => Room.CompatibleSprinklerCount = value;
+    }
+
+    public string AlternateSprinklerSummary
+    {
+        get => Room.AlternateSprinklerSummary;
+        set => Room.AlternateSprinklerSummary = value;
+    }
+
     public int ProposedSprinklerCount
     {
         get => Room.ProposedSprinklers.Count;
@@ -832,6 +973,11 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LayoutConfidenceScore)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RequiresExceptionReview)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ExceptionReason)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AutoSelectedSprinklerName)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SprinklerSelectionStatus)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SprinklerSelectionReason)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CompatibleSprinklerCount)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AlternateSprinklerSummary)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ProposedSprinklerCount)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewMarkers)));
     }

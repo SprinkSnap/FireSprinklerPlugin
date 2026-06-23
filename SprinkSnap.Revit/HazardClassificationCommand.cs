@@ -37,6 +37,7 @@ public sealed class HazardClassificationCommand : IExternalCommand
             IRoomBoundaryExtractor boundaryExtractor = new RoomBoundaryExtractor();
             IRoomAnalyzer roomAnalyzer = new RoomAnalyzer();
             IHazardClassifier hazardClassifier = new HazardClassifier();
+            ISprinklerFamilyScanner sprinklerFamilyScanner = new SprinklerFamilyScanner();
             IRoomExtractor roomExtractor = new RoomExtractor(
                 boundaryExtractor,
                 roomAnalyzer,
@@ -50,7 +51,10 @@ public sealed class HazardClassificationCommand : IExternalCommand
                 return Result.Succeeded;
             }
 
-            HazardClassificationViewModel viewModel = new HazardClassificationViewModel(rooms);
+            IReadOnlyList<SprinklerFamilyInfo> sprinklerFamilies = MergeSprinklerCatalogs(
+                new SprinklerFamilySelector().GetAvailableFamilies(),
+                sprinklerFamilyScanner.ScanLoadedSprinklerFamilies(document));
+            HazardClassificationViewModel viewModel = new HazardClassificationViewModel(rooms, sprinklerFamilies);
             HazardClassificationView view = new HazardClassificationView(viewModel);
             SetRevitOwner(view, uiApplication);
 
@@ -143,6 +147,48 @@ public sealed class HazardClassificationCommand : IExternalCommand
         builder.AppendLine();
         builder.AppendLine("Automatic placement is still preview-only in this command; unresolved exceptions must be reviewed before a future placement command writes sprinklers to Revit.");
         return builder.ToString();
+    }
+
+    private static IReadOnlyList<SprinklerFamilyInfo> MergeSprinklerCatalogs(
+        IEnumerable<SprinklerFamilyInfo> catalogFamilies,
+        IEnumerable<SprinklerFamilyInfo> loadedFamilies)
+    {
+        Dictionary<string, SprinklerFamilyInfo> mergedFamilies = new Dictionary<string, SprinklerFamilyInfo>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (SprinklerFamilyInfo family in catalogFamilies)
+        {
+            mergedFamilies[CreateSprinklerFamilyKey(family)] = family;
+        }
+
+        foreach (SprinklerFamilyInfo family in loadedFamilies)
+        {
+            mergedFamilies[CreateSprinklerFamilyKey(family)] = family;
+        }
+
+        return mergedFamilies.Values
+            .OrderBy(family => family.Manufacturer)
+            .ThenBy(family => family.Category)
+            .ThenBy(family => family.Model)
+            .ToList();
+    }
+
+    private static string CreateSprinklerFamilyKey(SprinklerFamilyInfo family)
+    {
+        if (!string.IsNullOrWhiteSpace(family.ListedFamilyId))
+        {
+            return family.ListedFamilyId;
+        }
+
+        return family.Manufacturer
+            + "|"
+            + family.Model
+            + "|"
+            + family.Sin
+            + "|"
+            + family.Orientation
+            + "|"
+            + family.KFactor.ToString("0.0");
     }
 
     private static string FormatOptionalValue(double? value, string unit)

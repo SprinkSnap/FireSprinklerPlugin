@@ -35,6 +35,8 @@ public sealed class CeilingIntelligenceResult
 
 public sealed class SprinklerFamilyInfo
 {
+    public string ListedFamilyId { get; set; } = string.Empty;
+
     public string Manufacturer { get; set; } = string.Empty;
 
     public string LibraryName { get; set; } = string.Empty;
@@ -45,9 +47,13 @@ public sealed class SprinklerFamilyInfo
 
     public string Sin { get; set; } = string.Empty;
 
+    public string Series { get; set; } = string.Empty;
+
     public string FamilyName { get; set; } = string.Empty;
 
     public string DisplayName => Manufacturer + " " + Model + " - " + FamilyName;
+
+    public string SprinklerType { get; set; } = string.Empty;
 
     public double KFactor { get; set; }
 
@@ -56,6 +62,8 @@ public sealed class SprinklerFamilyInfo
     public string ResponseType { get; set; } = string.Empty;
 
     public string CoverageType { get; set; } = string.Empty;
+
+    public string StorageUse { get; set; } = string.Empty;
 
     public double MaxSpacingFeet { get; set; }
 
@@ -66,6 +74,24 @@ public sealed class SprinklerFamilyInfo
     public IList<string> SupportedHazardClassifications { get; set; } = new List<string>();
 
     public IList<string> SupportedCeilingClassifications { get; set; } = new List<string>();
+
+    public IList<string> TemperatureRatings { get; set; } = new List<string>();
+
+    public IList<string> FinishOptions { get; set; } = new List<string>();
+
+    public string RevitFamilyPath { get; set; } = string.Empty;
+
+    public string RevitTypeName { get; set; } = string.Empty;
+
+    public string TechnicalDataSheetUrl { get; set; } = string.Empty;
+
+    public bool IsLoadedInProject { get; set; }
+
+    public string RevitFamilyName { get; set; } = string.Empty;
+
+    public string RevitFamilySymbolId { get; set; } = string.Empty;
+
+    public string RecognitionSource { get; set; } = "Catalog";
 
     public string ListingNotes { get; set; } = string.Empty;
 }
