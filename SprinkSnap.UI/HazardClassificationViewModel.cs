@@ -413,6 +413,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         RoomHazardReviewItem room,
         CompatibleSprinklerSelection selection)
     {
+        room.SetCompatibleSprinklerOptions(selection.CompatibleFamilies, selection.SelectedFamily);
         room.Room.AutoSelectedSprinklerName = selection.SelectedFamily?.DisplayName ?? "No compatible sprinkler";
         room.Room.SprinklerSelectionStatus = selection.Status;
         room.Room.SprinklerSelectionReason = selection.Reason;
@@ -567,9 +568,10 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         foreach (RoomHazardReviewItem item in Rooms)
         {
             item.Room.ApprovedHazardClassification = item.UserOverride;
+            SprinklerFamilyInfo roomSprinklerFamily = item.SelectedRoomSprinklerFamily ?? SelectedSprinklerFamily;
             LayoutValidationResult result = complianceValidator.ValidateLayout(
                 item.Room,
-                SelectedSprinklerFamily,
+                roomSprinklerFamily,
                 item.Room.ProposedSprinklers.ToList());
             ApplyLayoutResult(item, result);
         }
@@ -584,9 +586,10 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         foreach (RoomHazardReviewItem item in Rooms)
         {
             item.Room.ApprovedHazardClassification = item.UserOverride;
-            item.Room.SelectedSprinklerFamilyName = SelectedSprinklerFamily?.DisplayName ?? string.Empty;
+            SprinklerFamilyInfo roomSprinklerFamily = item.SelectedRoomSprinklerFamily ?? SelectedSprinklerFamily;
+            item.Room.SelectedSprinklerFamilyName = roomSprinklerFamily?.DisplayName ?? string.Empty;
 
-            AutomaticLayoutResult result = layoutOptimizer.GenerateBestLayout(item.Room, SelectedSprinklerFamily);
+            AutomaticLayoutResult result = layoutOptimizer.GenerateBestLayout(item.Room, roomSprinklerFamily);
             item.Room.ProposedSprinklers = result.Candidates;
             item.Room.LayoutPreviewMarkers = result.PreviewMarkers;
             item.Room.LayoutStatus = result.Status;
@@ -759,6 +762,8 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
 {
     private string userOverride;
     private bool isApproved;
+    private bool updatingCompatibleSprinklerOptions;
+    private SprinklerFamilyInfo selectedRoomSprinklerFamily;
 
     public RoomHazardReviewItem(RoomInfo room)
     {
@@ -772,6 +777,9 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
     public event PropertyChangedEventHandler PropertyChanged;
 
     public RoomInfo Room { get; }
+
+    public ObservableCollection<SprinklerFamilyInfo> CompatibleSprinklerOptions { get; } =
+        new ObservableCollection<SprinklerFamilyInfo>();
 
     public int RevitElementId
     {
@@ -899,6 +907,36 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
         set => Room.AutoSelectedSprinklerName = value;
     }
 
+    public SprinklerFamilyInfo SelectedRoomSprinklerFamily
+    {
+        get => selectedRoomSprinklerFamily;
+        set
+        {
+            if (ReferenceEquals(selectedRoomSprinklerFamily, value))
+            {
+                return;
+            }
+
+            selectedRoomSprinklerFamily = value;
+            if (selectedRoomSprinklerFamily != null)
+            {
+                Room.AutoSelectedSprinklerName = selectedRoomSprinklerFamily.DisplayName;
+                Room.SelectedSprinklerFamilyName = selectedRoomSprinklerFamily.DisplayName;
+
+                if (!updatingCompatibleSprinklerOptions)
+                {
+                    Room.SprinklerSelectionStatus = "Designer Override";
+                    Room.SprinklerSelectionReason = "Designer selected a compatible alternate manufacturer/model for this room.";
+                }
+            }
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedRoomSprinklerFamily)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AutoSelectedSprinklerName)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SprinklerSelectionStatus)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SprinklerSelectionReason)));
+        }
+    }
+
     public string SprinklerSelectionStatus
     {
         get => Room.SprinklerSelectionStatus;
@@ -965,6 +1003,29 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
         set => SetField(ref isApproved, value);
     }
 
+    public void SetCompatibleSprinklerOptions(
+        IEnumerable<SprinklerFamilyInfo> compatibleFamilies,
+        SprinklerFamilyInfo selectedFamily)
+    {
+        updatingCompatibleSprinklerOptions = true;
+        try
+        {
+            CompatibleSprinklerOptions.Clear();
+            foreach (SprinklerFamilyInfo family in compatibleFamilies)
+            {
+                CompatibleSprinklerOptions.Add(family);
+            }
+
+            SelectedRoomSprinklerFamily = selectedFamily;
+        }
+        finally
+        {
+            updatingCompatibleSprinklerOptions = false;
+        }
+
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CompatibleSprinklerOptions)));
+    }
+
     public void RefreshAssistantState()
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CeilingClassification)));
@@ -974,6 +1035,7 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RequiresExceptionReview)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ExceptionReason)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AutoSelectedSprinklerName)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedRoomSprinklerFamily)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SprinklerSelectionStatus)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SprinklerSelectionReason)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CompatibleSprinklerCount)));

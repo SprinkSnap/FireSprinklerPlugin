@@ -48,7 +48,8 @@ public sealed class CompatibleSprinklerSelector : ICompatibleSprinklerSelector
     {
         List<SprinklerFamilyInfo> compatibleFamilies = catalog
             .Where(family => IsCompatible(room, family))
-            .OrderBy(family => PreferenceScore(family, projectStandard))
+            .OrderBy(family => RoomSuitabilityScore(room, family))
+            .ThenBy(family => PreferenceScore(family, projectStandard))
             .ThenBy(family => family.Manufacturer)
             .ThenBy(family => family.Category)
             .ThenBy(family => family.Model)
@@ -73,12 +74,12 @@ public sealed class CompatibleSprinklerSelector : ICompatibleSprinklerSelector
         if (selection.AlternateFamilies.Count > 0)
         {
             selection.Status = "Compatible - Alternates Available";
-            selection.Reason = "Auto-selected the best match by listing compatibility and project standard preference. Alternates are available.";
+            selection.Reason = "Auto-selected the best match by room geometry, ceiling classification, listing compatibility, and project standard preference. Alternates are available.";
         }
         else
         {
             selection.Status = "Compatible";
-            selection.Reason = "Auto-selected the only compatible listed sprinkler for this room.";
+            selection.Reason = "Auto-selected the only compatible listed sprinkler for this room geometry, ceiling classification, and hazard.";
         }
 
         return selection;
@@ -127,6 +128,39 @@ public sealed class CompatibleSprinklerSelector : ICompatibleSprinklerSelector
             && Math.Abs(projectStandard.PreferredKFactor.Value - family.KFactor) > 0.001)
         {
             score += 5;
+        }
+
+        return score;
+    }
+
+    private static int RoomSuitabilityScore(RoomInfo room, SprinklerFamilyInfo family)
+    {
+        int score = 0;
+
+        if (string.Equals(room.CeilingClassification, CeilingClassification.OpenStructure, StringComparison.Ordinal)
+            && !family.Orientation.Contains("Upright", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 30;
+        }
+
+        if ((string.Equals(room.CeilingClassification, CeilingClassification.Flat, StringComparison.Ordinal)
+                || string.Equals(room.CeilingClassification, CeilingClassification.TBarSuspended, StringComparison.Ordinal))
+            && !family.Orientation.Contains("Pendent", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 20;
+        }
+
+        if ((string.Equals(room.ApprovedHazardClassification, HazardClassification.ExtraHazardGroup1, StringComparison.Ordinal)
+                || string.Equals(room.ApprovedHazardClassification, HazardClassification.ExtraHazardGroup2, StringComparison.Ordinal))
+            && !family.CoverageType.Contains("Storage", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 40;
+        }
+
+        if (room.HeightFeet > 20.0
+            && string.Equals(family.CoverageType, "Residential", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 100;
         }
 
         return score;
