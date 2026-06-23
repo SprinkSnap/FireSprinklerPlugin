@@ -28,6 +28,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private string staticPressurePsi = string.Empty;
     private string residualPressurePsi = string.Empty;
     private string flowGpm = string.Empty;
+    private bool allowAlternateManufacturers = true;
     private bool reviewOnlyExceptions;
     private SprinklerFamilyInfo selectedSprinklerFamily;
     private WaterDemandInfo approvedWaterDemand = new WaterDemandInfo();
@@ -65,6 +66,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         ValidateCommand = new RelayCommand(_ => ValidateLayouts(), _ => Rooms.Count > 0);
         AutoLayoutCommand = new RelayCommand(_ => AutoLayoutRooms(), _ => Rooms.Count > 0);
         OverrideCommand = new RelayCommand(_ => OverrideVisibleExceptions(), _ => Rooms.Count > 0);
+        ResetSprinklerOverridesCommand = new RelayCommand(_ => ResetSprinklerOverridesToProjectDefault(), _ => Rooms.Count > 0);
         SaveCommand = new RelayCommand(_ => Save(), _ => Rooms.Count > 0);
         CancelCommand = new RelayCommand(_ => RequestClose?.Invoke(this, false));
     }
@@ -100,6 +102,8 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     public ICommand AutoLayoutCommand { get; }
 
     public ICommand OverrideCommand { get; }
+
+    public ICommand ResetSprinklerOverridesCommand { get; }
 
     public ICommand SaveCommand { get; }
 
@@ -289,6 +293,18 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         set => SetField(ref flowGpm, value);
     }
 
+    public bool AllowAlternateManufacturers
+    {
+        get => allowAlternateManufacturers;
+        set
+        {
+            if (SetField(ref allowAlternateManufacturers, value))
+            {
+                UpdateRoomSprinklerSelections();
+            }
+        }
+    }
+
     public SprinklerFamilyInfo SelectedSprinklerFamily
     {
         get => selectedSprinklerFamily;
@@ -392,7 +408,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             PreferredCategory = SelectedCategory,
             PreferredOrientation = SelectedOrientation,
             PreferredKFactor = TryParseKFactor(SelectedKFactor),
-            AllowAlternateManufacturers = true
+            AllowAlternateManufacturers = AllowAlternateManufacturers
         };
     }
 
@@ -631,6 +647,17 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         RoomsView.Refresh();
         NotifyDashboardState();
         ValidationMessage = count + " visible exception room(s) were overridden by the designer.";
+    }
+
+    private void ResetSprinklerOverridesToProjectDefault()
+    {
+        foreach (RoomHazardReviewItem item in Rooms)
+        {
+            item.ClearSprinklerOverride();
+        }
+
+        UpdateRoomSprinklerSelections();
+        ValidationMessage = "Room sprinkler overrides were reset to the project default recommendation.";
     }
 
     private static void ApplyLayoutResult(RoomHazardReviewItem item, LayoutValidationResult result)
@@ -1024,6 +1051,16 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
         }
 
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CompatibleSprinklerOptions)));
+    }
+
+    public void ClearSprinklerOverride()
+    {
+        selectedRoomSprinklerFamily = null;
+        Room.SprinklerSelectionStatus = "Project Default";
+        Room.SprinklerSelectionReason = "Room override cleared; SprinkSnap will use the project default manufacturer preference and compatible listing logic.";
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedRoomSprinklerFamily)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SprinklerSelectionStatus)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SprinklerSelectionReason)));
     }
 
     public void RefreshAssistantState()
