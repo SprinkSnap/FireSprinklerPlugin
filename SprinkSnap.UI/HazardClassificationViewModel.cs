@@ -109,13 +109,34 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
     public ICommand CancelCommand { get; }
 
-    public int TotalRoomCount => Rooms.Count;
+    public int TotalRoomCount
+    {
+        get => Rooms.Count;
+        set
+        {
+            // Display-only binding compatibility for WPF controls that attempt source updates.
+        }
+    }
 
-    public int ExceptionRoomCount => Rooms.Count(room => room.RequiresExceptionReview);
+    public int ExceptionRoomCount
+    {
+        get => Rooms.Count(room => room.RequiresExceptionReview);
+        set
+        {
+            // Display-only binding compatibility for WPF controls that attempt source updates.
+        }
+    }
 
-    public int AutoSolvedRoomCount => Rooms.Count(room =>
-        string.Equals(room.LayoutStatus, LayoutStatus.Compliant, StringComparison.Ordinal)
-        && !room.RequiresExceptionReview);
+    public int AutoSolvedRoomCount
+    {
+        get => Rooms.Count(room =>
+            string.Equals(room.LayoutStatus, LayoutStatus.Compliant, StringComparison.Ordinal)
+            && !room.RequiresExceptionReview);
+        set
+        {
+            // Display-only binding compatibility for WPF controls that attempt source updates.
+        }
+    }
 
     public string AverageConfidenceText
     {
@@ -127,6 +148,11 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             }
 
             return Rooms.Average(room => room.LayoutConfidenceScore).ToString("P0", CultureInfo.CurrentCulture);
+        }
+
+        set
+        {
+            // Display-only binding compatibility for WPF controls that attempt source updates.
         }
     }
 
@@ -176,6 +202,11 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
                 + SelectedSprinklerFamily.RevitFamilyPath
                 + " | Type: "
                 + SelectedSprinklerFamily.RevitTypeName;
+        }
+
+        set
+        {
+            // Display-only binding compatibility for WPF controls that attempt source updates.
         }
     }
 
