@@ -169,7 +169,70 @@
             </Border>
         </Grid>
 
-        <Grid Grid.Row="2" Margin="0,0,0,4">
+        <TabControl Grid.Row="2"
+                    Grid.RowSpan="2"
+                    Margin="0,0,0,4"
+                    Background="Transparent"
+                    BorderThickness="0">
+            <TabItem Header="1  Project Setup">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.4*" />
+                            <ColumnDefinition Width="1.1*" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource CardBorder}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Project sprinkler standard" Style="{StaticResource SectionTitle}" />
+                                <TextBlock Grid.Row="1" Text="Set the default manufacturer and sprinkler head criteria for the project. SprinkSnap still filters by room hazard, ceiling, geometry, and listing constraints before recommending a head." Style="{StaticResource MutedText}" Margin="0,0,0,14" />
+                                <Grid Grid.Row="2">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                    <StackPanel Margin="0,0,10,10"><TextBlock Text="Manufacturer" Style="{StaticResource LabelText}" /><ComboBox ItemsSource="{Binding ManufacturerOptions}" SelectedItem="{Binding SelectedManufacturer}" /></StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="0,0,0,10"><TextBlock Text="Category" Style="{StaticResource LabelText}" /><ComboBox ItemsSource="{Binding CategoryOptions}" SelectedItem="{Binding SelectedCategory}" /></StackPanel>
+                                    <StackPanel Grid.Row="1" Margin="0,0,10,0"><TextBlock Text="Orientation" Style="{StaticResource LabelText}" /><ComboBox ItemsSource="{Binding OrientationOptions}" SelectedItem="{Binding SelectedOrientation}" /></StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="1"><TextBlock Text="K-factor" Style="{StaticResource LabelText}" /><ComboBox ItemsSource="{Binding KFactorOptions}" SelectedItem="{Binding SelectedKFactor}" /></StackPanel>
+                                </Grid>
+                                <Grid Grid.Row="3" Margin="0,14,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="1.2*" /><ColumnDefinition Width="2*" /></Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,10,0"><TextBlock Text="Search model / SIN" Style="{StaticResource LabelText}" /><TextBox Text="{Binding SprinklerSearchText, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                                    <StackPanel Grid.Column="1"><TextBlock Text="Selected model / SIN" Style="{StaticResource LabelText}" /><ComboBox DisplayMemberPath="DisplayName" ItemsSource="{Binding SprinklerFamilies}" SelectedItem="{Binding SelectedSprinklerFamily}" /></StackPanel>
+                                </Grid>
+                                <CheckBox Grid.Row="4" Content="Allow compatible alternate manufacturers for room overrides" IsChecked="{Binding AllowAlternateManufacturers}" Margin="0,16,0,0" />
+                            </Grid>
+                        </Border>
+                        <Border Grid.Column="1" Style="{StaticResource CardBorder}"><StackPanel><TextBlock Text="Listing summary" Style="{StaticResource SectionTitle}" /><TextBlock Text="{Binding SelectedFamilyListingSummary}" Style="{StaticResource MutedText}" /></StackPanel></Border>
+                        <Border Grid.Column="2" Style="{StaticResource CardBorder}" Margin="0,0,0,12"><StackPanel><TextBlock Text="Water supply / demand" Style="{StaticResource SectionTitle}" /><TextBlock Text="Static pressure PSI" Style="{StaticResource LabelText}" /><TextBox Text="{Binding StaticPressurePsi, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" /><TextBlock Text="Residual pressure PSI" Style="{StaticResource LabelText}" /><TextBox Text="{Binding ResidualPressurePsi, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" /><TextBlock Text="Flow GPM" Style="{StaticResource LabelText}" /><TextBox Text="{Binding FlowGpm, UpdateSourceTrigger=PropertyChanged}" /></StackPanel></Border>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="2  Rooms + Auto-Layout">
+                <Grid Margin="0,14,0,0">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                    <Border Style="{StaticResource CardBorder}" Margin="0,0,0,12"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Room review and automatic layout" Style="{StaticResource SectionTitle}" /><TextBlock Text="Review extracted rooms, hazard, recommended heads, and layout status. Use Auto-Layout to solve confident rooms." Style="{StaticResource MutedText}" /></StackPanel><TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Margin="12,10,8,0" VerticalAlignment="Top" /><Button Grid.Column="2" Content="Auto-Layout" Style="{StaticResource PrimaryButton}" Command="{Binding AutoLayoutCommand}" VerticalAlignment="Top" Margin="8,10,0,0" /><Button Grid.Column="3" Content="Validate" Command="{Binding ValidateCommand}" VerticalAlignment="Top" Margin="8,10,0,0" /></Grid></Border>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding RoomsView}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="False" SelectionMode="Extended" GridLinesVisibility="Horizontal" AlternatingRowBackground="#F8FAFC" Background="White" BorderBrush="{StaticResource PanelBorderBrush}" BorderThickness="1" RowHeaderWidth="0" RowHeight="96" HeadersVisibility="Column" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Room" Width="2.1*" SortMemberPath="Number"><DataGridTemplateColumn.CellTemplate><DataTemplate DataType="{x:Type ui:RoomHazardReviewItem}"><StackPanel Margin="8,6"><TextBlock FontSize="16" FontWeight="SemiBold"><Run Text="{Binding Number}" /><Run Text=" - " /><Run Text="{Binding Name}" /></TextBlock><TextBlock Text="{Binding OccupancyClassification}" Style="{StaticResource MutedText}" /><TextBlock Style="{StaticResource MutedText}"><Run Text="Area " /><Run Text="{Binding AreaSquareFeet, StringFormat=N0}" /><Run Text=" sq ft | Ceiling " /><Run Text="{Binding CeilingHeightFeet, StringFormat=N1}" /><Run Text=" ft" /></TextBlock></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Hazard + Ceiling" Width="1.7*"><DataGridTemplateColumn.CellTemplate><DataTemplate DataType="{x:Type ui:RoomHazardReviewItem}"><StackPanel Margin="8,6"><TextBlock Text="{Binding CeilingClassification}" FontWeight="SemiBold" /><TextBlock Style="{StaticResource MutedText}"><Run Text="Suggested: " /><Run Text="{Binding SuggestedHazard}" /></TextBlock><ComboBox Width="150" Margin="0,6,0,0" ItemsSource="{Binding DataContext.HazardOptions, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding UserOverride, UpdateSourceTrigger=PropertyChanged}" /></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Recommended Sprinkler" Width="2.2*"><DataGridTemplateColumn.CellTemplate><DataTemplate DataType="{x:Type ui:RoomHazardReviewItem}"><StackPanel Margin="8,6"><TextBlock Text="{Binding AutoSelectedSprinklerName}" FontWeight="SemiBold" TextWrapping="Wrap" /><ComboBox DisplayMemberPath="DisplayName" ItemsSource="{Binding CompatibleSprinklerOptions}" SelectedItem="{Binding SelectedRoomSprinklerFamily, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" /><TextBlock Style="{StaticResource MutedText}"><Run Text="{Binding SprinklerSelectionStatus}" /><Run Text=" | " /><Run Text="{Binding CompatibleSprinklerCount}" /><Run Text=" compatible" /></TextBlock></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Layout Status" Width="1.5*"><DataGridTemplateColumn.CellTemplate><DataTemplate DataType="{x:Type ui:RoomHazardReviewItem}"><StackPanel Margin="8,6"><DockPanel><TextBlock Text="{Binding LayoutStatus}" FontWeight="SemiBold" DockPanel.Dock="Left" /><CheckBox Content="Exception" IsChecked="{Binding RequiresExceptionReview, Mode=OneWay}" IsHitTestVisible="False" Focusable="False" HorizontalAlignment="Right" /></DockPanel><ProgressBar Value="{Binding Room.LayoutConfidenceScore, Mode=OneWay}" Maximum="1" Height="8" Margin="0,8,0,4" /><TextBlock Style="{StaticResource MutedText}"><Run Text="{Binding Room.LayoutConfidenceScore, StringFormat=P0}" /><Run Text=" | " /><Run Text="{Binding ProposedSprinklerCount}" /><Run Text=" heads | " /><Run Text="{Binding PreviewMarkers}" /></TextBlock></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="3  Exceptions + Overrides"><Grid Margin="0,14,0,0"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions><Border Style="{StaticResource CardBorder}" Margin="0,0,0,12"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Exception workflow" Style="{StaticResource SectionTitle}" /><TextBlock Text="Focus on rooms that require designer action or manufacturer overrides." Style="{StaticResource MutedText}" /></StackPanel><CheckBox Grid.Column="1" Content="Review only exceptions" IsChecked="{Binding ReviewOnlyExceptions}" VerticalAlignment="Center" Margin="18,0,0,0" /><Button Grid.Column="2" Content="Reset Sprinklers" Command="{Binding ResetSprinklerOverridesCommand}" VerticalAlignment="Center" Margin="12,0,0,0" /></Grid></Border><DataGrid Grid.Row="1" ItemsSource="{Binding RoomsView}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" AlternatingRowBackground="#F8FAFC" Background="White" BorderBrush="{StaticResource PanelBorderBrush}" BorderThickness="1" RowHeaderWidth="0" RowHeight="84" HeadersVisibility="Column"><DataGrid.Columns><DataGridTextColumn Header="Room" Binding="{Binding Number}" Width="90" IsReadOnly="True" /><DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="1.3*" IsReadOnly="True" /><DataGridTextColumn Header="Issue / Exception Reason" Binding="{Binding ExceptionReason}" Width="2*" IsReadOnly="True" /><DataGridTemplateColumn Header="Compatible Override" Width="2*"><DataGridTemplateColumn.CellTemplate><DataTemplate DataType="{x:Type ui:RoomHazardReviewItem}"><ComboBox DisplayMemberPath="DisplayName" ItemsSource="{Binding CompatibleSprinklerOptions}" SelectedItem="{Binding SelectedRoomSprinklerFamily, UpdateSourceTrigger=PropertyChanged}" Margin="6" /></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn><DataGridCheckBoxColumn Header="Approved" Binding="{Binding IsApproved, UpdateSourceTrigger=PropertyChanged}" Width="110" /></DataGrid.Columns></DataGrid></Grid></TabItem>
+            <TabItem Header="4  Summary + Save"><Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="1.2*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Border Style="{StaticResource CardBorder}"><StackPanel><TextBlock Text="Ready to save" Style="{StaticResource SectionTitle}" /><TextBlock Text="Save approved hazard classifications and generated sprinkler layout data for the next placement workflow." Style="{StaticResource MutedText}" /><Separator Margin="0,16,0,16" /><TextBlock Text="Before saving, review unresolved exceptions and room-specific manufacturer overrides." Style="{StaticResource MutedText}" /><TextBlock Text="{Binding ValidationMessage}" Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" Margin="0,14,0,0" /></StackPanel></Border><Border Grid.Column="1" Style="{StaticResource CardBorder}" Margin="0,0,0,12"><StackPanel><TextBlock Text="Project snapshot" Style="{StaticResource SectionTitle}" /><TextBlock Style="{StaticResource MutedText}"><Run Text="Rooms: " /><Run Text="{Binding TotalRoomCount}" /></TextBlock><TextBlock Style="{StaticResource MutedText}"><Run Text="Exceptions: " /><Run Text="{Binding ExceptionRoomCount}" /></TextBlock><TextBlock Style="{StaticResource MutedText}"><Run Text="Auto-solved: " /><Run Text="{Binding AutoSolvedRoomCount}" /></TextBlock><TextBlock Style="{StaticResource MutedText}"><Run Text="Average confidence: " /><Run Text="{Binding AverageConfidenceText}" /></TextBlock></StackPanel></Border></Grid></TabItem>
+        </TabControl>
+
+        <Grid Grid.Row="2" Margin="0,0,0,4" Visibility="Collapsed">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.1*" />
                 <ColumnDefinition Width="1.4*" />
@@ -312,6 +375,7 @@
         </Grid>
 
         <Border Grid.Row="3"
+                Visibility="Collapsed"
                 Background="{StaticResource PanelBackgroundBrush}"
                 BorderBrush="{StaticResource PanelBorderBrush}"
                 BorderThickness="1"
