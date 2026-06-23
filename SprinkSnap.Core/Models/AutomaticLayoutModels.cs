@@ -39,13 +39,23 @@ public sealed class SprinklerFamilyInfo
 
     public string LibraryName { get; set; } = string.Empty;
 
+    public string Category { get; set; } = string.Empty;
+
+    public string Model { get; set; } = string.Empty;
+
+    public string Sin { get; set; } = string.Empty;
+
     public string FamilyName { get; set; } = string.Empty;
 
-    public string DisplayName => Manufacturer + " - " + FamilyName;
+    public string DisplayName => Manufacturer + " " + Model + " - " + FamilyName;
 
     public double KFactor { get; set; }
 
     public string Orientation { get; set; } = "Pendent";
+
+    public string ResponseType { get; set; } = string.Empty;
+
+    public string CoverageType { get; set; } = string.Empty;
 
     public double MaxSpacingFeet { get; set; }
 

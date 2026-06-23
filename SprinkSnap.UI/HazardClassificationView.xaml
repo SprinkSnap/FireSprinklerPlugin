@@ -204,16 +204,65 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Listed sprinkler family" Style="{StaticResource SectionTitle}" />
-                    <ComboBox Grid.Row="1"
-                              DisplayMemberPath="DisplayName"
-                              ItemsSource="{Binding SprinklerFamilies}"
-                              SelectedItem="{Binding SelectedSprinklerFamily}" />
-                    <TextBlock Grid.Row="2"
+                    <TextBlock Text="Approved listed sprinkler" Style="{StaticResource SectionTitle}" />
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,8,0">
+                            <TextBlock Text="Manufacturer" Style="{StaticResource LabelText}" />
+                            <ComboBox ItemsSource="{Binding ManufacturerOptions}"
+                                      SelectedItem="{Binding SelectedManufacturer}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                            <TextBlock Text="Category" Style="{StaticResource LabelText}" />
+                            <ComboBox ItemsSource="{Binding CategoryOptions}"
+                                      SelectedItem="{Binding SelectedCategory}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Margin="0,0,8,0">
+                            <TextBlock Text="Orientation" Style="{StaticResource LabelText}" />
+                            <ComboBox ItemsSource="{Binding OrientationOptions}"
+                                      SelectedItem="{Binding SelectedOrientation}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="3">
+                            <TextBlock Text="K-factor" Style="{StaticResource LabelText}" />
+                            <ComboBox ItemsSource="{Binding KFactorOptions}"
+                                      SelectedItem="{Binding SelectedKFactor}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Grid.Row="2" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.2*" />
+                            <ColumnDefinition Width="2*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,8,0">
+                            <TextBlock Text="Search model / SIN" Style="{StaticResource LabelText}" />
+                            <TextBox Text="{Binding SprinklerSearchText, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Model / SIN" Style="{StaticResource LabelText}" />
+                            <ComboBox DisplayMemberPath="DisplayName"
+                                      ItemsSource="{Binding SprinklerFamilies}"
+                                      SelectedItem="{Binding SelectedSprinklerFamily}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Grid.Row="3"
                                Text="{Binding SelectedFamilyListingSummary}"
                                Style="{StaticResource MutedText}"
                                Margin="0,8,0,0" />
+                    <TextBlock Grid.Row="4"
+                               Text="SprinkSnap filters compatible manufacturer heads by project preference before auto-layout. Use model/SIN search when the designer already knows the exact head."
+                               Style="{StaticResource MutedText}"
+                               Margin="0,6,0,0" />
                 </Grid>
             </Border>
 
