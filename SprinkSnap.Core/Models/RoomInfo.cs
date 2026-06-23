@@ -93,6 +93,16 @@ public sealed class RoomInfo
 
     public string SelectedSprinklerFamilyName { get; set; } = string.Empty;
 
+    public string AutoSelectedSprinklerName { get; set; } = string.Empty;
+
+    public string SprinklerSelectionStatus { get; set; } = "Not Evaluated";
+
+    public string SprinklerSelectionReason { get; set; } = string.Empty;
+
+    public int CompatibleSprinklerCount { get; set; }
+
+    public string AlternateSprinklerSummary { get; set; } = string.Empty;
+
     public IList<SprinklerPlacementCandidate> ProposedSprinklers { get; set; } = new List<SprinklerPlacementCandidate>();
 
     public IList<LayoutMarker> LayoutPreviewMarkers { get; set; } = new List<LayoutMarker>();
