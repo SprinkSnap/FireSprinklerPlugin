@@ -439,6 +439,11 @@
                                                FontWeight="SemiBold"
                                                Margin="0,6,0,0"
                                                TextWrapping="Wrap" />
+                                    <ComboBox DisplayMemberPath="DisplayName"
+                                              ItemsSource="{Binding CompatibleSprinklerOptions}"
+                                              SelectedItem="{Binding SelectedRoomSprinklerFamily, UpdateSourceTrigger=PropertyChanged}"
+                                              Margin="0,6,0,0"
+                                              ToolTip="Override this room with another compatible manufacturer/model" />
                                     <TextBlock Style="{StaticResource MutedText}">
                                         <Run Text="{Binding SprinklerSelectionStatus}" />
                                         <Run Text=" | " />
