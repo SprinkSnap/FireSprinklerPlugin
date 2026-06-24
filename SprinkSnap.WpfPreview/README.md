@@ -1,7 +1,7 @@
 # SprinkSnap WPF Preview
 
-This standalone WPF app launches `HazardClassificationView` with sample room data and sample
-water demand values. It is intended for UI testing without Autodesk Revit.
+This standalone WPF app launches the `SprinkSnapShellView` so you can preview the SprinkSnap AI
+ribbon/workflow panels without Autodesk Revit.
 
 ## Run
 
@@ -10,7 +10,7 @@ From a Windows machine with Visual Studio 2022 and the **.NET desktop developmen
 1. Open `SprinkSnap.WpfPreview/SprinkSnap.WpfPreview.csproj`.
 2. Set `SprinkSnap.WpfPreview` as the startup project.
 3. Build the project.
-4. Press `F5` to launch the dialog with sample data.
+4. Press `F5` to launch the SprinkSnap AI shell preview.
 
 You can also run it from the repository root:
 
@@ -43,6 +43,7 @@ The app also displays the exception in a message box when possible.
 - This preview references `SprinkSnap.Core` and `SprinkSnap.UI` as normal projects so
   Visual Studio WPF temporary builds can resolve all namespaces.
 - It does not reference Autodesk Revit API assemblies.
-- Save/Cancel closes the preview window only; no Revit parameters are written.
-- The production Revit command remains `SprinkSnap.Revit/HazardClassificationCommand.cs`.
+- The preview shows the nine workflow/ribbon panels: Analyze Model, Hazard Review, Sprinkler Review,
+  Water Supply, Generate Design, Hydraulics, Materials, Reports, and Settings.
+- The production Revit add-in entry point is `SprinkSnap.Revit/SprinkSnapApplication.cs`.
 

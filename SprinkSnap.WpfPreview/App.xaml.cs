@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
-using FireSprinklerPlugin.SprinkSnap.UI;
+using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 namespace FireSprinklerPlugin.SprinkSnap.WpfPreview;
 
@@ -41,22 +41,19 @@ public partial class App : Application
         {
             base.OnStartup(e);
 
-            HazardClassificationViewModel viewModel = new HazardClassificationViewModel(
-                PreviewSampleDataFactory.CreateRooms())
+            Window previewWindow = new Window
             {
-                StaticPressurePsi = "72",
-                ResidualPressurePsi = "48",
-                FlowGpm = "1250"
+                Title = "SprinkSnap AI - WPF Preview",
+                Width = 1440,
+                Height = 860,
+                MinWidth = 1180,
+                MinHeight = 720,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                Content = new SprinkSnapShellView()
             };
 
-            HazardClassificationView view = new HazardClassificationView(viewModel)
-            {
-                Title = "SprinkSnap Hazard Classification Review - WPF Preview",
-                UseDialogResult = false
-            };
-
-            MainWindow = view;
-            view.Show();
+            MainWindow = previewWindow;
+            previewWindow.Show();
         }
         catch (Exception ex)
         {
