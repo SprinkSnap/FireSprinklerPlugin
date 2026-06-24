@@ -37,7 +37,7 @@
                                     Padding="10,6"
                                     Margin="0,0,8,0">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding ., Mode=OneWay}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
                                     <TextBlock Text="Ribbon panel" Foreground="#CBD5E1" FontSize="10" />
                                 </StackPanel>
                             </Border>
@@ -63,8 +63,14 @@
                 <StackPanel>
                     <TextBlock Text="Project Navigation" FontWeight="SemiBold" Margin="0,0,0,10" />
                     <ListBox ItemsSource="{Binding NavigationItems}"
-                             SelectedItem="{Binding SelectedNavigationItem}"
-                             BorderThickness="0" />
+                             SelectedItem="{Binding SelectedNavigationItem, Mode=TwoWay}"
+                             BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding ., Mode=OneWay}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </StackPanel>
             </Border>
 
@@ -110,7 +116,7 @@
                                             <DataTemplate>
                                                 <TextBlock Foreground="#1E40AF" TextWrapping="Wrap" Margin="0,0,0,4">
                                                     <Run Text="• " />
-                                                    <Run Text="{Binding}" />
+                                                    <Run Text="{Binding ., Mode=OneWay}" />
                                                 </TextBlock>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
