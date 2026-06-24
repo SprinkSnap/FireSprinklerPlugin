@@ -30,6 +30,8 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private string flowGpm = string.Empty;
     private bool allowAlternateManufacturers = true;
     private bool reviewOnlyExceptions;
+    private bool isEmbeddedInShell;
+    private int selectedTabIndex;
     private SprinklerFamilyInfo selectedSprinklerFamily;
     private WaterDemandInfo approvedWaterDemand = new WaterDemandInfo();
     private readonly IReadOnlyList<SprinklerFamilyInfo> allSprinklerFamilies;
@@ -359,6 +361,26 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
                 RoomsView.Refresh();
             }
         }
+    }
+
+    public bool IsEmbeddedInShell
+    {
+        get => isEmbeddedInShell;
+        set
+        {
+            if (SetField(ref isEmbeddedInShell, value))
+            {
+                OnPropertyChanged(nameof(ShowDialogActions));
+            }
+        }
+    }
+
+    public bool ShowDialogActions => !IsEmbeddedInShell;
+
+    public int SelectedTabIndex
+    {
+        get => selectedTabIndex;
+        set => SetField(ref selectedTabIndex, value);
     }
 
     public WaterDemandInfo ApprovedWaterDemand => approvedWaterDemand;

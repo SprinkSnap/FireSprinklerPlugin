@@ -1,11 +1,31 @@
 using System.Collections.Generic;
+using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core;
+using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.WpfPreview;
 
 public static class PreviewSampleDataFactory
 {
+    public static SprinkSnapProjectState CreateProjectState()
+    {
+        SprinkSnapProjectState state = new SprinkSnapProjectState();
+        foreach (RoomInfo room in CreateRooms())
+        {
+            state.Rooms.Add(room);
+        }
+
+        state.WaterSupply.StaticPressurePsi = 85;
+        state.WaterSupply.ResidualPressurePsi = 65;
+        state.WaterSupply.FlowAtResidualGpm = 1200;
+        state.WaterSupply.HydrantTestDate = System.DateTime.Today.AddMonths(-2);
+        state.ModelAnalysis = new ModelAnalysisEngine().Analyze(state);
+        state.ModelAnalysis.LinkedModelCount = 1;
+        state.ModelAnalysis.ExistingSprinklerCount = 12;
+        return state;
+    }
+
     public static IReadOnlyList<RoomInfo> CreateRooms()
     {
         IRoomAnalyzer analyzer = new RoomAnalyzer();

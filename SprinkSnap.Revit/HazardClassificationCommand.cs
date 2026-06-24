@@ -55,7 +55,7 @@ public sealed class HazardClassificationCommand : IExternalCommand
                 new SprinklerFamilySelector().GetAvailableFamilies(),
                 sprinklerFamilyScanner.ScanLoadedSprinklerFamilies(document));
             HazardClassificationViewModel viewModel = new HazardClassificationViewModel(rooms, sprinklerFamilies);
-            HazardClassificationView view = new HazardClassificationView(viewModel);
+            HazardClassificationWindow view = new HazardClassificationWindow(viewModel);
             SetRevitOwner(view, uiApplication);
 
             bool? dialogResult = view.ShowDialog();

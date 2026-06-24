@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
@@ -8,12 +10,17 @@ namespace FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 {
+    private readonly SprinkSnapShellContext context;
     private string selectedNavigationItem = "Analyze Model";
     private SprinkSnapModulePanel selectedModulePanel;
-    private string actionFeedback = "Select a workflow panel or click an action button to preview the module workspace.";
+    private string actionFeedback = "Select a workflow panel to open the module workspace.";
+    private FrameworkElement activeModuleContent;
+    private bool showModuleDashboard = true;
 
-    public SprinkSnapShellViewModel()
+    public SprinkSnapShellViewModel(SprinkSnapShellContext context = null)
     {
+        this.context = context ?? SprinkSnapShellContext.CreateEmpty();
+
         WorkflowSteps = new ObservableCollection<WorkflowStepState>
         {
             new WorkflowStepState { Step = SprinkSnapWorkflowStep.AnalyzeModel, Status = WorkflowStepStatus.NotStarted, Summary = "Model analysis" },
@@ -55,10 +62,13 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         selectedModulePanel = ModulePanels[0];
         ModuleCapabilities = new ObservableCollection<string>();
         OpenModuleCommand = new ShellRelayCommand(OpenModule);
+        ShowDashboardCommand = new ShellRelayCommand(_ => ShowDashboard());
         UpdateModuleCapabilities();
     }
 
     public event PropertyChangedEventHandler PropertyChanged;
+
+    public SprinkSnapShellContext Context => context;
 
     public ObservableCollection<WorkflowStepState> WorkflowSteps { get; }
 
@@ -69,6 +79,31 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     public ObservableCollection<string> ModuleCapabilities { get; }
 
     public ICommand OpenModuleCommand { get; }
+
+    public ICommand ShowDashboardCommand { get; }
+
+    public FrameworkElement ActiveModuleContent
+    {
+        get => activeModuleContent;
+        private set
+        {
+            activeModuleContent = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool ShowModuleDashboard
+    {
+        get => showModuleDashboard;
+        private set
+        {
+            showModuleDashboard = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ShowModuleWorkspace));
+        }
+    }
+
+    public bool ShowModuleWorkspace => !ShowModuleDashboard;
 
     public string SelectedNavigationItem
     {
@@ -82,14 +117,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
             selectedNavigationItem = value;
             selectedModulePanel = FindModulePanel(value);
-            actionFeedback = "Opened " + selectedModulePanel.Title + " workspace from navigation.";
-            UpdateModuleCapabilities();
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(MainWorkspaceTitle));
-            OnPropertyChanged(nameof(MainWorkspaceDescription));
-            OnPropertyChanged(nameof(SelectedModulePanel));
-            OnPropertyChanged(nameof(CurrentActionText));
-            OnPropertyChanged(nameof(ActionFeedback));
+            LoadModuleWorkspace(selectedModulePanel);
         }
     }
 
@@ -116,11 +144,25 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         }
     }
 
-    public string ComplianceStatus => "Designer approval required";
+    public string ComplianceStatus => context.ProjectState.Rooms.Count > 0
+        ? "Designer approval required"
+        : "Run Analyze Model to begin.";
 
-    public string WarningSummary => "Run Analyze Model to populate warnings and exceptions.";
+    public string WarningSummary => context.ProjectState.Warnings.Count > 0
+        ? string.Join("; ", context.ProjectState.Warnings.Select(warning => warning.Message))
+        : "Run Analyze Model to populate warnings and exceptions.";
 
-    public string ProgressSummary => "Workflow not started.";
+    public string ProgressSummary => context.ProjectState.Rooms.Count > 0
+        ? context.ProjectState.Rooms.Count + " rooms loaded into the current SprinkSnap session."
+        : "Workflow not started.";
+
+    public void OpenInitialModule(string moduleTitle)
+    {
+        SprinkSnapModulePanel panel = FindModulePanel(moduleTitle);
+        selectedModulePanel = panel;
+        selectedNavigationItem = panel.Title;
+        LoadModuleWorkspace(panel);
+    }
 
     private void OnPropertyChanged([CallerMemberName] string propertyName = null)
     {
@@ -134,7 +176,14 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
         selectedModulePanel = panel;
         selectedNavigationItem = panel.Title;
-        actionFeedback = panel.ActionText + " selected. The production module view will load here inside Revit.";
+        LoadModuleWorkspace(panel);
+    }
+
+    private void LoadModuleWorkspace(SprinkSnapModulePanel panel)
+    {
+        ActiveModuleContent = ModuleWorkspaceFactory.CreateWorkspace(panel.Title, context);
+        ShowModuleDashboard = false;
+        actionFeedback = panel.Title + " workspace loaded.";
         UpdateModuleCapabilities();
 
         OnPropertyChanged(nameof(SelectedNavigationItem));
@@ -142,6 +191,16 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(MainWorkspaceTitle));
         OnPropertyChanged(nameof(MainWorkspaceDescription));
         OnPropertyChanged(nameof(CurrentActionText));
+        OnPropertyChanged(nameof(ActionFeedback));
+        OnPropertyChanged(nameof(ComplianceStatus));
+        OnPropertyChanged(nameof(WarningSummary));
+        OnPropertyChanged(nameof(ProgressSummary));
+    }
+
+    private void ShowDashboard()
+    {
+        ShowModuleDashboard = true;
+        actionFeedback = "Select a workflow panel to open the module workspace.";
         OnPropertyChanged(nameof(ActionFeedback));
     }
 
@@ -282,4 +341,3 @@ public sealed class ShellRelayCommand : ICommand
         execute(parameter);
     }
 }
-

@@ -1,26 +1,40 @@
 using System.Windows;
+using System.Windows.Controls;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI;
 
-public partial class HazardClassificationView : Window
+public partial class HazardClassificationView : UserControl
 {
-    public HazardClassificationView(HazardClassificationViewModel viewModel)
+    public HazardClassificationView()
     {
         InitializeComponent();
+    }
+
+    public HazardClassificationView(HazardClassificationViewModel viewModel)
+        : this()
+    {
+        Initialize(viewModel);
+    }
+
+    public void Initialize(HazardClassificationViewModel viewModel)
+    {
         DataContext = viewModel;
         viewModel.RequestClose += OnRequestClose;
     }
 
-    public bool UseDialogResult { get; set; } = true;
-
     private void OnRequestClose(object sender, bool dialogResult)
     {
-        if (UseDialogResult)
+        Window hostWindow = Window.GetWindow(this);
+        if (hostWindow == null)
         {
-            DialogResult = dialogResult;
+            return;
         }
 
-        Close();
+        if (hostWindow is HazardClassificationWindow classificationWindow && classificationWindow.UseDialogResult)
+        {
+            classificationWindow.DialogResult = dialogResult;
+        }
+
+        hostWindow.Close();
     }
 }
-

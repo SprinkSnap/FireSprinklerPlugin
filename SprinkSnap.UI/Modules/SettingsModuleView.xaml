@@ -1,0 +1,25 @@
+<UserControl x:Class="FireSprinklerPlugin.SprinkSnap.UI.Modules.SettingsModuleView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="4" MaxWidth="720">
+            <TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,16" />
+
+            <TextBlock Text="Default manufacturer" Margin="0,0,0,4" />
+            <ComboBox ItemsSource="{Binding ManufacturerOptions}"
+                      SelectedItem="{Binding DefaultManufacturer}"
+                      Height="34"
+                      Margin="0,0,0,12" />
+
+            <CheckBox Content="Allow compatible alternate manufacturers for room overrides"
+                      IsChecked="{Binding AllowAlternateManufacturers}"
+                      Margin="0,0,0,12" />
+
+            <TextBlock Text="AI service endpoint (future)" Margin="0,0,0,4" />
+            <TextBox Text="{Binding AiServiceEndpoint, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,16" />
+
+            <Button Content="Save Settings" Command="{Binding SaveCommand}" Padding="14,8" HorizontalAlignment="Left" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

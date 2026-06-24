@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
+using FireSprinklerPlugin.SprinkSnap.WpfPreview;
 
 namespace FireSprinklerPlugin.SprinkSnap.WpfPreview;
 
@@ -41,6 +43,15 @@ public partial class WpfPreviewApplication : Application
         {
             base.OnStartup(e);
 
+            SprinkSnapProjectState projectState = PreviewSampleDataFactory.CreateProjectState();
+            SprinkSnapShellContext context = new SprinkSnapShellContext(projectState)
+            {
+                IsPreviewMode = true
+            };
+
+            SprinkSnapShellView shellView = new SprinkSnapShellView(context);
+            shellView.OpenModule(SprinkSnapWorkflowStep.AnalyzeModel);
+
             Window previewWindow = new Window
             {
                 Title = "SprinkSnap AI - WPF Preview",
@@ -49,7 +60,7 @@ public partial class WpfPreviewApplication : Application
                 MinWidth = 1180,
                 MinHeight = 720,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
-                Content = new SprinkSnapShellView()
+                Content = shellView
             };
 
             MainWindow = previewWindow;
@@ -85,4 +96,3 @@ public partial class WpfPreviewApplication : Application
             MessageBoxImage.Error);
     }
 }
-
