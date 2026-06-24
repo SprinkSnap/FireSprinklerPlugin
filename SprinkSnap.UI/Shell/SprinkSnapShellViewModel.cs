@@ -35,6 +35,19 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
             "Reports",
             "Settings"
         };
+
+        ModulePanels = new ObservableCollection<SprinkSnapModulePanel>
+        {
+            new SprinkSnapModulePanel("Analyze Model", "Extract rooms, spaces, ceilings, levels, linked models, phases, obstructions, and existing sprinklers.", "Analyze Revit Model"),
+            new SprinkSnapModulePanel("Hazard Review", "Review AI-suggested NFPA 13 hazard classifications with confidence, reasoning, and designer override.", "Open Hazard Review"),
+            new SprinkSnapModulePanel("Sprinkler Review", "Select project manufacturer standards, review recommended heads, and override compatible room heads.", "Review Sprinklers"),
+            new SprinkSnapModulePanel("Water Supply", "Enter hydrant test data, static pressure, residual pressure, and flow at residual.", "Enter Water Supply"),
+            new SprinkSnapModulePanel("Generate Design", "Generate sprinkler layout candidates after analysis, hazard approvals, sprinkler selections, and water supply are complete.", "Generate Sprinkler Design"),
+            new SprinkSnapModulePanel("Hydraulics", "Build the hydraulic network, calculate demand, critical path, pressure loss, and safety margin.", "Run Hydraulics"),
+            new SprinkSnapModulePanel("Materials", "Generate sprinkler, pipe, fitting, valve, and riser material takeoff quantities.", "Open Takeoff"),
+            new SprinkSnapModulePanel("Reports", "Export design summary, hydraulic report, node diagram, and material takeoff PDFs.", "Export Reports"),
+            new SprinkSnapModulePanel("Settings", "Manage company standards, manufacturer catalogs, Revit family mappings, and AI service settings.", "Open Settings")
+        };
     }
 
     public event PropertyChangedEventHandler PropertyChanged;
@@ -42,6 +55,8 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     public ObservableCollection<WorkflowStepState> WorkflowSteps { get; }
 
     public ObservableCollection<string> NavigationItems { get; }
+
+    public ObservableCollection<SprinkSnapModulePanel> ModulePanels { get; }
 
     public string SelectedNavigationItem
     {
@@ -63,7 +78,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     public string MainWorkspaceTitle => SelectedNavigationItem;
 
     public string MainWorkspaceDescription =>
-        "This production shell hosts the " + SelectedNavigationItem + " workflow. Module-specific WPF views plug into this center workspace.";
+        "Choose a workflow panel below or from the left navigation. Each panel will host its production workspace inside this center area.";
 
     public string ComplianceStatus => "Designer approval required";
 
@@ -75,5 +90,21 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
+}
+
+public sealed class SprinkSnapModulePanel
+{
+    public SprinkSnapModulePanel(string title, string description, string actionText)
+    {
+        Title = title;
+        Description = description;
+        ActionText = actionText;
+    }
+
+    public string Title { get; set; }
+
+    public string Description { get; set; }
+
+    public string ActionText { get; set; }
 }
 
