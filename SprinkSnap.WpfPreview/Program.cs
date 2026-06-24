@@ -7,7 +7,7 @@ public static class Program
     [STAThread]
     public static int Main()
     {
-        App app = new App();
+        WpfPreviewApplication app = new WpfPreviewApplication();
         app.Run();
         return 0;
     }

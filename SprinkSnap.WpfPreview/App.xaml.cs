@@ -6,7 +6,7 @@ using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 namespace FireSprinklerPlugin.SprinkSnap.WpfPreview;
 
-public partial class App : Application
+public partial class WpfPreviewApplication : Application
 {
     private static readonly string ErrorLogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -14,7 +14,7 @@ public partial class App : Application
         "WpfPreview",
         "startup-error.log");
 
-    public App()
+    public WpfPreviewApplication()
     {
         DispatcherUnhandledException += (_, e) =>
         {
