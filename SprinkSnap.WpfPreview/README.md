@@ -45,5 +45,7 @@ The app also displays the exception in a message box when possible.
 - It does not reference Autodesk Revit API assemblies.
 - The preview shows the nine workflow/ribbon panels: Analyze Model, Hazard Review, Sprinkler Review,
   Water Supply, Generate Design, Hydraulics, Materials, Reports, and Settings.
+- The same panels are displayed as large tiles in the center workspace so they are easy to see in
+  the standalone WPF preview.
 - The production Revit add-in entry point is `SprinkSnap.Revit/SprinkSnapApplication.cs`.
 
