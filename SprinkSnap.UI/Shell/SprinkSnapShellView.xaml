@@ -23,12 +23,12 @@
                            Foreground="White"
                            FontSize="20"
                            FontWeight="SemiBold" />
-                <TextBlock Text="Ribbon Panels"
+                <TextBlock Text="Workflow Progress"
                            Foreground="#CBD5E1"
                            FontSize="11"
                            FontWeight="SemiBold"
                            Margin="0,12,0,6" />
-                <ItemsControl ItemsSource="{Binding NavigationItems}">
+                <ItemsControl ItemsSource="{Binding WorkflowSteps}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal" />
@@ -41,8 +41,13 @@
                                     Padding="10,6"
                                     Margin="0,0,8,0">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding ., Mode=OneWay}" Foreground="White" FontSize="11" FontWeight="SemiBold" />
-                                    <TextBlock Text="Ribbon panel" Foreground="#CBD5E1" FontSize="10" />
+                                    <TextBlock Text="{Binding Summary, Mode=OneWay}"
+                                               Foreground="White"
+                                               FontSize="11"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="Workflow step"
+                                               Foreground="#CBD5E1"
+                                               FontSize="10" />
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
@@ -53,7 +58,7 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="210" />
+                <ColumnDefinition Width="230" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="280" />
             </Grid.ColumnDefinitions>
@@ -72,12 +77,38 @@
                             Padding="10,6" />
                     <StackPanel>
                         <TextBlock Text="Project Navigation" FontWeight="SemiBold" Margin="0,0,0,10" />
-                        <ListBox ItemsSource="{Binding NavigationItems}"
-                                 SelectedItem="{Binding SelectedNavigationItem, Mode=TwoWay}"
+                        <ListBox ItemsSource="{Binding ModulePanels}"
+                                 SelectedItem="{Binding SelectedModulePanel, Mode=TwoWay}"
                                  BorderThickness="0">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding ., Mode=OneWay}" />
+                                    <StackPanel Margin="0,2,0,2">
+                                        <DockPanel>
+                                            <TextBlock Text="{Binding StatusLabel, Mode=OneWay}"
+                                                       Foreground="{Binding StatusBrush, Mode=OneWay}"
+                                                       FontSize="10"
+                                                       FontWeight="SemiBold"
+                                                       DockPanel.Dock="Right" />
+                                            <TextBlock Text="{Binding Title, Mode=OneWay}"
+                                                       FontWeight="SemiBold" />
+                                        </DockPanel>
+                                        <TextBlock Text="{Binding BlockReason, Mode=OneWay}"
+                                                   Foreground="#B45309"
+                                                   FontSize="10"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,2,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsUnlocked}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
@@ -162,33 +193,69 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Width="255"
-                                                Height="158"
+                                                Height="180"
                                                 Background="#F8FAFC"
                                                 BorderBrush="#CBD5E1"
                                                 BorderThickness="1"
                                                 CornerRadius="12"
                                                 Padding="16"
                                                 Margin="0,0,14,14">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsUnlocked}" Value="False">
+                                                            <Setter Property="Opacity" Value="0.72" />
+                                                            <Setter Property="Background" Value="#F1F5F9" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
                                             <Grid>
                                                 <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
                                                     <RowDefinition Height="Auto" />
                                                     <RowDefinition Height="*" />
                                                     <RowDefinition Height="Auto" />
                                                 </Grid.RowDefinitions>
 
-                                                <TextBlock Text="{Binding Title}"
-                                                           FontWeight="SemiBold"
-                                                           FontSize="17"
-                                                           Foreground="#0F172A" />
+                                                <DockPanel>
+                                                    <TextBlock Text="{Binding StatusLabel, Mode=OneWay}"
+                                                               Foreground="{Binding StatusBrush, Mode=OneWay}"
+                                                               FontSize="11"
+                                                               FontWeight="SemiBold"
+                                                               DockPanel.Dock="Right" />
+                                                    <TextBlock Text="{Binding Title, Mode=OneWay}"
+                                                               FontWeight="SemiBold"
+                                                               FontSize="17"
+                                                               Foreground="#0F172A" />
+                                                </DockPanel>
                                                 <TextBlock Grid.Row="1"
-                                                           Text="{Binding Description}"
+                                                           Text="{Binding BlockReason, Mode=OneWay}"
+                                                           Foreground="#B45309"
+                                                           FontSize="11"
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,6,0,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsUnlocked}" Value="False">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Grid.Row="2"
+                                                           Text="{Binding Description, Mode=OneWay}"
                                                            Foreground="#475569"
                                                            TextWrapping="Wrap"
                                                            Margin="0,8,0,10" />
-                                                <Button Grid.Row="2"
-                                                        Content="{Binding ActionText}"
+                                                <Button Grid.Row="3"
+                                                        Content="{Binding ActionText, Mode=OneWay}"
                                                         Command="{Binding DataContext.OpenModuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
+                                                        IsEnabled="{Binding IsUnlocked}"
                                                         Background="#2563EB"
                                                         Foreground="White"
                                                         FontWeight="SemiBold"

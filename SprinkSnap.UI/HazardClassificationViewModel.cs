@@ -55,7 +55,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         ApplySprinklerFamilyFilters();
 
         Rooms = new ObservableCollection<RoomHazardReviewItem>(
-            rooms.Select(PrepareRoomForAssistant).Select(room => new RoomHazardReviewItem(room)));
+            rooms.Select(PrepareRoomForAssistant).Select(room => new RoomHazardReviewItem(room, NotifyWorkflowProgressChanged)));
 
         HazardOptions = new ObservableCollection<string>(HazardClassification.All);
         HazardFilters = new ObservableCollection<string>(new[] { "All" }.Concat(HazardClassification.All));
@@ -74,6 +74,8 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler PropertyChanged;
+
+    public event EventHandler WorkflowProgressChanged;
 
     public event EventHandler<bool> RequestClose;
 
@@ -451,9 +453,8 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         }
 
         RoomsView?.Refresh();
+        NotifyWorkflowProgressChanged();
     }
-
-    private ProjectSprinklerStandard CreateProjectSprinklerStandard()
     {
         return new ProjectSprinklerStandard
         {
@@ -608,6 +609,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
         UpdateRoomSprinklerSelections();
         ValidationMessage = "All suggested classifications were accepted. Review remains editable until Save.";
+        NotifyWorkflowProgressChanged();
     }
 
     private void ApplyBatchOrCurrentOverrides()
@@ -630,6 +632,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
         UpdateRoomSprinklerSelections();
         ValidationMessage = updatedCount + " visible room(s) marked approved.";
+        NotifyWorkflowProgressChanged();
     }
 
     private void ValidateLayouts()
@@ -711,6 +714,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
         UpdateRoomSprinklerSelections();
         ValidationMessage = "Room sprinkler overrides were reset to the project default recommendation.";
+        NotifyWorkflowProgressChanged();
     }
 
     private static void ApplyLayoutResult(RoomHazardReviewItem item, LayoutValidationResult result)
@@ -738,13 +742,31 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             return;
         }
 
-        if (!TryCreateWaterDemandInfo(out WaterDemandInfo waterDemandInfo))
+        if (!IsEmbeddedInShell)
         {
+            if (!TryCreateWaterDemandInfo(out WaterDemandInfo waterDemandInfo))
+            {
+                return;
+            }
+
+            approvedWaterDemand = waterDemandInfo;
+        }
+
+        ValidationMessage = string.Empty;
+
+        foreach (RoomHazardReviewItem room in Rooms)
+        {
+            room.Room.ApprovedHazardClassification = room.UserOverride;
+            room.Room.DesignerApproved = room.IsApproved;
+        }
+
+        if (IsEmbeddedInShell)
+        {
+            ValidationMessage = "Hazard and sprinkler selections saved to the current SprinkSnap session.";
+            NotifyWorkflowProgressChanged();
             return;
         }
 
-        approvedWaterDemand = waterDemandInfo;
-        ValidationMessage = string.Empty;
         RequestClose?.Invoke(this, true);
     }
 
@@ -824,6 +846,11 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         return true;
     }
 
+    private void NotifyWorkflowProgressChanged()
+    {
+        WorkflowProgressChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     private void OnPropertyChanged([CallerMemberName] string propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -840,14 +867,16 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
 public sealed class RoomHazardReviewItem : INotifyPropertyChanged
 {
+    private readonly Action workflowSyncRequested;
     private string userOverride;
     private bool isApproved;
     private bool updatingCompatibleSprinklerOptions;
     private SprinklerFamilyInfo selectedRoomSprinklerFamily;
 
-    public RoomHazardReviewItem(RoomInfo room)
+    public RoomHazardReviewItem(RoomInfo room, Action workflowSyncRequested = null)
     {
         Room = room;
+        this.workflowSyncRequested = workflowSyncRequested;
         userOverride = string.IsNullOrWhiteSpace(room.ApprovedHazardClassification)
             ? room.SuggestedHazardClassification
             : room.ApprovedHazardClassification;
@@ -1073,6 +1102,8 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
             if (SetField(ref userOverride, value))
             {
                 IsApproved = false;
+                SyncApprovedHazardToRoom();
+                workflowSyncRequested?.Invoke();
             }
         }
     }
@@ -1080,7 +1111,23 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
     public bool IsApproved
     {
         get => isApproved;
-        set => SetField(ref isApproved, value);
+        set
+        {
+            if (SetField(ref isApproved, value))
+            {
+                Room.DesignerApproved = value;
+                SyncApprovedHazardToRoom();
+                workflowSyncRequested?.Invoke();
+            }
+        }
+    }
+
+    private void SyncApprovedHazardToRoom()
+    {
+        if (isApproved && HazardClassification.IsSupported(userOverride))
+        {
+            Room.ApprovedHazardClassification = userOverride;
+        }
     }
 
     public void SetCompatibleSprinklerOptions(

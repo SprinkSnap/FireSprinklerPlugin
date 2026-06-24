@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core;
@@ -18,6 +19,8 @@ public sealed class SprinkSnapShellContext
             ?? new SprinklerFamilySelector().GetAvailableFamilies().ToList();
     }
 
+    public event EventHandler WorkflowChanged;
+
     public SprinkSnapProjectState ProjectState { get; }
 
     public IReadOnlyList<SprinklerFamilyInfo> SprinklerFamilies { get; }
@@ -27,6 +30,11 @@ public sealed class SprinkSnapShellContext
     public static SprinkSnapShellContext CreateEmpty()
     {
         return new SprinkSnapShellContext(new SprinkSnapProjectState());
+    }
+
+    public void RequestWorkflowRefresh()
+    {
+        WorkflowChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public HazardClassificationViewModel GetOrCreateHazardViewModel()
@@ -40,6 +48,7 @@ public sealed class SprinkSnapShellContext
         {
             IsEmbeddedInShell = true
         };
+        hazardViewModel.WorkflowProgressChanged += (_, _) => RequestWorkflowRefresh();
 
         return hazardViewModel;
     }

@@ -9,6 +9,7 @@ using System.Windows.Input;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Modules;
@@ -80,6 +81,8 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
         StatusMessage = context.IsPreviewMode
             ? "Preview analysis complete using sample room data."
             : "Revit model analysis complete. Review extracted rooms below.";
+        context.ProjectState.SessionProgress.ModelAnalysisComplete = true;
+        context.RequestWorkflowRefresh();
         RefreshSummary();
     }
 
@@ -197,6 +200,14 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         ValidationSummary = result.IsAdequate
             ? "Water supply is adequate. Safety margin: " + result.SafetyMarginPsi.ToString("N1") + " PSI."
             : "Water supply warning: " + string.Join(" ", result.Warnings);
+
+        if (input.StaticPressurePsi.HasValue
+            && input.ResidualPressurePsi.HasValue
+            && input.FlowAtResidualGpm.HasValue)
+        {
+            context.ProjectState.SessionProgress.WaterSupplyComplete = true;
+            context.RequestWorkflowRefresh();
+        }
     }
 
     private static double? TryParse(string value)
@@ -276,6 +287,8 @@ public sealed class GenerateDesignModuleViewModel : ModuleViewModelBase
         }
 
         StatusMessage = "Generated layout candidates for " + generatedRooms + " room(s). Open Hazard Review to validate.";
+        context.ProjectState.SessionProgress.DesignGenerated = generatedRooms > 0;
+        context.RequestWorkflowRefresh();
         OnPropertyChanged(nameof(RoomCount));
         OnPropertyChanged(nameof(ApprovedRoomCount));
         OnPropertyChanged(nameof(HasWaterSupply));
@@ -311,6 +324,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
     private void Calculate()
     {
         result = hydraulicEngine.Calculate(context.ProjectState.Rooms, context.ProjectState.WaterSupply);
+        context.ProjectState.SessionProgress.HydraulicsComplete = true;
+        context.RequestWorkflowRefresh();
         OnPropertyChanged(nameof(TotalFlowGpm));
         OnPropertyChanged(nameof(SystemDemandPsi));
         OnPropertyChanged(nameof(AvailablePressurePsi));
@@ -342,6 +357,9 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
         {
             Items.Add(item);
         }
+
+        context.ProjectState.SessionProgress.MaterialsComplete = Items.Count > 0;
+        context.RequestWorkflowRefresh();
     }
 }
 
@@ -410,6 +428,8 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
             request);
 
         StatusMessage = "Prepared reports in " + OutputFolder + ": " + string.Join(", ", reports);
+        context.ProjectState.SessionProgress.ReportsExported = reports.Count > 0;
+        context.RequestWorkflowRefresh();
     }
 }
 
@@ -478,6 +498,9 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         HazardClassificationViewModel hazardViewModel = context.GetOrCreateHazardViewModel();
         hazardViewModel.SelectedManufacturer = DefaultManufacturer;
         hazardViewModel.AllowAlternateManufacturers = AllowAlternateManufacturers;
+        context.ProjectState.SessionProgress.SprinklerReviewComplete =
+            SprinkSnapWorkflowGate.IsSprinklerReviewComplete(context.ProjectState);
+        context.RequestWorkflowRefresh();
         StatusMessage = "Project settings saved for this SprinkSnap session.";
     }
 }

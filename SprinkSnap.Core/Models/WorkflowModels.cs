@@ -34,6 +34,25 @@ public sealed class WorkflowStepState
     public string Summary { get; set; } = string.Empty;
 }
 
+public sealed class SprinkSnapSessionProgress
+{
+    public bool ModelAnalysisComplete { get; set; }
+
+    public bool HazardReviewComplete { get; set; }
+
+    public bool SprinklerReviewComplete { get; set; }
+
+    public bool WaterSupplyComplete { get; set; }
+
+    public bool DesignGenerated { get; set; }
+
+    public bool HydraulicsComplete { get; set; }
+
+    public bool MaterialsComplete { get; set; }
+
+    public bool ReportsExported { get; set; }
+}
+
 public sealed class SprinkSnapProjectState
 {
     public IList<WorkflowStepState> Workflow { get; set; } = new List<WorkflowStepState>();
@@ -41,6 +60,8 @@ public sealed class SprinkSnapProjectState
     public ModelAnalysisSummary ModelAnalysis { get; set; } = new ModelAnalysisSummary();
 
     public WaterSupplyInput WaterSupply { get; set; } = new WaterSupplyInput();
+
+    public SprinkSnapSessionProgress SessionProgress { get; set; } = new SprinkSnapSessionProgress();
 
     public IList<RoomInfo> Rooms { get; set; } = new List<RoomInfo>();
 

@@ -23,6 +23,7 @@ public static class PreviewSampleDataFactory
         state.ModelAnalysis = new ModelAnalysisEngine().Analyze(state);
         state.ModelAnalysis.LinkedModelCount = 1;
         state.ModelAnalysis.ExistingSprinklerCount = 12;
+        state.SessionProgress.ModelAnalysisComplete = true;
         return state;
     }
 

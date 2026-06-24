@@ -50,7 +50,6 @@ public partial class WpfPreviewApplication : Application
             };
 
             SprinkSnapShellView shellView = new SprinkSnapShellView(context);
-            shellView.OpenModule(SprinkSnapWorkflowStep.AnalyzeModel);
 
             Window previewWindow = new Window
             {

@@ -4,14 +4,15 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 {
     private readonly SprinkSnapShellContext context;
-    private string selectedNavigationItem = "Analyze Model";
     private SprinkSnapModulePanel selectedModulePanel;
     private string actionFeedback = "Select a workflow panel to open the module workspace.";
     private FrameworkElement activeModuleContent;
@@ -20,49 +21,27 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     public SprinkSnapShellViewModel(SprinkSnapShellContext context = null)
     {
         this.context = context ?? SprinkSnapShellContext.CreateEmpty();
+        context.WorkflowChanged += (_, _) => RefreshWorkflowGates();
 
-        WorkflowSteps = new ObservableCollection<WorkflowStepState>
-        {
-            new WorkflowStepState { Step = SprinkSnapWorkflowStep.AnalyzeModel, Status = WorkflowStepStatus.NotStarted, Summary = "Model analysis" },
-            new WorkflowStepState { Step = SprinkSnapWorkflowStep.HazardReview, Status = WorkflowStepStatus.NotStarted, Summary = "Hazard approval" },
-            new WorkflowStepState { Step = SprinkSnapWorkflowStep.SprinklerReview, Status = WorkflowStepStatus.NotStarted, Summary = "Sprinkler selection" },
-            new WorkflowStepState { Step = SprinkSnapWorkflowStep.WaterSupply, Status = WorkflowStepStatus.NotStarted, Summary = "Water supply" },
-            new WorkflowStepState { Step = SprinkSnapWorkflowStep.GenerateDesign, Status = WorkflowStepStatus.NotStarted, Summary = "Generate design" },
-            new WorkflowStepState { Step = SprinkSnapWorkflowStep.Hydraulics, Status = WorkflowStepStatus.NotStarted, Summary = "Hydraulics" },
-            new WorkflowStepState { Step = SprinkSnapWorkflowStep.Materials, Status = WorkflowStepStatus.NotStarted, Summary = "Materials" },
-            new WorkflowStepState { Step = SprinkSnapWorkflowStep.Reports, Status = WorkflowStepStatus.NotStarted, Summary = "Reports" }
-        };
-
-        NavigationItems = new ObservableCollection<string>
-        {
-            "Analyze Model",
-            "Hazard Review",
-            "Sprinkler Review",
-            "Water Supply",
-            "Generate Design",
-            "Hydraulics",
-            "Materials",
-            "Reports",
-            "Settings"
-        };
-
+        WorkflowSteps = new ObservableCollection<WorkflowStepState>();
         ModulePanels = new ObservableCollection<SprinkSnapModulePanel>
         {
-            new SprinkSnapModulePanel("Analyze Model", "Extract rooms, spaces, ceilings, levels, linked models, phases, obstructions, and existing sprinklers.", "Analyze Revit Model"),
-            new SprinkSnapModulePanel("Hazard Review", "Review AI-suggested NFPA 13 hazard classifications with confidence, reasoning, and designer override.", "Open Hazard Review"),
-            new SprinkSnapModulePanel("Sprinkler Review", "Select project manufacturer standards, review recommended heads, and override compatible room heads.", "Review Sprinklers"),
-            new SprinkSnapModulePanel("Water Supply", "Enter hydrant test data, static pressure, residual pressure, and flow at residual.", "Enter Water Supply"),
-            new SprinkSnapModulePanel("Generate Design", "Generate sprinkler layout candidates after analysis, hazard approvals, sprinkler selections, and water supply are complete.", "Generate Sprinkler Design"),
-            new SprinkSnapModulePanel("Hydraulics", "Build the hydraulic network, calculate demand, critical path, pressure loss, and safety margin.", "Run Hydraulics"),
-            new SprinkSnapModulePanel("Materials", "Generate sprinkler, pipe, fitting, valve, and riser material takeoff quantities.", "Open Takeoff"),
-            new SprinkSnapModulePanel("Reports", "Export design summary, hydraulic report, node diagram, and material takeoff PDFs.", "Export Reports"),
-            new SprinkSnapModulePanel("Settings", "Manage company standards, manufacturer catalogs, Revit family mappings, and AI service settings.", "Open Settings")
+            CreatePanel("Analyze Model", SprinkSnapWorkflowStep.AnalyzeModel, "Extract rooms, spaces, ceilings, levels, linked models, phases, obstructions, and existing sprinklers.", "Analyze Revit Model"),
+            CreatePanel("Hazard Review", SprinkSnapWorkflowStep.HazardReview, "Review AI-suggested NFPA 13 hazard classifications with confidence, reasoning, and designer override.", "Open Hazard Review"),
+            CreatePanel("Sprinkler Review", SprinkSnapWorkflowStep.SprinklerReview, "Select project manufacturer standards, review recommended heads, and override compatible room heads.", "Review Sprinklers"),
+            CreatePanel("Water Supply", SprinkSnapWorkflowStep.WaterSupply, "Enter hydrant test data, static pressure, residual pressure, and flow at residual.", "Enter Water Supply"),
+            CreatePanel("Generate Design", SprinkSnapWorkflowStep.GenerateDesign, "Generate sprinkler layout candidates after analysis, hazard approvals, sprinkler selections, and water supply are complete.", "Generate Sprinkler Design"),
+            CreatePanel("Hydraulics", SprinkSnapWorkflowStep.Hydraulics, "Build the hydraulic network, calculate demand, critical path, pressure loss, and safety margin.", "Run Hydraulics"),
+            CreatePanel("Materials", SprinkSnapWorkflowStep.Materials, "Generate sprinkler, pipe, fitting, valve, and riser material takeoff quantities.", "Open Takeoff"),
+            CreatePanel("Reports", SprinkSnapWorkflowStep.Reports, "Export design summary, hydraulic report, node diagram, and material takeoff PDFs.", "Export Reports"),
+            CreatePanel("Settings", SprinkSnapWorkflowStep.Settings, "Manage company standards, manufacturer catalogs, Revit family mappings, and AI service settings.", "Open Settings")
         };
 
         selectedModulePanel = ModulePanels[0];
         ModuleCapabilities = new ObservableCollection<string>();
-        OpenModuleCommand = new ShellRelayCommand(OpenModule);
+        OpenModuleCommand = new ShellRelayCommand(OpenModule, CanOpenModule);
         ShowDashboardCommand = new ShellRelayCommand(_ => ShowDashboard());
+        RefreshWorkflowGates();
         UpdateModuleCapabilities();
     }
 
@@ -71,8 +50,6 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     public SprinkSnapShellContext Context => context;
 
     public ObservableCollection<WorkflowStepState> WorkflowSteps { get; }
-
-    public ObservableCollection<string> NavigationItems { get; }
 
     public ObservableCollection<SprinkSnapModulePanel> ModulePanels { get; }
 
@@ -105,29 +82,34 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
     public bool ShowModuleWorkspace => !ShowModuleDashboard;
 
-    public string SelectedNavigationItem
+    public SprinkSnapModulePanel SelectedModulePanel
     {
-        get => selectedNavigationItem;
+        get => selectedModulePanel;
         set
         {
-            if (selectedNavigationItem == value)
+            if (value == null || ReferenceEquals(selectedModulePanel, value))
             {
                 return;
             }
 
-            selectedNavigationItem = value;
-            selectedModulePanel = FindModulePanel(value);
-            LoadModuleWorkspace(selectedModulePanel);
+            if (!value.IsUnlocked)
+            {
+                actionFeedback = value.BlockReason;
+                OnPropertyChanged(nameof(ActionFeedback));
+                OnPropertyChanged();
+                return;
+            }
+
+            selectedModulePanel = value;
+            LoadModuleWorkspace(value);
         }
     }
 
-    public SprinkSnapModulePanel SelectedModulePanel => selectedModulePanel;
+    public string MainWorkspaceTitle => selectedModulePanel?.Title ?? "SprinkSnap AI";
 
-    public string MainWorkspaceTitle => selectedModulePanel.Title;
+    public string MainWorkspaceDescription => selectedModulePanel?.Description ?? string.Empty;
 
-    public string MainWorkspaceDescription => selectedModulePanel.Description;
-
-    public string CurrentActionText => selectedModulePanel.ActionText;
+    public string CurrentActionText => selectedModulePanel?.ActionText ?? "Open Module";
 
     public string ActionFeedback
     {
@@ -144,24 +126,97 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         }
     }
 
-    public string ComplianceStatus => context.ProjectState.Rooms.Count > 0
-        ? "Designer approval required"
-        : "Run Analyze Model to begin.";
+    public string ComplianceStatus
+    {
+        get
+        {
+            if (!SprinkSnapWorkflowGate.IsAnalyzeComplete(context.ProjectState))
+            {
+                return "Workflow not started. Begin with Analyze Model.";
+            }
 
-    public string WarningSummary => context.ProjectState.Warnings.Count > 0
-        ? string.Join("; ", context.ProjectState.Warnings.Select(warning => warning.Message))
-        : "Run Analyze Model to populate warnings and exceptions.";
+            if (!SprinkSnapWorkflowGate.IsHazardReviewComplete(context.ProjectState))
+            {
+                return "Designer hazard approval required.";
+            }
 
-    public string ProgressSummary => context.ProjectState.Rooms.Count > 0
-        ? context.ProjectState.Rooms.Count + " rooms loaded into the current SprinkSnap session."
-        : "Workflow not started.";
+            return "Core prerequisites satisfied. Continue through design and hydraulics.";
+        }
+    }
+
+    public string WarningSummary
+    {
+        get
+        {
+            int lockedCount = ModulePanels.Count(panel => !panel.IsUnlocked);
+            if (lockedCount > 0)
+            {
+                return lockedCount + " module(s) remain locked until earlier workflow steps are complete.";
+            }
+
+            return context.ProjectState.Warnings.Count > 0
+                ? string.Join("; ", context.ProjectState.Warnings.Select(warning => warning.Message))
+                : "No active workflow warnings.";
+        }
+    }
+
+    public string ProgressSummary
+    {
+        get
+        {
+            int completeCount = ModulePanels.Count(panel => panel.IsComplete);
+            return completeCount + " of " + ModulePanels.Count + " modules complete in this session.";
+        }
+    }
 
     public void OpenInitialModule(string moduleTitle)
     {
         SprinkSnapModulePanel panel = FindModulePanel(moduleTitle);
+        if (!panel.IsUnlocked)
+        {
+            actionFeedback = panel.BlockReason;
+            OnPropertyChanged(nameof(ActionFeedback));
+            return;
+        }
+
         selectedModulePanel = panel;
-        selectedNavigationItem = panel.Title;
         LoadModuleWorkspace(panel);
+    }
+
+    public void RefreshWorkflowGates()
+    {
+        SprinkSnapSessionProgress progress = context.ProjectState.SessionProgress;
+        progress.HazardReviewComplete = SprinkSnapWorkflowGate.IsHazardReviewComplete(context.ProjectState);
+        progress.SprinklerReviewComplete = SprinkSnapWorkflowGate.IsSprinklerReviewComplete(context.ProjectState);
+        progress.WaterSupplyComplete = SprinkSnapWorkflowGate.IsWaterSupplyComplete(context.ProjectState);
+        progress.DesignGenerated = SprinkSnapWorkflowGate.IsDesignGenerated(context.ProjectState);
+
+        WorkflowSteps.Clear();
+        foreach (SprinkSnapModulePanel panel in ModulePanels)
+        {
+            WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(context.ProjectState, panel.Step);
+            panel.ApplyAccess(access);
+            WorkflowSteps.Add(new WorkflowStepState
+            {
+                Step = panel.Step,
+                Status = access.Status,
+                Summary = panel.Title + " • " + access.StatusLabel
+            });
+        }
+
+        OnPropertyChanged(nameof(ComplianceStatus));
+        OnPropertyChanged(nameof(WarningSummary));
+        OnPropertyChanged(nameof(ProgressSummary));
+        OnPropertyChanged(nameof(SelectedModulePanel));
+    }
+
+    private static SprinkSnapModulePanel CreatePanel(
+        string title,
+        SprinkSnapWorkflowStep step,
+        string description,
+        string actionText)
+    {
+        return new SprinkSnapModulePanel(title, step, description, actionText);
     }
 
     private void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -169,13 +224,30 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
+    private bool CanOpenModule(object parameter)
+    {
+        SprinkSnapModulePanel panel = parameter as SprinkSnapModulePanel ?? selectedModulePanel;
+        return panel != null && panel.IsUnlocked;
+    }
+
     private void OpenModule(object parameter)
     {
         SprinkSnapModulePanel panel = parameter as SprinkSnapModulePanel
-            ?? FindModulePanel(parameter as string ?? SelectedNavigationItem);
+            ?? FindModulePanel(parameter as string ?? selectedModulePanel?.Title);
+
+        if (panel == null)
+        {
+            return;
+        }
+
+        if (!panel.IsUnlocked)
+        {
+            actionFeedback = panel.BlockReason;
+            OnPropertyChanged(nameof(ActionFeedback));
+            return;
+        }
 
         selectedModulePanel = panel;
-        selectedNavigationItem = panel.Title;
         LoadModuleWorkspace(panel);
     }
 
@@ -185,22 +257,19 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         ShowModuleDashboard = false;
         actionFeedback = panel.Title + " workspace loaded.";
         UpdateModuleCapabilities();
+        RefreshWorkflowGates();
 
-        OnPropertyChanged(nameof(SelectedNavigationItem));
         OnPropertyChanged(nameof(SelectedModulePanel));
         OnPropertyChanged(nameof(MainWorkspaceTitle));
         OnPropertyChanged(nameof(MainWorkspaceDescription));
         OnPropertyChanged(nameof(CurrentActionText));
         OnPropertyChanged(nameof(ActionFeedback));
-        OnPropertyChanged(nameof(ComplianceStatus));
-        OnPropertyChanged(nameof(WarningSummary));
-        OnPropertyChanged(nameof(ProgressSummary));
     }
 
     private void ShowDashboard()
     {
         ShowModuleDashboard = true;
-        actionFeedback = "Select a workflow panel to open the module workspace.";
+        actionFeedback = "Select an unlocked workflow panel to open the module workspace.";
         OnPropertyChanged(nameof(ActionFeedback));
     }
 
@@ -220,30 +289,94 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     private void UpdateModuleCapabilities()
     {
         ModuleCapabilities.Clear();
+        if (selectedModulePanel == null)
+        {
+            return;
+        }
+
         foreach (string item in selectedModulePanel.Capabilities)
         {
             ModuleCapabilities.Add(item);
         }
+
+        if (!selectedModulePanel.IsUnlocked && !string.IsNullOrWhiteSpace(selectedModulePanel.BlockReason))
+        {
+            ModuleCapabilities.Insert(0, selectedModulePanel.BlockReason);
+        }
     }
 }
 
-public sealed class SprinkSnapModulePanel
+public sealed class SprinkSnapModulePanel : INotifyPropertyChanged
 {
-    public SprinkSnapModulePanel(string title, string description, string actionText)
+    public SprinkSnapModulePanel(string title, SprinkSnapWorkflowStep step, string description, string actionText)
     {
         Title = title;
+        Step = step;
         Description = description;
         ActionText = actionText;
         Capabilities = CreateCapabilities(title);
     }
 
-    public string Title { get; set; }
+    public event PropertyChangedEventHandler PropertyChanged;
 
-    public string Description { get; set; }
+    public string Title { get; }
 
-    public string ActionText { get; set; }
+    public SprinkSnapWorkflowStep Step { get; }
+
+    public string Description { get; }
+
+    public string ActionText { get; }
 
     public ObservableCollection<string> Capabilities { get; }
+
+    public bool IsUnlocked { get; private set; } = true;
+
+    public bool IsComplete { get; private set; }
+
+    public WorkflowStepStatus Status { get; private set; } = WorkflowStepStatus.NotStarted;
+
+    public string StatusLabel { get; private set; } = "Ready";
+
+    public string BlockReason { get; private set; } = string.Empty;
+
+    public Brush StatusBrush
+    {
+        get
+        {
+            switch (Status)
+            {
+                case WorkflowStepStatus.Complete:
+                    return new SolidColorBrush(Color.FromRgb(21, 128, 61));
+                case WorkflowStepStatus.Blocked:
+                    return new SolidColorBrush(Color.FromRgb(180, 83, 9));
+                case WorkflowStepStatus.InProgress:
+                    return new SolidColorBrush(Color.FromRgb(37, 99, 235));
+                default:
+                    return new SolidColorBrush(Color.FromRgb(100, 116, 139));
+            }
+        }
+    }
+
+    public void ApplyAccess(WorkflowModuleAccess access)
+    {
+        IsUnlocked = access.IsUnlocked;
+        IsComplete = access.IsComplete;
+        Status = access.Status;
+        StatusLabel = access.StatusLabel;
+        BlockReason = access.BlockReason;
+
+        OnPropertyChanged(nameof(IsUnlocked));
+        OnPropertyChanged(nameof(IsComplete));
+        OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(StatusLabel));
+        OnPropertyChanged(nameof(BlockReason));
+        OnPropertyChanged(nameof(StatusBrush));
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 
     private static ObservableCollection<string> CreateCapabilities(string title)
     {
@@ -319,10 +452,12 @@ public sealed class SprinkSnapModulePanel
 public sealed class ShellRelayCommand : ICommand
 {
     private readonly System.Action<object> execute;
+    private readonly Predicate<object> canExecute;
 
-    public ShellRelayCommand(System.Action<object> execute)
+    public ShellRelayCommand(System.Action<object> execute, Predicate<object> canExecute = null)
     {
         this.execute = execute;
+        this.canExecute = canExecute;
     }
 
     public event System.EventHandler CanExecuteChanged
@@ -333,7 +468,7 @@ public sealed class ShellRelayCommand : ICommand
 
     public bool CanExecute(object parameter)
     {
-        return true;
+        return canExecute == null || canExecute(parameter);
     }
 
     public void Execute(object parameter)
