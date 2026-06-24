@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>SprinkSnap AI</Name>
+    <Assembly>%AppData%\Autodesk\Revit\Addins\2027\SprinkSnap.Revit.dll</Assembly>
+    <AddInId>2F17C72D-1E20-4B9B-8B4C-4D237B6CE6F4</AddInId>
+    <FullClassName>FireSprinklerPlugin.SprinkSnap.Revit.SprinkSnapApplication</FullClassName>
+    <VendorId>SPNK</VendorId>
+    <VendorDescription>SprinkSnap AI fire protection sprinkler design platform</VendorDescription>
+  </AddIn>
+</RevitAddIns>
+
