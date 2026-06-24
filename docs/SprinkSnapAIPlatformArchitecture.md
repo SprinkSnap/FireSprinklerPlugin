@@ -18,10 +18,11 @@ engineering decisions.
   3. Sprinkler Review
   4. Water Supply
   5. Generate Design
-  6. Hydraulics
-  7. Materials
-  8. Reports
-  9. Settings
+  6. Clash Detection
+  7. Hydraulics
+  8. Materials
+  9. Reports
+  10. Settings
 - Dockable pane: `SprinkSnap AI`
 
 ## Folder structure
@@ -42,9 +43,14 @@ SprinkSnap.Revit
   SprinkSnapApplication.cs
 
 SprinkSnap.UI
+  Modules
+    HazardReviewModuleView.xaml
+    SprinklerReviewModuleView.xaml
+    LayoutReviewModuleView.xaml
+    ClashDetectionModuleView.xaml
   Shell
-  Workflow
-  HazardClassificationView.xaml
+    SprinkSnapShellView.xaml
+    AiAssistantPanelView.xaml
 
 SprinkSnap.WpfPreview
 SprinkSnap.Addin

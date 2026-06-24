@@ -32,7 +32,6 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private bool allowAlternateManufacturers = true;
     private bool reviewOnlyExceptions;
     private bool isEmbeddedInShell;
-    private int selectedTabIndex;
     private RoomHazardReviewItem selectedRoom;
     private SprinklerFamilyInfo selectedSprinklerFamily;
     private WaterDemandInfo approvedWaterDemand = new WaterDemandInfo();
@@ -79,7 +78,6 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         OverrideCommand = new RelayCommand(_ => OverrideVisibleExceptions(), _ => Rooms.Count > 0);
         ResetSprinklerOverridesCommand = new RelayCommand(_ => ResetSprinklerOverridesToProjectDefault(), _ => Rooms.Count > 0);
         SaveCommand = new RelayCommand(_ => Save(), _ => Rooms.Count > 0);
-        CancelCommand = new RelayCommand(_ => RequestClose?.Invoke(this, false));
     }
 
     public event PropertyChangedEventHandler PropertyChanged;
@@ -119,8 +117,6 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     public ICommand ResetSprinklerOverridesCommand { get; }
 
     public ICommand SaveCommand { get; }
-
-    public ICommand CancelCommand { get; }
 
     public int TotalRoomCount
     {
@@ -419,21 +415,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     public bool IsEmbeddedInShell
     {
         get => isEmbeddedInShell;
-        set
-        {
-            if (SetField(ref isEmbeddedInShell, value))
-            {
-                OnPropertyChanged(nameof(ShowDialogActions));
-            }
-        }
-    }
-
-    public bool ShowDialogActions => !IsEmbeddedInShell;
-
-    public int SelectedTabIndex
-    {
-        get => selectedTabIndex;
-        set => SetField(ref selectedTabIndex, value);
+        set => SetField(ref isEmbeddedInShell, value);
     }
 
     public WaterDemandInfo ApprovedWaterDemand => approvedWaterDemand;
