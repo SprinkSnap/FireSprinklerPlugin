@@ -13,7 +13,17 @@ using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Modules;
 
-public sealed class AnalyzeModelModuleViewModel : INotifyPropertyChanged
+public abstract class ModuleViewModelBase : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+}
+
+public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private readonly IModelAnalysisEngine analysisEngine = new ModelAnalysisEngine();
@@ -27,8 +37,6 @@ public sealed class AnalyzeModelModuleViewModel : INotifyPropertyChanged
         ExportJsonCommand = new ModuleRelayCommand(_ => ExportJson(), _ => context.ProjectState.Rooms.Count > 0);
         RefreshSummary();
     }
-
-    public event PropertyChangedEventHandler PropertyChanged;
 
     public ObservableCollection<RoomInfo> Rooms { get; }
 
@@ -94,14 +102,9 @@ public sealed class AnalyzeModelModuleViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ExistingSprinklerCount));
         OnPropertyChanged(nameof(LinkedModelCount));
     }
-
-    private void OnPropertyChanged([CallerMemberName] string propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
 }
 
-public sealed class WaterSupplyModuleViewModel : INotifyPropertyChanged
+public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private readonly IWaterSupplyEngine waterSupplyEngine = new WaterSupplyEngine();
@@ -118,8 +121,6 @@ public sealed class WaterSupplyModuleViewModel : INotifyPropertyChanged
         LoadFromState();
         ValidateCommand = new ModuleRelayCommand(_ => ValidateSupply());
     }
-
-    public event PropertyChangedEventHandler PropertyChanged;
 
     public ICommand ValidateCommand { get; }
 
@@ -202,14 +203,9 @@ public sealed class WaterSupplyModuleViewModel : INotifyPropertyChanged
     {
         return double.TryParse(value, out double parsed) ? parsed : null;
     }
-
-    private void OnPropertyChanged([CallerMemberName] string propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
 }
 
-public sealed class GenerateDesignModuleViewModel : INotifyPropertyChanged
+public sealed class GenerateDesignModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private readonly ILayoutEngine layoutEngine = new LayoutEngine();
@@ -220,8 +216,6 @@ public sealed class GenerateDesignModuleViewModel : INotifyPropertyChanged
         this.context = context;
         GenerateCommand = new ModuleRelayCommand(_ => GenerateDesign());
     }
-
-    public event PropertyChangedEventHandler PropertyChanged;
 
     public ICommand GenerateCommand { get; }
 
@@ -288,7 +282,7 @@ public sealed class GenerateDesignModuleViewModel : INotifyPropertyChanged
     }
 }
 
-public sealed class HydraulicsModuleViewModel : INotifyPropertyChanged
+public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private readonly IHydraulicEngine hydraulicEngine = new HydraulicEngine();
@@ -299,8 +293,6 @@ public sealed class HydraulicsModuleViewModel : INotifyPropertyChanged
         this.context = context;
         CalculateCommand = new ModuleRelayCommand(_ => Calculate());
     }
-
-    public event PropertyChangedEventHandler PropertyChanged;
 
     public ICommand CalculateCommand { get; }
 
@@ -327,7 +319,7 @@ public sealed class HydraulicsModuleViewModel : INotifyPropertyChanged
     }
 }
 
-public sealed class MaterialsModuleViewModel : INotifyPropertyChanged
+public sealed class MaterialsModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private readonly IMaterialTakeoffEngine takeoffEngine = new MaterialTakeoffEngine();
@@ -338,8 +330,6 @@ public sealed class MaterialsModuleViewModel : INotifyPropertyChanged
         Items = new ObservableCollection<MaterialTakeoffItem>(takeoffEngine.Generate(context.ProjectState.Rooms));
         RefreshCommand = new ModuleRelayCommand(_ => Refresh());
     }
-
-    public event PropertyChangedEventHandler PropertyChanged;
 
     public ObservableCollection<MaterialTakeoffItem> Items { get; }
 
@@ -355,7 +345,7 @@ public sealed class MaterialsModuleViewModel : INotifyPropertyChanged
     }
 }
 
-public sealed class ReportsModuleViewModel : INotifyPropertyChanged
+public sealed class ReportsModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private readonly IReportEngine reportEngine = new ReportEngine();
@@ -367,8 +357,6 @@ public sealed class ReportsModuleViewModel : INotifyPropertyChanged
         this.context = context;
         ExportCommand = new ModuleRelayCommand(_ => ExportReports());
     }
-
-    public event PropertyChangedEventHandler PropertyChanged;
 
     public ICommand ExportCommand { get; }
 
@@ -425,12 +413,13 @@ public sealed class ReportsModuleViewModel : INotifyPropertyChanged
     }
 }
 
-public sealed class SettingsModuleViewModel : INotifyPropertyChanged
+public sealed class SettingsModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private string defaultManufacturer = "Viking";
     private bool allowAlternateManufacturers = true;
     private string aiServiceEndpoint = string.Empty;
+    private string statusMessage = "Configure project standards and AI service settings.";
 
     public SettingsModuleViewModel(SprinkSnapShellContext context)
     {
@@ -438,8 +427,6 @@ public sealed class SettingsModuleViewModel : INotifyPropertyChanged
         SaveCommand = new ModuleRelayCommand(_ => Save());
         defaultManufacturer = context.SprinklerFamilies.FirstOrDefault()?.Manufacturer ?? "Viking";
     }
-
-    public event PropertyChangedEventHandler PropertyChanged;
 
     public ICommand SaveCommand { get; }
 
@@ -476,7 +463,15 @@ public sealed class SettingsModuleViewModel : INotifyPropertyChanged
         }
     }
 
-    public string StatusMessage { get; private set; } = "Configure project standards and AI service settings.";
+    public string StatusMessage
+    {
+        get => statusMessage;
+        private set
+        {
+            statusMessage = value;
+            OnPropertyChanged();
+        }
+    }
 
     private void Save()
     {
@@ -484,7 +479,6 @@ public sealed class SettingsModuleViewModel : INotifyPropertyChanged
         hazardViewModel.SelectedManufacturer = DefaultManufacturer;
         hazardViewModel.AllowAlternateManufacturers = AllowAlternateManufacturers;
         StatusMessage = "Project settings saved for this SprinkSnap session.";
-        OnPropertyChanged(nameof(StatusMessage));
     }
 }
 
