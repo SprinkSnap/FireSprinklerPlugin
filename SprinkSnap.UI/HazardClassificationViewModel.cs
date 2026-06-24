@@ -455,6 +455,8 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         RoomsView?.Refresh();
         NotifyWorkflowProgressChanged();
     }
+
+    private ProjectSprinklerStandard CreateProjectSprinklerStandard()
     {
         return new ProjectSprinklerStandard
         {
