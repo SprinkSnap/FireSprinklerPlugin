@@ -9,6 +9,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI;
 
@@ -32,6 +33,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private bool reviewOnlyExceptions;
     private bool isEmbeddedInShell;
     private int selectedTabIndex;
+    private RoomHazardReviewItem selectedRoom;
     private SprinklerFamilyInfo selectedSprinklerFamily;
     private WaterDemandInfo approvedWaterDemand = new WaterDemandInfo();
     private readonly IReadOnlyList<SprinklerFamilyInfo> allSprinklerFamilies;
@@ -56,6 +58,13 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
         Rooms = new ObservableCollection<RoomHazardReviewItem>(
             rooms.Select(PrepareRoomForAssistant).Select(room => new RoomHazardReviewItem(room, NotifyWorkflowProgressChanged)));
+
+        if (Rooms.Count > 0)
+        {
+            selectedRoom = Rooms[0];
+        }
+
+        UpdateActiveCodeReference();
 
         HazardOptions = new ObservableCollection<string>(HazardClassification.All);
         HazardFilters = new ObservableCollection<string>(new[] { "All" }.Concat(HazardClassification.All));
@@ -130,6 +139,48 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             // Display-only binding compatibility for WPF controls that attempt source updates.
         }
     }
+
+    public int ApprovedRoomCount
+    {
+        get => Rooms.Count(room => room.IsApproved && HazardClassification.IsSupported(room.UserOverride));
+        set { }
+    }
+
+    public RoomHazardReviewItem SelectedRoom
+    {
+        get => selectedRoom;
+        set
+        {
+            if (ReferenceEquals(selectedRoom, value))
+            {
+                return;
+            }
+
+            selectedRoom = value;
+            UpdateActiveCodeReference();
+            OnPropertyChanged();
+        }
+    }
+
+    public string ActiveCodeReferenceSection
+    {
+        get => activeCodeReference?.Section ?? "NFPA 13 Chapter 5";
+        set { }
+    }
+
+    public string ActiveCodeReferenceSummary
+    {
+        get => activeCodeReference?.Summary ?? "Select a room hazard to view the applicable NFPA 13 reference.";
+        set { }
+    }
+
+    public string ActiveCodeReferenceDesignerNote
+    {
+        get => activeCodeReference?.DesignerNote ?? string.Empty;
+        set { }
+    }
+
+    private Nfpa13CodeReference activeCodeReference;
 
     public int AutoSolvedRoomCount
     {
@@ -848,9 +899,32 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         return true;
     }
 
+    public void NotifyExternalRefresh()
+    {
+        foreach (RoomHazardReviewItem item in Rooms)
+        {
+            item.RefreshAssistantState();
+        }
+
+        NotifyWorkflowProgressChanged();
+        OnPropertyChanged(nameof(AutoSolvedRoomCount));
+    }
+
     private void NotifyWorkflowProgressChanged()
     {
+        UpdateActiveCodeReference();
+        OnPropertyChanged(nameof(ApprovedRoomCount));
+        OnPropertyChanged(nameof(ExceptionRoomCount));
         WorkflowProgressChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void UpdateActiveCodeReference()
+    {
+        string hazard = selectedRoom?.UserOverride ?? selectedRoom?.SuggestedHazard ?? string.Empty;
+        activeCodeReference = Nfpa13CodeReferenceLibrary.GetHazardReference(hazard);
+        OnPropertyChanged(nameof(ActiveCodeReferenceSection));
+        OnPropertyChanged(nameof(ActiveCodeReferenceSummary));
+        OnPropertyChanged(nameof(ActiveCodeReferenceDesignerNote));
     }
 
     private void OnPropertyChanged([CallerMemberName] string propertyName = null)

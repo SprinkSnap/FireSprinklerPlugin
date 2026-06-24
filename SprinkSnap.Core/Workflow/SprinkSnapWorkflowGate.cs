@@ -27,6 +27,7 @@ public static class SprinkSnapWorkflowGate
         bool sprinklerComplete = IsSprinklerReviewComplete(state);
         bool waterSupplyComplete = IsWaterSupplyComplete(state);
         bool designComplete = IsDesignGenerated(state);
+        bool clashComplete = IsClashDetectionComplete(state);
         bool hydraulicsComplete = state.SessionProgress.HydraulicsComplete;
         bool materialsComplete = state.SessionProgress.MaterialsComplete;
 
@@ -80,12 +81,23 @@ public static class SprinkSnapWorkflowGate
 
                 return CreateAccess(step, true, designComplete, string.Empty);
 
-            case SprinkSnapWorkflowStep.Hydraulics:
+            case SprinkSnapWorkflowStep.ClashDetection:
                 return CreateAccess(
                     step,
                     isUnlocked: designComplete,
+                    isComplete: clashComplete,
+                    blockReason: designComplete
+                        ? string.Empty
+                        : "Generate sprinkler design before running clash detection.");
+
+            case SprinkSnapWorkflowStep.Hydraulics:
+                return CreateAccess(
+                    step,
+                    isUnlocked: clashComplete,
                     isComplete: hydraulicsComplete,
-                    blockReason: designComplete ? string.Empty : "Generate sprinkler design before running hydraulics.");
+                    blockReason: clashComplete
+                        ? string.Empty
+                        : "Resolve clashes and update layout before running hydraulics.");
 
             case SprinkSnapWorkflowStep.Materials:
                 return CreateAccess(
@@ -154,6 +166,15 @@ public static class SprinkSnapWorkflowGate
     {
         return state.SessionProgress.DesignGenerated
             || state.Rooms.Any(room => room.ProposedSprinklers.Count > 0);
+    }
+
+    public static bool IsClashDetectionComplete(SprinkSnapProjectState state)
+    {
+        return state.SessionProgress.ClashDetectionComplete
+            || (state.ClashSummary != null && state.ClashSummary.TotalClashes == 0 && IsDesignGenerated(state))
+            || (state.ClashSummary != null
+                && state.ClashSummary.TotalClashes > 0
+                && state.ClashSummary.UnresolvedClashes == 0);
     }
 
     private static WorkflowModuleAccess CreateAccess(

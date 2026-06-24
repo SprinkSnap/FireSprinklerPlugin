@@ -43,6 +43,7 @@ public sealed class SprinkSnapApplication : IExternalApplication
             new RibbonButtonDefinition("Sprinkler Review", "Sprinkler\nReview", typeof(Commands.SprinklerReviewCommand).FullName),
             new RibbonButtonDefinition("Water Supply", "Water\nSupply", typeof(Commands.WaterSupplyCommand).FullName),
             new RibbonButtonDefinition("Generate Design", "Generate\nDesign", typeof(Commands.GenerateDesignCommand).FullName),
+            new RibbonButtonDefinition("Clash Detection", "Clash\nDetection", typeof(Commands.ClashDetectionCommand).FullName),
             new RibbonButtonDefinition("Hydraulics", "Hydraulics", typeof(Commands.HydraulicsCommand).FullName),
             new RibbonButtonDefinition("Materials", "Materials", typeof(Commands.MaterialsCommand).FullName),
             new RibbonButtonDefinition("Reports", "Reports", typeof(Commands.ReportsCommand).FullName),

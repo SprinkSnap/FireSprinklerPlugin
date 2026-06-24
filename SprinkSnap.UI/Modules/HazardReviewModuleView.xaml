@@ -1,0 +1,136 @@
+<UserControl x:Class="FireSprinklerPlugin.SprinkSnap.UI.Modules.HazardReviewModuleView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:FireSprinklerPlugin.SprinkSnap.UI"
+             Background="#EEF2F7">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Background="#0F172A" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="Accept All Suggestions" Command="{Binding AcceptAllSuggestionsCommand}" Padding="12,8" Margin="0,0,8,0" />
+                    <Button Content="Save Approvals" Command="{Binding SaveCommand}" Background="#2563EB" Foreground="White" FontWeight="SemiBold" Padding="12,8" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock Text="Hazard Review" Foreground="White" FontSize="22" FontWeight="SemiBold" />
+                    <TextBlock Text="Approve NFPA 13 hazard classifications room by room. SprinkSnap suggests — you decide."
+                               Foreground="#CBD5E1" TextWrapping="Wrap" Margin="0,6,0,0" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,12">
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Rooms" Foreground="#6B7280" FontSize="12" />
+                    <TextBlock Text="{Binding TotalRoomCount}" FontSize="26" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Exceptions" Foreground="#6B7280" FontSize="12" />
+                    <TextBlock Text="{Binding ExceptionRoomCount}" FontSize="26" FontWeight="SemiBold" Foreground="#B45309" />
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Approved" Foreground="#6B7280" FontSize="12" />
+                    <TextBlock Text="{Binding ApprovedRoomCount}" FontSize="26" FontWeight="SemiBold" Foreground="#15803D" />
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12">
+                <StackPanel>
+                    <TextBlock Text="NFPA 13 Reference" Foreground="#6B7280" FontSize="12" />
+                    <TextBlock Text="{Binding ActiveCodeReferenceSection}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="10" Padding="0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Margin="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="220" />
+                        <ColumnDefinition Width="160" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Review each room hazard. Select a row to see the NFPA 13 code reference in the right panel."
+                               TextWrapping="Wrap" VerticalAlignment="Center" Foreground="#4B5563" />
+                    <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="12,0,8,0" />
+                    <ComboBox Grid.Column="2" ItemsSource="{Binding HazardFilters}" SelectedItem="{Binding HazardFilter}" Height="34" Margin="0,0,8,0" />
+                    <CheckBox Grid.Column="3" Content="Exceptions only" IsChecked="{Binding ReviewOnlyExceptions}" VerticalAlignment="Center" />
+                </Grid>
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding RoomsView}"
+                          SelectedItem="{Binding SelectedRoom, Mode=TwoWay}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          IsReadOnly="False"
+                          RowHeight="88"
+                          RowHeaderWidth="0"
+                          GridLinesVisibility="Horizontal"
+                          AlternatingRowBackground="#F8FAFC"
+                          BorderThickness="0">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="Room" Width="2*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="{x:Type ui:RoomHazardReviewItem}">
+                                    <StackPanel Margin="8,6">
+                                        <TextBlock FontWeight="SemiBold" FontSize="15">
+                                            <Run Text="{Binding Number}" /><Run Text=" - " /><Run Text="{Binding Name}" />
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding OccupancyClassification}" Foreground="#6B7280" />
+                                        <TextBlock Foreground="#6B7280">
+                                            <Run Text="Area " /><Run Text="{Binding AreaSquareFeet, StringFormat=N0}" /><Run Text=" sq ft" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Ceiling + Suggestion" Width="1.6*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="{x:Type ui:RoomHazardReviewItem}">
+                                    <StackPanel Margin="8,6">
+                                        <TextBlock Text="{Binding CeilingClassification}" FontWeight="SemiBold" />
+                                        <TextBlock Foreground="#6B7280" TextWrapping="Wrap">
+                                            <Run Text="Suggested: " /><Run Text="{Binding SuggestedHazard}" />
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding SuggestionReason}" Foreground="#6B7280" TextWrapping="Wrap" MaxHeight="36" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Designer Approval" Width="1.4*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="{x:Type ui:RoomHazardReviewItem}">
+                                    <StackPanel Margin="8,6">
+                                        <ComboBox ItemsSource="{Binding DataContext.HazardOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  SelectedItem="{Binding UserOverride, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <CheckBox Content="Approved" IsChecked="{Binding IsApproved, UpdateSourceTrigger=PropertyChanged}" Margin="0,8,0,0" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <TextBlock Grid.Row="3"
+                   Text="{Binding ValidationMessage}"
+                   Foreground="#B45309"
+                   TextWrapping="Wrap"
+                   Margin="0,10,0,0" />
+    </Grid>
+</UserControl>

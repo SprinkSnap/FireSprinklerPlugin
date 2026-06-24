@@ -1,6 +1,7 @@
 <UserControl x:Class="FireSprinklerPlugin.SprinkSnap.UI.Shell.SprinkSnapShellView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shell="clr-namespace:FireSprinklerPlugin.SprinkSnap.UI.Shell"
              MinWidth="980"
              MinHeight="640"
              Background="#EEF2F7">
@@ -277,16 +278,59 @@
                     BorderThickness="1"
                     CornerRadius="10"
                     Padding="14">
-                <StackPanel>
-                    <TextBlock Text="Summary Panel" FontWeight="SemiBold" FontSize="16" />
-                    <Separator Margin="0,10,0,10" />
-                    <TextBlock Text="Compliance Status" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding ComplianceStatus}" Foreground="#B45309" TextWrapping="Wrap" Margin="0,4,0,14" />
-                    <TextBlock Text="Warnings" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding WarningSummary}" Foreground="#4B5563" TextWrapping="Wrap" Margin="0,4,0,14" />
-                    <TextBlock Text="Progress" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding ProgressSummary}" Foreground="#4B5563" TextWrapping="Wrap" Margin="0,4,0,0" />
-                </StackPanel>
+                <TabControl>
+                    <TabItem Header="Summary">
+                        <StackPanel Margin="0,8,0,0">
+                            <TextBlock Text="Compliance Status" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding ComplianceStatus}" Foreground="#B45309" TextWrapping="Wrap" Margin="0,4,0,14" />
+                            <TextBlock Text="Warnings" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding WarningSummary}" Foreground="#4B5563" TextWrapping="Wrap" Margin="0,4,0,14" />
+                            <TextBlock Text="Progress" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding ProgressSummary}" Foreground="#4B5563" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="AI Assistant">
+                        <shell:AiAssistantPanelView DataContext="{Binding AiAssistant}" Margin="0,8,0,0" />
+                    </TabItem>
+                    <TabItem Header="NFPA 13">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
+                            <StackPanel>
+                                <Border Background="#EFF6FF"
+                                        BorderBrush="#BFDBFE"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12"
+                                        Margin="0,0,0,12">
+                                    <StackPanel DataContext="{Binding HazardViewModel}">
+                                        <TextBlock Text="Active Room Reference" FontWeight="SemiBold" Foreground="#1E3A8A" />
+                                        <TextBlock Text="{Binding ActiveCodeReferenceSection, Mode=OneWay}" FontWeight="SemiBold" Margin="0,6,0,4" />
+                                        <TextBlock Text="{Binding ActiveCodeReferenceSummary, Mode=OneWay}" TextWrapping="Wrap" Foreground="#1E40AF" />
+                                        <TextBlock Text="{Binding ActiveCodeReferenceDesignerNote, Mode=OneWay}" TextWrapping="Wrap" Foreground="#475569" Margin="0,8,0,0" FontStyle="Italic" />
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock Text="Quick Reference Library" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <ItemsControl ItemsSource="{Binding NfpaReferences}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#F8FAFC"
+                                                    BorderBrush="#E2E8F0"
+                                                    BorderThickness="1"
+                                                    CornerRadius="6"
+                                                    Padding="10"
+                                                    Margin="0,0,0,8">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Section, Mode=OneWay}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding Title, Mode=OneWay}" Foreground="#475569" Margin="0,2,0,4" />
+                                                    <TextBlock Text="{Binding Summary, Mode=OneWay}" TextWrapping="Wrap" Foreground="#64748B" FontSize="12" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                </TabControl>
             </Border>
         </Grid>
     </Grid>

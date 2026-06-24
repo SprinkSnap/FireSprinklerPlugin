@@ -8,6 +8,8 @@ public static class ModuleWorkspaceFactory
 {
     public static FrameworkElement CreateWorkspace(string moduleTitle, SprinkSnapShellContext context)
     {
+        HazardClassificationViewModel hazardViewModel = context.GetOrCreateHazardViewModel();
+
         switch (moduleTitle)
         {
             case "Analyze Model":
@@ -17,10 +19,16 @@ public static class ModuleWorkspaceFactory
                 };
 
             case "Hazard Review":
-                return CreateHazardWorkspace(context, selectedTabIndex: 1);
+                return new HazardReviewModuleView
+                {
+                    DataContext = hazardViewModel
+                };
 
             case "Sprinkler Review":
-                return CreateHazardWorkspace(context, selectedTabIndex: 0);
+                return new SprinklerReviewModuleView
+                {
+                    DataContext = hazardViewModel
+                };
 
             case "Water Supply":
                 return new WaterSupplyModuleView
@@ -29,9 +37,15 @@ public static class ModuleWorkspaceFactory
                 };
 
             case "Generate Design":
-                return new GenerateDesignModuleView
+                return new LayoutReviewModuleView
                 {
-                    DataContext = new GenerateDesignModuleViewModel(context)
+                    DataContext = hazardViewModel
+                };
+
+            case "Clash Detection":
+                return new ClashDetectionModuleView
+                {
+                    DataContext = new ClashDetectionModuleViewModel(context)
                 };
 
             case "Hydraulics":
@@ -59,18 +73,10 @@ public static class ModuleWorkspaceFactory
                 };
 
             default:
-                return CreateHazardWorkspace(context, selectedTabIndex: 0);
+                return new AnalyzeModelModuleView
+                {
+                    DataContext = new AnalyzeModelModuleViewModel(context)
+                };
         }
-    }
-
-    private static HazardClassificationView CreateHazardWorkspace(SprinkSnapShellContext context, int selectedTabIndex)
-    {
-        HazardClassificationViewModel viewModel = context.GetOrCreateHazardViewModel();
-        viewModel.IsEmbeddedInShell = true;
-        viewModel.SelectedTabIndex = selectedTabIndex;
-
-        HazardClassificationView view = new HazardClassificationView();
-        view.Initialize(viewModel);
-        return view;
     }
 }

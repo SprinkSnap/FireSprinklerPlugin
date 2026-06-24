@@ -133,6 +133,13 @@ public sealed class GenerateDesignCommand : SprinkSnapWorkflowCommandBase
     protected override string DisplayName => "Generate Design";
 }
 
+public sealed class ClashDetectionCommand : SprinkSnapWorkflowCommandBase
+{
+    protected override SprinkSnapWorkflowStep WorkflowStep => SprinkSnapWorkflowStep.ClashDetection;
+
+    protected override string DisplayName => "Clash Detection";
+}
+
 public sealed class HydraulicsCommand : SprinkSnapWorkflowCommandBase
 {
     protected override SprinkSnapWorkflowStep WorkflowStep => SprinkSnapWorkflowStep.Hydraulics;

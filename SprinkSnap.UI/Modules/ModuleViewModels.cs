@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using FireSprinklerPlugin.SprinkSnap.Core;
+using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
@@ -430,6 +431,114 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
         StatusMessage = "Prepared reports in " + OutputFolder + ": " + string.Join(", ", reports);
         context.ProjectState.SessionProgress.ReportsExported = reports.Count > 0;
         context.RequestWorkflowRefresh();
+    }
+}
+
+public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
+{
+    private readonly SprinkSnapShellContext context;
+    private readonly IClashDetectionEngine clashEngine = new ClashDetectionEngine();
+    private readonly ISprinklerLayoutOptimizer layoutOptimizer = new SprinklerLayoutOptimizer();
+    private string statusMessage = "Run clash detection after generating sprinkler layout.";
+
+    public ClashDetectionModuleViewModel(SprinkSnapShellContext context)
+    {
+        this.context = context;
+        Clashes = new ObservableCollection<SprinklerClashRecord>();
+        DetectClashesCommand = new ModuleRelayCommand(_ => DetectClashes());
+        ResolveClashesCommand = new ModuleRelayCommand(_ => ResolveClashes(), _ => TotalClashes > 0);
+        SyncFromState();
+    }
+
+    public ObservableCollection<SprinklerClashRecord> Clashes { get; }
+
+    public ICommand DetectClashesCommand { get; }
+
+    public ICommand ResolveClashesCommand { get; }
+
+    public int TotalClashes => context.ProjectState.ClashSummary?.TotalClashes ?? 0;
+
+    public int ResolvedClashes => context.ProjectState.ClashSummary?.ResolvedClashes ?? 0;
+
+    public int UnresolvedClashes => context.ProjectState.ClashSummary?.UnresolvedClashes ?? 0;
+
+    public string StatusMessage
+    {
+        get => statusMessage;
+        private set
+        {
+            statusMessage = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private void DetectClashes()
+    {
+        if (context.ProjectState.Rooms.Count == 0)
+        {
+            StatusMessage = "Generate sprinkler design first — no rooms with layout candidates found.";
+            return;
+        }
+
+        ClashDetectionSummary summary = clashEngine.Detect(context.ProjectState.Rooms);
+        context.ProjectState.ClashSummary = summary;
+        ApplySummary(summary);
+        StatusMessage = summary.Messages.Count > 0
+            ? string.Join(" ", summary.Messages)
+            : "Clash detection complete.";
+        context.ProjectState.SessionProgress.ClashDetectionComplete =
+            SprinkSnapWorkflowGate.IsClashDetectionComplete(context.ProjectState);
+        context.RequestWorkflowRefresh();
+    }
+
+    private void ResolveClashes()
+    {
+        SprinklerFamilyInfo sprinkler = context.SprinklerFamilies.FirstOrDefault()
+            ?? context.GetOrCreateHazardViewModel().SelectedSprinklerFamily;
+        if (sprinkler == null)
+        {
+            StatusMessage = "Select a project sprinkler standard before resolving clashes.";
+            return;
+        }
+
+        ClashDetectionSummary summary = clashEngine.ResolveAndUpdateLayout(
+            context.ProjectState.Rooms,
+            layoutOptimizer,
+            sprinkler);
+        context.ProjectState.ClashSummary = summary;
+        ApplySummary(summary);
+        StatusMessage = summary.Messages.Count > 0
+            ? string.Join(" ", summary.Messages)
+            : "Layout updated after clash resolution.";
+        context.ProjectState.SessionProgress.ClashDetectionComplete =
+            SprinkSnapWorkflowGate.IsClashDetectionComplete(context.ProjectState);
+        context.GetOrCreateHazardViewModel().NotifyExternalRefresh();
+        context.RequestWorkflowRefresh();
+    }
+
+    private void ApplySummary(ClashDetectionSummary summary)
+    {
+        Clashes.Clear();
+        foreach (SprinklerClashRecord clash in summary.Clashes)
+        {
+            Clashes.Add(clash);
+        }
+
+        OnPropertyChanged(nameof(TotalClashes));
+        OnPropertyChanged(nameof(ResolvedClashes));
+        OnPropertyChanged(nameof(UnresolvedClashes));
+    }
+
+    private void SyncFromState()
+    {
+        if (context.ProjectState.ClashSummary != null)
+        {
+            ApplySummary(context.ProjectState.ClashSummary);
+            if (context.ProjectState.ClashSummary.Messages.Count > 0)
+            {
+                StatusMessage = string.Join(" ", context.ProjectState.ClashSummary.Messages);
+            }
+        }
     }
 }
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -6,7 +7,9 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
+using FireSprinklerPlugin.SprinkSnap.UI;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
@@ -31,11 +34,16 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
             CreatePanel("Sprinkler Review", SprinkSnapWorkflowStep.SprinklerReview, "Select project manufacturer standards, review recommended heads, and override compatible room heads.", "Review Sprinklers"),
             CreatePanel("Water Supply", SprinkSnapWorkflowStep.WaterSupply, "Enter hydrant test data, static pressure, residual pressure, and flow at residual.", "Enter Water Supply"),
             CreatePanel("Generate Design", SprinkSnapWorkflowStep.GenerateDesign, "Generate sprinkler layout candidates after analysis, hazard approvals, sprinkler selections, and water supply are complete.", "Generate Sprinkler Design"),
+            CreatePanel("Clash Detection", SprinkSnapWorkflowStep.ClashDetection, "Detect sprinkler conflicts with ducts, beams, lights, and geometry — then update layout per NFPA 13 Section 10.2.6.", "Run Clash Detection"),
             CreatePanel("Hydraulics", SprinkSnapWorkflowStep.Hydraulics, "Build the hydraulic network, calculate demand, critical path, pressure loss, and safety margin.", "Run Hydraulics"),
             CreatePanel("Materials", SprinkSnapWorkflowStep.Materials, "Generate sprinkler, pipe, fitting, valve, and riser material takeoff quantities.", "Open Takeoff"),
             CreatePanel("Reports", SprinkSnapWorkflowStep.Reports, "Export design summary, hydraulic report, node diagram, and material takeoff PDFs.", "Export Reports"),
             CreatePanel("Settings", SprinkSnapWorkflowStep.Settings, "Manage company standards, manufacturer catalogs, Revit family mappings, and AI service settings.", "Open Settings")
         };
+
+        AiAssistant = new AiAssistantViewModel(this.context);
+        NfpaReferences = new ObservableCollection<Nfpa13CodeReference>(Nfpa13CodeReferenceLibrary.GetAllReferences());
+        context.GetOrCreateHazardViewModel().PropertyChanged += OnHazardViewModelPropertyChanged;
 
         selectedModulePanel = ModulePanels[0];
         ModuleCapabilities = new ObservableCollection<string>();
@@ -54,6 +62,12 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     public ObservableCollection<SprinkSnapModulePanel> ModulePanels { get; }
 
     public ObservableCollection<string> ModuleCapabilities { get; }
+
+    public AiAssistantViewModel AiAssistant { get; }
+
+    public HazardClassificationViewModel HazardViewModel => context.GetOrCreateHazardViewModel();
+
+    public ObservableCollection<Nfpa13CodeReference> NfpaReferences { get; }
 
     public ICommand OpenModuleCommand { get; }
 
@@ -140,7 +154,13 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
                 return "Designer hazard approval required.";
             }
 
-            return "Core prerequisites satisfied. Continue through design and hydraulics.";
+            if (SprinkSnapWorkflowGate.IsDesignGenerated(context.ProjectState)
+                && !SprinkSnapWorkflowGate.IsClashDetectionComplete(context.ProjectState))
+            {
+                return "Layout generated. Run Clash Detection before hydraulics.";
+            }
+
+            return "Core prerequisites satisfied. Continue through design, clash resolution, and hydraulics.";
         }
     }
 
@@ -190,6 +210,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         progress.SprinklerReviewComplete = SprinkSnapWorkflowGate.IsSprinklerReviewComplete(context.ProjectState);
         progress.WaterSupplyComplete = SprinkSnapWorkflowGate.IsWaterSupplyComplete(context.ProjectState);
         progress.DesignGenerated = SprinkSnapWorkflowGate.IsDesignGenerated(context.ProjectState);
+        progress.ClashDetectionComplete = SprinkSnapWorkflowGate.IsClashDetectionComplete(context.ProjectState);
 
         WorkflowSteps.Clear();
         foreach (SprinkSnapModulePanel panel in ModulePanels)
@@ -304,6 +325,14 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
             ModuleCapabilities.Insert(0, selectedModulePanel.BlockReason);
         }
     }
+
+    private void OnHazardViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != null && e.PropertyName.StartsWith("ActiveCodeReference", StringComparison.Ordinal))
+        {
+            OnPropertyChanged(nameof(HazardViewModel));
+        }
+    }
 }
 
 public sealed class SprinkSnapModulePanel : INotifyPropertyChanged
@@ -416,6 +445,13 @@ public sealed class SprinkSnapModulePanel : INotifyPropertyChanged
                     "Verify analysis, hazard approvals, sprinkler approvals, and water supply.",
                     "Generate sprinkler candidates, branch lines, mains, cross mains, and riser connections.",
                     "Show deterministic progress and block generation when critical data is missing."
+                };
+            case "Clash Detection":
+                return new ObservableCollection<string>
+                {
+                    "Detect conflicts with ducts, beams, lights, cable trays, and pipes.",
+                    "Reference NFPA 13 Section 10.2.6 obstruction rules for each clash.",
+                    "Automatically reposition sprinklers and update layout before hydraulics."
                 };
             case "Hydraulics":
                 return new ObservableCollection<string>

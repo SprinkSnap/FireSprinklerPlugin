@@ -1,0 +1,73 @@
+<UserControl x:Class="FireSprinklerPlugin.SprinkSnap.UI.Modules.ClashDetectionModuleView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#EEF2F7">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Background="#0F172A" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="Detect Clashes" Command="{Binding DetectClashesCommand}" Padding="12,8" Margin="0,0,8,0" />
+                    <Button Content="Resolve &amp; Update Layout" Command="{Binding ResolveClashesCommand}" Background="#2563EB" Foreground="White" FontWeight="SemiBold" Padding="12,8" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock Text="Clash Detection" Foreground="White" FontSize="22" FontWeight="SemiBold" />
+                    <TextBlock Text="Find sprinkler conflicts with ducts, beams, lights, and geometry — then update layout per NFPA 13 Section 10.2.6."
+                               Foreground="#CBD5E1" TextWrapping="Wrap" Margin="0,6,0,0" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,12">
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Total clashes" Foreground="#6B7280" />
+                    <TextBlock Text="{Binding TotalClashes}" FontSize="26" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Resolved" Foreground="#6B7280" />
+                    <TextBlock Text="{Binding ResolvedClashes}" FontSize="26" FontWeight="SemiBold" Foreground="#15803D" />
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12">
+                <StackPanel>
+                    <TextBlock Text="Unresolved" Foreground="#6B7280" />
+                    <TextBlock Text="{Binding UnresolvedClashes}" FontSize="26" FontWeight="SemiBold" Foreground="#B45309" />
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="10" Padding="12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,10" />
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding Clashes}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          IsReadOnly="True"
+                          RowHeaderWidth="0"
+                          GridLinesVisibility="Horizontal">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Room" Binding="{Binding RoomNumber}" Width="80" />
+                        <DataGridTextColumn Header="Name" Binding="{Binding RoomName}" Width="1.2*" />
+                        <DataGridTextColumn Header="Type" Binding="{Binding ClashType}" Width="120" />
+                        <DataGridTextColumn Header="Obstruction" Binding="{Binding ObstructionDescription}" Width="2*" />
+                        <DataGridTextColumn Header="NFPA 13" Binding="{Binding NfpaReference}" Width="1.2*" />
+                        <DataGridCheckBoxColumn Header="Resolved" Binding="{Binding Resolved}" Width="90" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

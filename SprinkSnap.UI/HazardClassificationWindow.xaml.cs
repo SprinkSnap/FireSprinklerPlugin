@@ -12,7 +12,10 @@ public sealed class HazardClassificationWindow : Window
         MinWidth = 1180;
         MinHeight = 720;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Content = new HazardClassificationView(viewModel);
+        Content = new Modules.HazardReviewModuleView
+        {
+            DataContext = viewModel
+        };
         UseDialogResult = true;
     }
 

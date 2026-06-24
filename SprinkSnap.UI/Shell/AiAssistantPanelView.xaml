@@ -1,0 +1,68 @@
+<UserControl x:Class="FireSprinklerPlugin.SprinkSnap.UI.Shell.AiAssistantPanelView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Advisory only — designer approval required for all design decisions."
+                   Foreground="#6B7280"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,8" />
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Messages}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,8"
+                                Padding="10"
+                                CornerRadius="8"
+                                MaxWidth="240">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#EFF6FF" />
+                                    <Setter Property="HorizontalAlignment" Value="Left" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsUser}" Value="True">
+                                            <Setter Property="Background" Value="#F1F5F9" />
+                                            <Setter Property="HorizontalAlignment" Value="Right" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Text, Mode=OneWay}" TextWrapping="Wrap" Foreground="#0F172A" />
+                                <TextBlock Text="{Binding Timestamp, Mode=OneWay}" FontSize="10" Foreground="#94A3B8" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,8">
+            <Button Content="What's next?" Command="{Binding AskAboutWorkflowCommand}" Padding="8,4" Margin="0,0,6,0" />
+            <Button Content="NFPA obstructions" Command="{Binding AskAboutNfpaCommand}" Padding="8,4" />
+        </StackPanel>
+
+        <DockPanel Grid.Row="3">
+            <Button DockPanel.Dock="Right"
+                    Content="Send"
+                    Command="{Binding SendCommand}"
+                    Background="#2563EB"
+                    Foreground="White"
+                    FontWeight="SemiBold"
+                    Padding="12,8"
+                    Margin="8,0,0,0" />
+            <TextBox Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
+                     MinHeight="34"
+                     VerticalContentAlignment="Center"
+                     AcceptsReturn="False" />
+        </DockPanel>
+    </Grid>
+</UserControl>
