@@ -8,5 +8,11 @@
     <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="QuestPDF" Version="2025.7.2" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Data\sprinkler_catalog.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Data\sprinkler_catalog.json</Link>
+    </Content>
+  </ItemGroup>
 </Project>
 

@@ -471,7 +471,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private void RebuildSprinklerFilterOptions()
     {
         ReplaceOptions(ManufacturerOptions, allSprinklerFamilies.Select(family => family.Manufacturer));
-        ReplaceOptions(CategoryOptions, allSprinklerFamilies.Select(family => family.Category).Concat(SprinklerFamilySelector.VikingCategories));
+        ReplaceOptions(CategoryOptions, allSprinklerFamilies.Select(family => family.Category).Concat(SprinklerFamilySelector.GetCatalogCategories()));
         ReplaceOptions(OrientationOptions, allSprinklerFamilies.Select(family => family.Orientation));
         ReplaceOptions(
             KFactorOptions,

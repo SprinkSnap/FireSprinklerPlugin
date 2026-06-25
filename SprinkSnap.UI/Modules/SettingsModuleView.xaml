@@ -7,6 +7,45 @@
             <TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,16" />
 
+            <TextBlock Text="Manufacturer sprinkler catalog" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6" />
+            <TextBlock Text="Load listed sprinkler families from sprinkler_catalog.json. The default catalog ships with SprinkSnap; point to a custom JSON file to extend or replace manufacturers."
+                       TextWrapping="Wrap"
+                       Foreground="#4B5563"
+                       Margin="0,0,0,10" />
+
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0"
+                         Text="{Binding CatalogPath, UpdateSourceTrigger=PropertyChanged}"
+                         Height="34"
+                         Margin="0,0,8,0" />
+                <Button Grid.Column="1"
+                        Content="Browse..."
+                        Command="{Binding BrowseCatalogCommand}"
+                        Padding="12,6"
+                        Margin="0,0,8,0" />
+                <Button Grid.Column="2"
+                        Content="Reload"
+                        Command="{Binding ReloadCatalogCommand}"
+                        Padding="12,6" />
+            </Grid>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                <TextBlock Foreground="#6B7280" Margin="0,0,16,0">
+                    <Run Text="Source: " /><Run Text="{Binding CatalogSourceKind}" FontWeight="SemiBold" />
+                </TextBlock>
+                <TextBlock Foreground="#6B7280" Margin="0,0,16,0">
+                    <Run Text="Library: " /><Run Text="{Binding CatalogLibraryName}" FontWeight="SemiBold" />
+                </TextBlock>
+                <TextBlock Foreground="#6B7280">
+                    <Run Text="Families: " /><Run Text="{Binding CatalogFamilyCount}" FontWeight="SemiBold" />
+                </TextBlock>
+            </StackPanel>
+
             <TextBlock Text="Default manufacturer" Margin="0,0,0,4" />
             <ComboBox ItemsSource="{Binding ManufacturerOptions}"
                       SelectedItem="{Binding DefaultManufacturer}"

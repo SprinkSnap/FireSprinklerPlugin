@@ -6,6 +6,10 @@ public sealed class SprinklerCatalogDocument
 {
     public string SchemaVersion { get; set; } = "1.0";
 
+    public string LibraryName { get; set; } = "SprinkSnap Listed Family Library";
+
+    public IList<string> Categories { get; set; } = new List<string>();
+
     public IList<SprinklerCatalogRecord> Sprinklers { get; set; } = new List<SprinklerCatalogRecord>();
 }
 
@@ -25,6 +29,8 @@ public sealed class SprinklerCatalogRecord
 
     public string SprinklerType { get; set; } = string.Empty;
 
+    public string FamilyName { get; set; } = string.Empty;
+
     public string ResponseType { get; set; } = string.Empty;
 
     public string Orientation { get; set; } = string.Empty;
@@ -43,6 +49,8 @@ public sealed class SprinklerCatalogRecord
 
     public double MaxCoverageAreaSquareFeet { get; set; }
 
+    public double MaxDistanceFromWallFeet { get; set; }
+
     public IList<string> TemperatureRatings { get; set; } = new List<string>();
 
     public IList<string> FinishOptions { get; set; } = new List<string>();
@@ -52,6 +60,8 @@ public sealed class SprinklerCatalogRecord
     public string RevitTypeName { get; set; } = string.Empty;
 
     public string TechnicalDataSheetUrl { get; set; } = string.Empty;
+
+    public string ListingNotes { get; set; } = string.Empty;
 }
 
 public sealed class SprinkSnapProjectPreferences
@@ -65,5 +75,7 @@ public sealed class SprinkSnapProjectPreferences
     public double DefaultKFactor { get; set; } = 5.6;
 
     public bool AllowAlternateManufacturers { get; set; } = true;
+
+    public string CatalogPath { get; set; } = string.Empty;
 }
 

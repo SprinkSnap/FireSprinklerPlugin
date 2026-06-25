@@ -13,5 +13,12 @@
     <ProjectReference Include="..\SprinkSnap.Core\SprinkSnap.Core.csproj" />
     <ProjectReference Include="..\SprinkSnap.UI\SprinkSnap.UI.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\SprinkSnap.Core\Data\sprinkler_catalog.json">
+      <Link>Data\sprinkler_catalog.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
 

@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
+using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
@@ -45,6 +46,7 @@ public static class SprinkSnapSessionPersistenceService
             WaterSupplyValidation = state.WaterSupplyValidation,
             SchematicPipeRouting = state.SchematicPipeRouting,
             PipePlacementSummary = state.PipePlacementSummary,
+            Preferences = ClonePreferences(state.Preferences),
             ReportExport = CloneReportExport(state.ReportExport)
         };
     }
@@ -74,6 +76,7 @@ public static class SprinkSnapSessionPersistenceService
         state.WaterSupplyValidation = snapshot.WaterSupplyValidation ?? new WaterSupplyValidationResult();
         state.SchematicPipeRouting = snapshot.SchematicPipeRouting ?? new SchematicPipeRoutingSummary();
         state.PipePlacementSummary = snapshot.PipePlacementSummary ?? new PipePlacementSummary();
+        state.Preferences = ClonePreferences(snapshot.Preferences);
         state.ReportExport = CloneReportExport(snapshot.ReportExport);
 
         Dictionary<int, PersistedRoomSnapshot> roomSnapshots = (snapshot.Rooms ?? new List<PersistedRoomSnapshot>())
@@ -318,6 +321,24 @@ public static class SprinkSnapSessionPersistenceService
             IncludeHydraulicReport = request.IncludeHydraulicReport,
             IncludeNodeDiagram = request.IncludeNodeDiagram,
             IncludeMaterialTakeoff = request.IncludeMaterialTakeoff
+        };
+    }
+
+    private static SprinkSnapProjectPreferences ClonePreferences(SprinkSnapProjectPreferences preferences)
+    {
+        if (preferences == null)
+        {
+            return new SprinkSnapProjectPreferences();
+        }
+
+        return new SprinkSnapProjectPreferences
+        {
+            PreferredManufacturer = preferences.PreferredManufacturer,
+            DefaultCategory = preferences.DefaultCategory,
+            DefaultOrientation = preferences.DefaultOrientation,
+            DefaultKFactor = preferences.DefaultKFactor,
+            AllowAlternateManufacturers = preferences.AllowAlternateManufacturers,
+            CatalogPath = preferences.CatalogPath
         };
     }
 }

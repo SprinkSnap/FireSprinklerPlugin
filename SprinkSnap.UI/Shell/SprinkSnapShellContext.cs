@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
-using FireSprinklerPlugin.SprinkSnap.Core.Placement;
-using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
+using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
-using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
+using FireSprinklerPlugin.SprinkSnap.Core.Placement;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
@@ -20,8 +21,10 @@ public sealed class SprinkSnapShellContext
         IEnumerable<SprinklerFamilyInfo> sprinklerFamilies = null)
     {
         ProjectState = projectState ?? new SprinkSnapProjectState();
+        string catalogPath = ProjectState.Preferences?.CatalogPath;
+        SprinklerCatalogService.Default.Reload(string.IsNullOrWhiteSpace(catalogPath) ? null : catalogPath);
         SprinklerFamilies = sprinklerFamilies?.ToList()
-            ?? new SprinklerFamilySelector().GetAvailableFamilies().ToList();
+            ?? SprinklerCatalogService.Default.GetAvailableFamilies().ToList();
     }
 
     public event EventHandler WorkflowChanged;
@@ -79,12 +82,6 @@ public sealed class SprinkSnapShellContext
             ProjectState.Rooms.Add(room);
         }
 
-        SprinklerFamilies.Clear();
-        foreach (SprinklerFamilyInfo family in loadResult.SprinklerFamilies)
-        {
-            SprinklerFamilies.Add(family);
-        }
-
         if (loadResult.ModelAnalysis != null)
         {
             ProjectState.ModelAnalysis = loadResult.ModelAnalysis;
@@ -94,6 +91,15 @@ public sealed class SprinkSnapShellContext
         if (loadResult.SessionSnapshot != null)
         {
             SprinkSnapSessionPersistenceService.ApplySnapshot(ProjectState, loadResult.SessionSnapshot);
+        }
+
+        string catalogPath = ProjectState.Preferences?.CatalogPath;
+        SprinklerCatalogService.Default.Reload(string.IsNullOrWhiteSpace(catalogPath) ? null : catalogPath);
+
+        SprinklerFamilies.Clear();
+        foreach (SprinklerFamilyInfo family in loadResult.SprinklerFamilies)
+        {
+            SprinklerFamilies.Add(family);
         }
 
         ProjectState.LinkedModelScanOptions = LinkedModelScanOptionService.MergeDiscoveredWithExisting(
@@ -145,6 +151,43 @@ public sealed class SprinkSnapShellContext
         {
             hazardViewModel.RefreshFamilyMappingStatuses();
         }
+    }
+
+    public SprinklerCatalogLoadResult ReloadCatalogFamilies(string optionalCatalogPath = null)
+    {
+        string catalogPath = optionalCatalogPath ?? ProjectState.Preferences?.CatalogPath;
+        SprinklerCatalogLoadResult loadResult = SprinklerCatalogService.Default.Reload(
+            string.IsNullOrWhiteSpace(catalogPath) ? null : catalogPath);
+
+        if (ProjectState.Preferences != null)
+        {
+            ProjectState.Preferences.CatalogPath = catalogPath ?? string.Empty;
+        }
+
+        Dictionary<string, SprinklerFamilyInfo> loadedFamilies = SprinklerFamilies
+            .Where(family => family.IsLoadedInProject)
+            .GroupBy(family => family.ListedFamilyId ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+        SprinklerFamilies.Clear();
+        foreach (SprinklerFamilyInfo family in loadResult.Families)
+        {
+            if (!string.IsNullOrWhiteSpace(family.ListedFamilyId)
+                && loadedFamilies.TryGetValue(family.ListedFamilyId, out SprinklerFamilyInfo loadedFamily))
+            {
+                family.IsLoadedInProject = loadedFamily.IsLoadedInProject;
+                family.RevitFamilyName = loadedFamily.RevitFamilyName;
+                family.RevitFamilySymbolId = loadedFamily.RevitFamilySymbolId;
+                family.RecognitionSource = loadedFamily.RecognitionSource;
+            }
+
+            SprinklerFamilies.Add(family);
+        }
+
+        ApplyFamilyMapping(refreshHazardViewModel: false);
+        ResetHazardViewModel();
+        RequestWorkflowRefresh();
+        return loadResult;
     }
 
     public HazardClassificationViewModel GetOrCreateHazardViewModel()

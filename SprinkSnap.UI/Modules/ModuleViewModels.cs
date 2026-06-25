@@ -11,6 +11,7 @@ using System.Windows.Input;
 using Microsoft.Win32;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
+using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Materials;
@@ -1410,6 +1411,10 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
     private string defaultManufacturer = "Viking";
     private bool allowAlternateManufacturers = true;
     private string aiServiceEndpoint = string.Empty;
+    private string catalogPath = string.Empty;
+    private string catalogSourceKind = string.Empty;
+    private string catalogLibraryName = string.Empty;
+    private int catalogFamilyCount;
     private string statusMessage = "Configure project standards, map catalog families to loaded Revit types, and save.";
 
     public SettingsModuleViewModel(SprinkSnapShellContext context)
@@ -1419,21 +1424,68 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         LoadedRevitSymbols = new ObservableCollection<LoadedRevitSymbolOption>();
         LinkedModelScanOptions = new ObservableCollection<LinkedModelScanOptionViewModel>();
         SaveCommand = new ModuleRelayCommand(_ => Save());
-        defaultManufacturer = context.SprinklerFamilies.FirstOrDefault()?.Manufacturer ?? "Viking";
+        BrowseCatalogCommand = new ModuleRelayCommand(_ => BrowseCatalog());
+        ReloadCatalogCommand = new ModuleRelayCommand(_ => ReloadCatalog());
+        SyncPreferencesFromState();
+        RefreshCatalogSummary();
         RefreshFamilyMappingGrid();
         RefreshLinkedModelOptions();
+        RefreshManufacturerOptions();
     }
 
     public ObservableCollection<LinkedModelScanOptionViewModel> LinkedModelScanOptions { get; }
 
     public ICommand SaveCommand { get; }
 
+    public ICommand BrowseCatalogCommand { get; }
+
+    public ICommand ReloadCatalogCommand { get; }
+
     public ObservableCollection<FamilyMappingRowViewModel> FamilyMappingRows { get; }
 
     public ObservableCollection<LoadedRevitSymbolOption> LoadedRevitSymbols { get; }
 
-    public ObservableCollection<string> ManufacturerOptions { get; } =
-        new ObservableCollection<string> { "Viking", "Tyco", "Reliable", "Victaulic" };
+    public ObservableCollection<string> ManufacturerOptions { get; } = new ObservableCollection<string>();
+
+    public string CatalogPath
+    {
+        get => catalogPath;
+        set
+        {
+            catalogPath = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string CatalogSourceKind
+    {
+        get => catalogSourceKind;
+        private set
+        {
+            catalogSourceKind = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string CatalogLibraryName
+    {
+        get => catalogLibraryName;
+        private set
+        {
+            catalogLibraryName = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int CatalogFamilyCount
+    {
+        get => catalogFamilyCount;
+        private set
+        {
+            catalogFamilyCount = value;
+            OnPropertyChanged();
+        }
+    }
 
     public string DefaultManufacturer
     {
@@ -1484,6 +1536,79 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         }
     }
 
+    private void SyncPreferencesFromState()
+    {
+        SprinkSnapProjectPreferences preferences = context.ProjectState.Preferences
+            ?? new SprinkSnapProjectPreferences();
+        defaultManufacturer = string.IsNullOrWhiteSpace(preferences.PreferredManufacturer)
+            ? context.SprinklerFamilies.FirstOrDefault()?.Manufacturer ?? "Viking"
+            : preferences.PreferredManufacturer;
+        allowAlternateManufacturers = preferences.AllowAlternateManufacturers;
+        catalogPath = preferences.CatalogPath ?? string.Empty;
+    }
+
+    private void RefreshManufacturerOptions()
+    {
+        ManufacturerOptions.Clear();
+        foreach (string manufacturer in context.SprinklerFamilies
+                     .Select(family => family.Manufacturer)
+                     .Where(name => !string.IsNullOrWhiteSpace(name))
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(name => name))
+        {
+            ManufacturerOptions.Add(manufacturer);
+        }
+
+        if (ManufacturerOptions.Count == 0)
+        {
+            ManufacturerOptions.Add("Viking");
+        }
+    }
+
+    private void RefreshCatalogSummary()
+    {
+        CatalogSourceKind = SprinklerCatalogService.Default.CatalogSourceKind;
+        CatalogLibraryName = SprinklerCatalogService.Default.LibraryName;
+        CatalogFamilyCount = SprinklerCatalogService.Default.GetAvailableFamilies().Count;
+        if (string.IsNullOrWhiteSpace(catalogPath))
+        {
+            CatalogPath = SprinklerCatalogLoader.GetDefaultCatalogPath() ?? string.Empty;
+        }
+    }
+
+    private void BrowseCatalog()
+    {
+        OpenFileDialog dialog = new OpenFileDialog
+        {
+            Title = "Select sprinkler catalog JSON",
+            Filter = "Sprinkler catalog (*.json)|*.json|All files (*.*)|*.*",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            CatalogPath = dialog.FileName;
+            ReloadCatalog();
+        }
+    }
+
+    private void ReloadCatalog()
+    {
+        SprinklerCatalogLoadResult loadResult = context.ReloadCatalogFamilies(
+            string.IsNullOrWhiteSpace(catalogPath) ? null : catalogPath);
+        if (context.ProjectState.Preferences != null)
+        {
+            context.ProjectState.Preferences.CatalogPath = catalogPath ?? string.Empty;
+        }
+
+        RefreshCatalogSummary();
+        RefreshManufacturerOptions();
+        RefreshFamilyMappingGrid();
+        StatusMessage = loadResult.Messages.Count > 0
+            ? string.Join(" ", loadResult.Messages)
+            : "Sprinkler catalog reloaded.";
+    }
+
     private void RefreshFamilyMappingGrid()
     {
         LoadedRevitSymbols.Clear();
@@ -1504,6 +1629,15 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
 
     private void Save()
     {
+        if (context.ProjectState.Preferences == null)
+        {
+            context.ProjectState.Preferences = new SprinkSnapProjectPreferences();
+        }
+
+        context.ProjectState.Preferences.PreferredManufacturer = DefaultManufacturer;
+        context.ProjectState.Preferences.AllowAlternateManufacturers = AllowAlternateManufacturers;
+        context.ProjectState.Preferences.CatalogPath = CatalogPath ?? string.Empty;
+
         HazardClassificationViewModel hazardViewModel = context.GetOrCreateHazardViewModel();
         hazardViewModel.SelectedManufacturer = DefaultManufacturer;
         hazardViewModel.AllowAlternateManufacturers = AllowAlternateManufacturers;

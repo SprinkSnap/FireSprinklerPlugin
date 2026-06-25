@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Autodesk.Revit.DB;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
+using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
@@ -31,16 +32,24 @@ public static class RevitProjectLoader
             result.Rooms.Add(room);
         }
 
-        ISprinklerFamilyScanner sprinklerFamilyScanner = new SprinklerFamilyScanner();
+        result.SessionSnapshot = RevitSessionPersistence.TryLoad(document);
+        string catalogPath = result.SessionSnapshot?.Preferences?.CatalogPath;
+        if (!string.IsNullOrWhiteSpace(catalogPath))
+        {
+            SprinklerCatalogService.Default.Reload(catalogPath);
+        }
+
+        ISprinklerFamilyScanner sprinklerFamilyScanner = new SprinklerFamilyScanner(
+            SprinklerCatalogService.Default.GetAvailableFamilies());
+
         result.SprinklerFamilies = RevitSprinklerCatalogMerger.Merge(
-            new SprinklerFamilySelector().GetAvailableFamilies(),
+            SprinklerCatalogService.Default.GetAvailableFamilies(),
             sprinklerFamilyScanner.ScanLoadedSprinklerFamilies(document));
 
         result.ModelAnalysis.LinkedModelCount = new FilteredElementCollector(document)
             .OfClass(typeof(RevitLinkInstance))
             .GetElementCount();
         result.LinkedModelScanOptions = RevitLinkedModelDiscovery.Discover(document);
-        result.SessionSnapshot = RevitSessionPersistence.TryLoad(document);
         result.ModelAnalysis.ExistingSprinklerCount = new FilteredElementCollector(document)
             .OfCategory(BuiltInCategory.OST_Sprinklers)
             .WhereElementIsNotElementType()

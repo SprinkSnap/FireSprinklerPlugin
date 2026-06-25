@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
+using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
@@ -103,6 +104,8 @@ public sealed class SprinkSnapProjectState
     public PipePlacementSummary PipePlacementSummary { get; set; } = new PipePlacementSummary();
 
     public bool PlaceSchematicFittingsWithPipes { get; set; } = true;
+
+    public SprinkSnapProjectPreferences Preferences { get; set; } = new SprinkSnapProjectPreferences();
 }
 
 public sealed class ComplianceWarning
