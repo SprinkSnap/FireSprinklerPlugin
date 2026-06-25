@@ -106,6 +106,8 @@ public sealed class SprinkSnapProjectState
     public bool PlaceSchematicFittingsWithPipes { get; set; } = true;
 
     public SprinkSnapProjectPreferences Preferences { get; set; } = new SprinkSnapProjectPreferences();
+
+    public IList<LoadedRevitSymbolOption> LoadedRevitSprinklerSymbols { get; set; } = new List<LoadedRevitSymbolOption>();
 }
 
 public sealed class ComplianceWarning

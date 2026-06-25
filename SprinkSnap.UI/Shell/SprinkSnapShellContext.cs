@@ -49,6 +49,8 @@ public sealed class SprinkSnapShellContext
 
     public Action<Action<RevitProjectLoadResult>> RequestReanalyze { get; set; }
 
+    public Action<Action<IList<LoadedRevitSymbolOption>>> RequestRefreshLoadedSprinklerSymbols { get; set; }
+
     public Action<SprinklerClashRecord> RequestShowClashInRevit { get; set; }
 
     public Action<int> RequestShowRoomInRevit { get; set; }
@@ -102,6 +104,12 @@ public sealed class SprinkSnapShellContext
         foreach (SprinklerFamilyInfo family in loadResult.SprinklerFamilies)
         {
             SprinklerFamilies.Add(family);
+        }
+
+        ProjectState.LoadedRevitSprinklerSymbols.Clear();
+        foreach (LoadedRevitSymbolOption symbol in loadResult.LoadedRevitSprinklerSymbols)
+        {
+            ProjectState.LoadedRevitSprinklerSymbols.Add(symbol);
         }
 
         ProjectState.LinkedModelScanOptions = LinkedModelScanOptionService.MergeDiscoveredWithExisting(
@@ -192,6 +200,19 @@ public sealed class SprinkSnapShellContext
         return loadResult;
     }
 
+    public void ApplyLoadedSprinklerSymbols(IEnumerable<LoadedRevitSymbolOption> symbols)
+    {
+        ProjectState.LoadedRevitSprinklerSymbols.Clear();
+        foreach (LoadedRevitSymbolOption symbol in symbols ?? Array.Empty<LoadedRevitSymbolOption>())
+        {
+            ProjectState.LoadedRevitSprinklerSymbols.Add(symbol);
+        }
+
+        ApplyFamilyMapping(refreshHazardViewModel: false);
+        ResetHazardViewModel();
+        RequestWorkflowRefresh();
+    }
+
     public void ApplyPostReanalysisInvalidation()
     {
         ProjectState.SessionProgress.ClashDetectionComplete = false;
@@ -250,6 +271,8 @@ public sealed class RevitProjectLoadResult
     public IList<RoomInfo> Rooms { get; set; } = new List<RoomInfo>();
 
     public IList<SprinklerFamilyInfo> SprinklerFamilies { get; set; } = new List<SprinklerFamilyInfo>();
+
+    public IList<LoadedRevitSymbolOption> LoadedRevitSprinklerSymbols { get; set; } = new List<LoadedRevitSymbolOption>();
 
     public ModelAnalysisSummary ModelAnalysis { get; set; } = new ModelAnalysisSummary();
 

@@ -25,6 +25,7 @@ public sealed class SprinkSnapRevitSession
         Context.RequestPlacePipes = RequestPlacePipesInRevit;
         Context.RequestClashDetection = RequestClashDetectionInRevit;
         Context.RequestReanalyze = RequestReanalyzeInRevit;
+        Context.RequestRefreshLoadedSprinklerSymbols = RequestRefreshLoadedSprinklerSymbolsInRevit;
         Context.RequestShowClashInRevit = ShowClashInRevit;
         Context.RequestShowRoomInRevit = ShowRoomInRevit;
     }
@@ -128,6 +129,11 @@ public sealed class SprinkSnapRevitSession
     private void RequestReanalyzeInRevit(Action<RevitProjectLoadResult> callback)
     {
         ModelReanalysisExternalEventHandler.Instance.RequestReanalysis(Document, Context, callback);
+    }
+
+    private void RequestRefreshLoadedSprinklerSymbolsInRevit(Action<IList<LoadedRevitSymbolOption>> callback)
+    {
+        LoadedSprinklerSymbolScanExternalEventHandler.Instance.RequestScan(Document, Context, callback);
     }
 
     private void ShowClashInRevit(SprinklerClashRecord clash)

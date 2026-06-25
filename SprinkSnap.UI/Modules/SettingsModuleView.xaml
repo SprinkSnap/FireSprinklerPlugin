@@ -60,10 +60,19 @@
             <TextBox Text="{Binding AiServiceEndpoint, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,20" />
 
             <TextBlock Text="Revit family mapping" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6" />
-            <TextBlock Text="Map SprinkSnap catalog families to loaded Revit sprinkler types before placement."
+            <TextBlock Text="Map SprinkSnap catalog families to any sprinkler type loaded in the Revit project. All OST_Sprinklers family types are scanned — not only catalog matches."
                        TextWrapping="Wrap"
                        Foreground="#4B5563"
                        Margin="0,0,0,10" />
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <Run Text="Loaded Revit types: " /><Run Text="{Binding LoadedRevitSymbolCount}" FontWeight="SemiBold" />
+                </TextBlock>
+                <Button Content="Refresh Loaded Types"
+                        Command="{Binding RefreshLoadedSymbolsCommand}"
+                        Padding="12,6" />
+            </StackPanel>
 
             <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="10" Padding="8" Margin="0,0,0,16">
                 <DataGrid ItemsSource="{Binding FamilyMappingRows}"

@@ -1474,6 +1474,7 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         SaveCommand = new ModuleRelayCommand(_ => Save());
         BrowseCatalogCommand = new ModuleRelayCommand(_ => BrowseCatalog());
         ReloadCatalogCommand = new ModuleRelayCommand(_ => ReloadCatalog());
+        RefreshLoadedSymbolsCommand = new ModuleRelayCommand(_ => RefreshLoadedSymbols());
         SyncPreferencesFromState();
         RefreshCatalogSummary();
         RefreshFamilyMappingGrid();
@@ -1488,6 +1489,8 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
     public ICommand BrowseCatalogCommand { get; }
 
     public ICommand ReloadCatalogCommand { get; }
+
+    public ICommand RefreshLoadedSymbolsCommand { get; }
 
     public ObservableCollection<FamilyMappingRowViewModel> FamilyMappingRows { get; }
 
@@ -1534,6 +1537,8 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
             OnPropertyChanged();
         }
     }
+
+    public int LoadedRevitSymbolCount => LoadedRevitSymbols.Count(option => !string.IsNullOrWhiteSpace(option.RevitFamilySymbolId));
 
     public string DefaultManufacturer
     {
@@ -1657,13 +1662,41 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
             : "Sprinkler catalog reloaded.";
     }
 
+    private void RefreshLoadedSymbols()
+    {
+        if (context.IsPreviewMode || context.RequestRefreshLoadedSprinklerSymbols == null)
+        {
+            StatusMessage = context.IsPreviewMode
+                ? "WpfPreview cannot scan Revit families. Open SprinkSnap in Revit to refresh loaded sprinkler types."
+                : "Loaded sprinkler symbol scan is not connected for this session.";
+            return;
+        }
+
+        StatusMessage = "Scanning loaded sprinkler types in Revit...";
+        context.RequestRefreshLoadedSprinklerSymbols(symbols =>
+        {
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                RefreshFamilyMappingGrid();
+                StatusMessage = "Found "
+                    + LoadedRevitSymbolCount
+                    + " loaded sprinkler type(s) in the Revit project. Map catalog families below.";
+                context.RequestWorkflowRefresh();
+            });
+        });
+    }
+
     private void RefreshFamilyMappingGrid()
     {
         LoadedRevitSymbols.Clear();
-        foreach (LoadedRevitSymbolOption option in SprinklerFamilyMappingService.GetLoadedRevitSymbolOptions(context.SprinklerFamilies))
+        foreach (LoadedRevitSymbolOption option in SprinklerFamilyMappingService.GetLoadedRevitSymbolOptions(
+                     context.SprinklerFamilies,
+                     context.ProjectState.LoadedRevitSprinklerSymbols))
         {
             LoadedRevitSymbols.Add(option);
         }
+
+        OnPropertyChanged(nameof(LoadedRevitSymbolCount));
 
         IList<LoadedRevitSymbolOption> symbolOptions = LoadedRevitSymbols.ToList();
         FamilyMappingRows.Clear();

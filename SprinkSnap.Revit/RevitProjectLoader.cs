@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System.Linq;
 using Autodesk.Revit.DB;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
+using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
@@ -42,6 +44,7 @@ public static class RevitProjectLoader
         ISprinklerFamilyScanner sprinklerFamilyScanner = new SprinklerFamilyScanner(
             SprinklerCatalogService.Default.GetAvailableFamilies());
 
+        result.LoadedRevitSprinklerSymbols = sprinklerFamilyScanner.ScanLoadedSymbolOptions(document).ToList();
         result.SprinklerFamilies = RevitSprinklerCatalogMerger.Merge(
             SprinklerCatalogService.Default.GetAvailableFamilies(),
             sprinklerFamilyScanner.ScanLoadedSprinklerFamilies(document));

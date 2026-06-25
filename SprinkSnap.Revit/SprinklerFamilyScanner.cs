@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Autodesk.Revit.DB;
-using FireSprinklerPlugin.SprinkSnap.Core;
+using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.Revit;
@@ -11,6 +11,8 @@ namespace FireSprinklerPlugin.SprinkSnap.Revit;
 public interface ISprinklerFamilyScanner
 {
     IReadOnlyList<SprinklerFamilyInfo> ScanLoadedSprinklerFamilies(Document document);
+
+    IList<LoadedRevitSymbolOption> ScanLoadedSymbolOptions(Document document);
 }
 
 public sealed class SprinklerFamilyScanner : ISprinklerFamilyScanner
@@ -56,6 +58,38 @@ public sealed class SprinklerFamilyScanner : ISprinklerFamilyScanner
         }
 
         return recognizedFamilies;
+    }
+
+    public IList<LoadedRevitSymbolOption> ScanLoadedSymbolOptions(Document document)
+    {
+        List<LoadedRevitSymbolOption> options = new List<LoadedRevitSymbolOption>();
+        HashSet<string> seenSymbolIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        IEnumerable<FamilySymbol> sprinklerSymbols = new FilteredElementCollector(document)
+            .OfCategory(BuiltInCategory.OST_Sprinklers)
+            .WhereElementIsElementType()
+            .OfType<FamilySymbol>();
+
+        foreach (FamilySymbol symbol in sprinklerSymbols)
+        {
+            string symbolId = symbol.Id.IntegerValue.ToString(CultureInfo.InvariantCulture);
+            if (!seenSymbolIds.Add(symbolId))
+            {
+                continue;
+            }
+
+            options.Add(new LoadedRevitSymbolOption
+            {
+                RevitFamilySymbolId = symbolId,
+                RevitFamilyName = symbol.FamilyName,
+                RevitTypeName = symbol.Name,
+                DisplayName = symbol.FamilyName + " : " + symbol.Name
+            });
+        }
+
+        return options
+            .OrderBy(option => option.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static SprinklerFamilyInfo ReadSprinkSnapMetadata(FamilySymbol symbol)

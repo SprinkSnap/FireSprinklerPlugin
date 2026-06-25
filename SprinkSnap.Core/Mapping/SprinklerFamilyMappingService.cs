@@ -71,10 +71,40 @@ public static class SprinklerFamilyMappingService
         }
     }
 
-    public static IList<LoadedRevitSymbolOption> GetLoadedRevitSymbolOptions(IEnumerable<SprinklerFamilyInfo> catalog)
+    public static IList<LoadedRevitSymbolOption> GetLoadedRevitSymbolOptions(
+        IEnumerable<SprinklerFamilyInfo> catalog,
+        IEnumerable<LoadedRevitSymbolOption> scannedSymbols = null)
     {
         List<LoadedRevitSymbolOption> options = new List<LoadedRevitSymbolOption> { LoadedRevitSymbolOption.Empty };
         HashSet<string> seenSymbolIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void AddOption(LoadedRevitSymbolOption option)
+        {
+            if (option == null || string.IsNullOrWhiteSpace(option.RevitFamilySymbolId))
+            {
+                return;
+            }
+
+            if (!seenSymbolIds.Add(option.RevitFamilySymbolId))
+            {
+                return;
+            }
+
+            options.Add(new LoadedRevitSymbolOption
+            {
+                RevitFamilySymbolId = option.RevitFamilySymbolId,
+                RevitFamilyName = option.RevitFamilyName,
+                RevitTypeName = option.RevitTypeName,
+                DisplayName = string.IsNullOrWhiteSpace(option.DisplayName)
+                    ? option.RevitFamilyName + " : " + option.RevitTypeName
+                    : option.DisplayName
+            });
+        }
+
+        foreach (LoadedRevitSymbolOption scannedOption in scannedSymbols ?? Array.Empty<LoadedRevitSymbolOption>())
+        {
+            AddOption(scannedOption);
+        }
 
         foreach (SprinklerFamilyInfo family in catalog ?? Array.Empty<SprinklerFamilyInfo>())
         {
@@ -83,12 +113,7 @@ public static class SprinklerFamilyMappingService
                 continue;
             }
 
-            if (!seenSymbolIds.Add(family.RevitFamilySymbolId))
-            {
-                continue;
-            }
-
-            options.Add(new LoadedRevitSymbolOption
+            AddOption(new LoadedRevitSymbolOption
             {
                 RevitFamilySymbolId = family.RevitFamilySymbolId,
                 RevitFamilyName = string.IsNullOrWhiteSpace(family.RevitFamilyName)
