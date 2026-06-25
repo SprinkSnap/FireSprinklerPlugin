@@ -39,7 +39,8 @@ public static class SprinkSnapSessionPersistenceService
             LinkedModelScanOptions = state.LinkedModelScanOptions.ToList(),
             Rooms = state.Rooms.Select(CreateRoomSnapshot).ToList(),
             ClashSummary = state.ClashSummary,
-            PlacementSummary = state.PlacementSummary
+            PlacementSummary = state.PlacementSummary,
+            HydraulicResult = state.HydraulicResult
         };
     }
 
@@ -64,6 +65,7 @@ public static class SprinkSnapSessionPersistenceService
         state.LinkedModelScanOptions = snapshot.LinkedModelScanOptions?.ToList() ?? new List<LinkedModelScanOption>();
         state.ClashSummary = snapshot.ClashSummary ?? new ClashDetectionSummary();
         state.PlacementSummary = snapshot.PlacementSummary ?? new SprinklerPlacementSummary();
+        state.HydraulicResult = snapshot.HydraulicResult ?? new HydraulicCalculationResult();
 
         Dictionary<int, PersistedRoomSnapshot> roomSnapshots = (snapshot.Rooms ?? new List<PersistedRoomSnapshot>())
             .Where(room => room.RevitElementId > 0)

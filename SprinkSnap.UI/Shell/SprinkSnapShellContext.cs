@@ -113,6 +113,9 @@ public sealed class SprinkSnapShellContext
                     ProjectState.ModelAnalysis.Warnings.Add(message);
                 }
             }
+
+            ProjectState.SessionProgress.ClashDetectionComplete = false;
+            ProjectState.SessionProgress.SprinklersPlacedInRevit = false;
         }
 
         if (markAnalysisComplete && ProjectState.Rooms.Count > 0)
@@ -151,9 +154,11 @@ public sealed class SprinkSnapShellContext
         hazardViewModel = new HazardClassificationViewModel(ProjectState.Rooms, SprinklerFamilies)
         {
             IsEmbeddedInShell = true,
+            EmbeddedProjectState = ProjectState,
             PersistToRevitRequested = PersistToRevitRequested,
             ShowRoomInRevitRequested = roomId => RequestShowRoomInRevit?.Invoke(roomId)
         };
+        hazardViewModel.ApplyModelChangeAssessment(ProjectState.ModelChangeAssessment);
         hazardViewModel.WorkflowProgressChanged += (_, _) => RequestWorkflowRefresh();
 
         return hazardViewModel;

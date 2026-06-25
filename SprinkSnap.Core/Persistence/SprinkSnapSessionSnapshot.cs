@@ -81,6 +81,8 @@ public sealed class SprinkSnapSessionSnapshot
     public ClashDetectionSummary ClashSummary { get; set; } = new ClashDetectionSummary();
 
     public SprinklerPlacementSummary PlacementSummary { get; set; } = new SprinklerPlacementSummary();
+
+    public HydraulicCalculationResult HydraulicResult { get; set; } = new HydraulicCalculationResult();
 }
 
 public sealed class ModelChangeAssessment

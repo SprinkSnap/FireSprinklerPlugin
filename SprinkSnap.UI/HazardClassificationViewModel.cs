@@ -11,6 +11,8 @@ using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
+using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
+using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI;
 
@@ -427,6 +429,8 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         set => SetField(ref isEmbeddedInShell, value);
     }
 
+    public SprinkSnapProjectState EmbeddedProjectState { get; set; }
+
     public WaterDemandInfo ApprovedWaterDemand => approvedWaterDemand;
 
     public IReadOnlyList<RoomInfo> ApprovedRooms
@@ -707,6 +711,11 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
     private void AutoLayoutRooms()
     {
+        if (TryBlockIfModelStale("Layout generation"))
+        {
+            return;
+        }
+
         foreach (RoomHazardReviewItem item in Rooms)
         {
             item.Room.ApprovedHazardClassification = item.UserOverride;
@@ -777,6 +786,22 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         item.Room.RequiresExceptionReview = !result.IsCompliant;
         item.Room.ExceptionReason = string.Join("; ", result.Messages);
         item.RefreshAssistantState();
+    }
+
+    private bool TryBlockIfModelStale(string actionName)
+    {
+        if (!IsEmbeddedInShell || EmbeddedProjectState == null)
+        {
+            return false;
+        }
+
+        if (!SprinkSnapWorkflowGate.IsModelStale(EmbeddedProjectState))
+        {
+            return false;
+        }
+
+        ValidationMessage = actionName + " blocked. " + SprinkSnapWorkflowGate.StaleModelBlockReason;
+        return true;
     }
 
     private void Save()
@@ -919,6 +944,15 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         RefreshFamilyMappingStatuses();
         NotifyWorkflowProgressChanged();
         OnPropertyChanged(nameof(AutoSolvedRoomCount));
+    }
+
+    public void ApplyModelChangeAssessment(ModelChangeAssessment assessment)
+    {
+        HashSet<int> changedRoomIds = assessment?.ChangedRoomRevitElementIds?.ToHashSet() ?? new HashSet<int>();
+        foreach (RoomHazardReviewItem item in Rooms)
+        {
+            item.RefreshModelChangeState(changedRoomIds);
+        }
     }
 
     public void RefreshFamilyMappingStatuses()
@@ -1115,6 +1149,29 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
     }
 
     public string RevitFamilyMappingStatus => Room.RevitFamilyMappingStatus;
+
+    public bool IsModelChanged
+    {
+        get => isModelChanged;
+        private set
+        {
+            if (isModelChanged == value)
+            {
+                return;
+            }
+
+            isModelChanged = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsModelChanged)));
+        }
+    }
+
+    private bool isModelChanged;
+
+    public void RefreshModelChangeState(ISet<int> changedRoomRevitElementIds)
+    {
+        IsModelChanged = changedRoomRevitElementIds != null
+            && changedRoomRevitElementIds.Contains(Room.RevitElementId);
+    }
 
     public void RefreshMappingStatus()
     {

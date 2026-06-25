@@ -455,6 +455,8 @@ public sealed class SprinkSnapModulePanel : INotifyPropertyChanged
                     return new SolidColorBrush(Color.FromRgb(21, 128, 61));
                 case WorkflowStepStatus.Blocked:
                     return new SolidColorBrush(Color.FromRgb(180, 83, 9));
+                case WorkflowStepStatus.Warning:
+                    return new SolidColorBrush(Color.FromRgb(217, 119, 6));
                 case WorkflowStepStatus.InProgress:
                     return new SolidColorBrush(Color.FromRgb(37, 99, 235));
                 default:

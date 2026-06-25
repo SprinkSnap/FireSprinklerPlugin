@@ -20,6 +20,14 @@ public sealed class WorkflowModuleAccess
 
 public static class SprinkSnapWorkflowGate
 {
+    public const string StaleModelBlockReason =
+        "Revit model changed since the last SprinkSnap save. Re-run Analyze Model and review hazard, layout, and clash results before continuing.";
+
+    public static bool IsModelStale(SprinkSnapProjectState state)
+    {
+        return state?.ModelChangeAssessment?.IsStale == true;
+    }
+
     public static WorkflowModuleAccess Evaluate(SprinkSnapProjectState state, SprinkSnapWorkflowStep step)
     {
         bool analyzeComplete = IsAnalyzeComplete(state);
@@ -31,10 +39,22 @@ public static class SprinkSnapWorkflowGate
         bool placementComplete = IsSprinklersPlacedInRevit(state);
         bool hydraulicsComplete = state.SessionProgress.HydraulicsComplete;
         bool materialsComplete = state.SessionProgress.MaterialsComplete;
+        bool modelStale = IsModelStale(state);
 
         switch (step)
         {
             case SprinkSnapWorkflowStep.AnalyzeModel:
+                if (modelStale)
+                {
+                    return CreateAccess(
+                        step,
+                        isUnlocked: true,
+                        isComplete: false,
+                        blockReason: StaleModelBlockReason,
+                        status: WorkflowStepStatus.Warning,
+                        statusLabel: "Re-analyze");
+                }
+
                 return CreateAccess(
                     step,
                     isUnlocked: true,
@@ -42,11 +62,27 @@ public static class SprinkSnapWorkflowGate
                     blockReason: string.Empty);
 
             case SprinkSnapWorkflowStep.HazardReview:
-                return CreateAccess(
-                    step,
-                    isUnlocked: analyzeComplete,
-                    isComplete: hazardComplete,
-                    blockReason: analyzeComplete ? string.Empty : "Run Analyze Model and extract rooms before hazard review.");
+                if (!analyzeComplete)
+                {
+                    return CreateAccess(
+                        step,
+                        false,
+                        hazardComplete,
+                        "Run Analyze Model and extract rooms before hazard review.");
+                }
+
+                if (modelStale)
+                {
+                    return CreateAccess(
+                        step,
+                        true,
+                        hazardComplete,
+                        StaleModelBlockReason,
+                        WorkflowStepStatus.Warning,
+                        "Review changes");
+                }
+
+                return CreateAccess(step, true, hazardComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.SprinklerReview:
                 return CreateAccess(
@@ -80,34 +116,69 @@ public static class SprinkSnapWorkflowGate
                     return CreateAccess(step, false, designComplete, "Enter and validate water supply before generating design.");
                 }
 
+                if (modelStale)
+                {
+                    return CreateAccess(step, false, designComplete, StaleModelBlockReason);
+                }
+
                 return CreateAccess(step, true, designComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.ClashDetection:
-                return CreateAccess(
-                    step,
-                    isUnlocked: designComplete,
-                    isComplete: clashComplete,
-                    blockReason: designComplete
-                        ? string.Empty
-                        : "Generate sprinkler design before running clash detection.");
+                if (!designComplete)
+                {
+                    return CreateAccess(
+                        step,
+                        false,
+                        clashComplete,
+                        "Generate sprinkler design before running clash detection.");
+                }
+
+                if (modelStale)
+                {
+                    return CreateAccess(step, false, clashComplete, StaleModelBlockReason);
+                }
+
+                return CreateAccess(step, true, clashComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.PlaceSprinklers:
-                return CreateAccess(
-                    step,
-                    isUnlocked: clashComplete,
-                    isComplete: placementComplete,
-                    blockReason: clashComplete
-                        ? string.Empty
-                        : "Resolve clashes and update layout before placing sprinklers in Revit.");
+                if (!clashComplete)
+                {
+                    return CreateAccess(
+                        step,
+                        false,
+                        placementComplete,
+                        "Resolve clashes and update layout before placing sprinklers in Revit.");
+                }
+
+                if (modelStale)
+                {
+                    return CreateAccess(step, false, placementComplete, StaleModelBlockReason);
+                }
+
+                return CreateAccess(step, true, placementComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.Hydraulics:
-                return CreateAccess(
-                    step,
-                    isUnlocked: clashComplete,
-                    isComplete: hydraulicsComplete,
-                    blockReason: clashComplete
-                        ? string.Empty
-                        : "Resolve clashes and update layout before running hydraulics.");
+                if (!clashComplete)
+                {
+                    return CreateAccess(
+                        step,
+                        false,
+                        hydraulicsComplete,
+                        "Resolve clashes and update layout before running hydraulics.");
+                }
+
+                if (modelStale)
+                {
+                    return CreateAccess(
+                        step,
+                        true,
+                        hydraulicsComplete,
+                        StaleModelBlockReason,
+                        WorkflowStepStatus.Warning,
+                        "Review first");
+                }
+
+                return CreateAccess(step, true, hydraulicsComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.Materials:
                 return CreateAccess(
@@ -199,35 +270,51 @@ public static class SprinkSnapWorkflowGate
         SprinkSnapWorkflowStep step,
         bool isUnlocked,
         bool isComplete,
-        string blockReason)
+        string blockReason,
+        WorkflowStepStatus? status = null,
+        string statusLabel = null)
     {
-        WorkflowStepStatus status;
-        string statusLabel;
-
-        if (!isUnlocked)
-        {
-            status = WorkflowStepStatus.Blocked;
-            statusLabel = "Locked";
-        }
-        else if (isComplete)
-        {
-            status = WorkflowStepStatus.Complete;
-            statusLabel = "Complete";
-        }
-        else
-        {
-            status = WorkflowStepStatus.InProgress;
-            statusLabel = "Ready";
-        }
+        WorkflowStepStatus resolvedStatus = status ?? ResolveStatus(isUnlocked, isComplete);
+        string resolvedLabel = statusLabel ?? ResolveStatusLabel(resolvedStatus, isComplete);
 
         return new WorkflowModuleAccess
         {
             Step = step,
             IsUnlocked = isUnlocked,
             IsComplete = isComplete,
-            Status = status,
-            StatusLabel = statusLabel,
+            Status = resolvedStatus,
+            StatusLabel = resolvedLabel,
             BlockReason = blockReason
         };
+    }
+
+    private static WorkflowStepStatus ResolveStatus(bool isUnlocked, bool isComplete)
+    {
+        if (!isUnlocked)
+        {
+            return WorkflowStepStatus.Blocked;
+        }
+
+        if (isComplete)
+        {
+            return WorkflowStepStatus.Complete;
+        }
+
+        return WorkflowStepStatus.InProgress;
+    }
+
+    private static string ResolveStatusLabel(WorkflowStepStatus status, bool isComplete)
+    {
+        switch (status)
+        {
+            case WorkflowStepStatus.Blocked:
+                return "Locked";
+            case WorkflowStepStatus.Complete:
+                return "Complete";
+            case WorkflowStepStatus.Warning:
+                return isComplete ? "Review" : "Review needed";
+            default:
+                return "Ready";
+        }
     }
 }

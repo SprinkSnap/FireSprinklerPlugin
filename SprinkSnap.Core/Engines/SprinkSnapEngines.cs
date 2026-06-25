@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Engines;
 
@@ -87,21 +88,152 @@ public sealed class LayoutEngine : ILayoutEngine
 
 public sealed class HydraulicEngine : IHydraulicEngine
 {
+    private const double DefaultKFactor = 5.6;
+    private const double BranchDiameterInches = 1.25;
+    private const double BranchLengthFeet = 60.0;
+    private const double MainDiameterInches = 4.0;
+    private const double MainLengthFeet = 120.0;
+
     public HydraulicCalculationResult Calculate(IEnumerable<RoomInfo> rooms, WaterSupplyInput waterSupply)
     {
-        List<RoomInfo> roomList = rooms.ToList();
-        double totalFlow = Math.Max(0, roomList.Sum(room => room.ProposedSprinklers.Count) * 25.0);
-        double demandPressure = totalFlow > 0 ? 35.0 : 0.0;
-        double availablePressure = waterSupply.ResidualPressurePsi ?? 0.0;
+        List<RoomInfo> roomList = rooms?.ToList() ?? new List<RoomInfo>();
+        HydraulicCalculationResult result = new HydraulicCalculationResult();
 
-        return new HydraulicCalculationResult
+        List<RoomInfo> designRooms = roomList
+            .Where(room => room.DesignerApproved && !string.IsNullOrWhiteSpace(room.ApprovedHazardClassification))
+            .ToList();
+
+        if (designRooms.Count == 0)
         {
-            TotalFlowGpm = totalFlow,
-            SystemDemandPsi = demandPressure,
-            AvailablePressurePsi = availablePressure,
-            SafetyMarginPsi = availablePressure - demandPressure,
-            Warnings = totalFlow <= 0 ? new List<string> { "No sprinkler candidates available for hydraulic calculation." } : new List<string>()
-        };
+            result.Warnings.Add("No designer-approved rooms with hazard classifications are available for hydraulic calculation.");
+            return result;
+        }
+
+        Nfpa13HydraulicDesignCriteria controllingCriteria = SelectControllingCriteria(designRooms);
+        result.ControllingHazardClassification = controllingCriteria.HazardClassification;
+        result.DesignDensityGpmPerSqFt = controllingCriteria.DesignDensityGpmPerSqFt;
+        result.RemoteAreaSquareFeet = controllingCriteria.RemoteAreaSquareFeet;
+        result.HoseStreamAllowanceGpm = controllingCriteria.HoseStreamAllowanceGpm;
+        result.NfpaReference = controllingCriteria.NfpaReference;
+
+        result.SprinklerDemandFlowGpm = controllingCriteria.DesignDensityGpmPerSqFt * controllingCriteria.RemoteAreaSquareFeet;
+        result.TotalFlowGpm = result.SprinklerDemandFlowGpm + controllingCriteria.HoseStreamAllowanceGpm;
+
+        double equivalentKFactor = ResolveEquivalentKFactor(designRooms, controllingCriteria.HazardClassification);
+        result.EquivalentKFactor = equivalentKFactor;
+
+        double remoteSprinklerPressurePsi = Math.Pow(result.SprinklerDemandFlowGpm / Math.Max(equivalentKFactor, 0.1), 2.0);
+        double branchFrictionPsi = HazenWilliamsCalculator.FrictionLossPsi(
+            result.TotalFlowGpm,
+            BranchDiameterInches,
+            BranchLengthFeet);
+        double mainFrictionPsi = HazenWilliamsCalculator.FrictionLossPsi(
+            result.TotalFlowGpm,
+            MainDiameterInches,
+            MainLengthFeet);
+
+        result.SystemDemandPsi = remoteSprinklerPressurePsi + branchFrictionPsi + mainFrictionPsi;
+        result.AvailablePressurePsi = waterSupply.ResidualPressurePsi ?? 0.0;
+        result.SafetyMarginPsi = result.AvailablePressurePsi - result.SystemDemandPsi;
+
+        result.CriticalPath.Add(new HydraulicNode
+        {
+            NodeId = "Remote Sprinkler",
+            PressurePsi = remoteSprinklerPressurePsi,
+            FlowGpm = result.SprinklerDemandFlowGpm
+        });
+        result.CriticalPath.Add(new HydraulicNode
+        {
+            NodeId = "Branch Segment",
+            PressurePsi = remoteSprinklerPressurePsi + branchFrictionPsi,
+            FlowGpm = result.TotalFlowGpm
+        });
+        result.CriticalPath.Add(new HydraulicNode
+        {
+            NodeId = "Riser / Source",
+            PressurePsi = result.SystemDemandPsi,
+            FlowGpm = result.TotalFlowGpm
+        });
+
+        if (!waterSupply.ResidualPressurePsi.HasValue)
+        {
+            result.Warnings.Add("Residual pressure is required to compare demand against the available water supply.");
+        }
+        else if (result.SafetyMarginPsi < 0)
+        {
+            result.Warnings.Add(
+                "Calculated system demand exceeds available residual pressure by "
+                + Math.Abs(result.SafetyMarginPsi).ToString("N1")
+                + " PSI.");
+        }
+
+        if (designRooms.Sum(room => room.ProposedSprinklers.Count) == 0)
+        {
+            result.Warnings.Add("No proposed sprinkler locations found. Remote area demand uses NFPA 13 minimum area only.");
+        }
+
+        result.Warnings.Add(
+            "Controlling hazard: "
+            + controllingCriteria.HazardClassification
+            + " at "
+            + controllingCriteria.DesignDensityGpmPerSqFt.ToString("0.00")
+            + " gpm/sq ft over "
+            + controllingCriteria.RemoteAreaSquareFeet.ToString("N0")
+            + " sq ft remote area.");
+
+        return result;
+    }
+
+    private static Nfpa13HydraulicDesignCriteria SelectControllingCriteria(IEnumerable<RoomInfo> rooms)
+    {
+        Nfpa13HydraulicDesignCriteria controlling = null;
+        double highestDemand = 0.0;
+
+        foreach (IGrouping<string, RoomInfo> hazardGroup in rooms.GroupBy(room =>
+                     Nfpa13HydraulicDesignTable.NormalizeHazard(room.ApprovedHazardClassification)))
+        {
+            Nfpa13HydraulicDesignCriteria criteria = Nfpa13HydraulicDesignTable.GetCriteria(hazardGroup.Key);
+            double demand = criteria.DesignDensityGpmPerSqFt * criteria.RemoteAreaSquareFeet + criteria.HoseStreamAllowanceGpm;
+            if (demand > highestDemand)
+            {
+                highestDemand = demand;
+                controlling = criteria;
+            }
+        }
+
+        return controlling ?? Nfpa13HydraulicDesignTable.GetCriteria(HazardClassification.LightHazard);
+    }
+
+    private static double ResolveEquivalentKFactor(IEnumerable<RoomInfo> rooms, string controllingHazardDisplay)
+    {
+        List<double> kFactors = rooms
+            .Where(room => string.Equals(
+                Nfpa13HydraulicDesignTable.GetCriteria(room.ApprovedHazardClassification).HazardClassification,
+                controllingHazardDisplay,
+                StringComparison.OrdinalIgnoreCase))
+            .Select(ResolveRoomKFactor)
+            .Where(kFactor => kFactor > 0)
+            .ToList();
+
+        return kFactors.Count > 0 ? kFactors.Average() : DefaultKFactor;
+    }
+
+    private static double ResolveRoomKFactor(RoomInfo room)
+    {
+        string sprinklerName = string.IsNullOrWhiteSpace(room.SelectedSprinklerFamilyName)
+            ? room.AutoSelectedSprinklerName
+            : room.SelectedSprinklerFamilyName;
+
+        if (string.IsNullOrWhiteSpace(sprinklerName))
+        {
+            return 0.0;
+        }
+
+        SprinklerFamilyInfo family = new SprinklerFamilySelector()
+            .GetAvailableFamilies()
+            .FirstOrDefault(item => string.Equals(item.DisplayName, sprinklerName, StringComparison.OrdinalIgnoreCase));
+
+        return family?.KFactor > 0 ? family.KFactor : 0.0;
     }
 }
 

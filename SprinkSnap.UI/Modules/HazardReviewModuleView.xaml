@@ -3,6 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="clr-namespace:FireSprinklerPlugin.SprinkSnap.UI"
              Background="#EEF2F7">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -91,6 +94,10 @@
                                         <TextBlock FontWeight="SemiBold" FontSize="15">
                                             <Run Text="{Binding Number}" /><Run Text=" - " /><Run Text="{Binding Name}" />
                                         </TextBlock>
+                                        <TextBlock Text="Model changed since last save"
+                                                   Foreground="#B45309"
+                                                   FontWeight="SemiBold"
+                                                   Visibility="{Binding IsModelChanged, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                         <TextBlock Text="{Binding OccupancyClassification}" Foreground="#6B7280" />
                                         <TextBlock Foreground="#6B7280">
                                             <Run Text="Area " /><Run Text="{Binding AreaSquareFeet, StringFormat=N0}" /><Run Text=" sq ft" />

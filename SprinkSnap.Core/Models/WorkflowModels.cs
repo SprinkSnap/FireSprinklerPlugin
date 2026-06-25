@@ -90,6 +90,8 @@ public sealed class SprinkSnapProjectState
     public IList<LinkedModelScanOption> LinkedModelScanOptions { get; set; } = new List<LinkedModelScanOption>();
 
     public ModelChangeAssessment ModelChangeAssessment { get; set; } = new ModelChangeAssessment();
+
+    public HydraulicCalculationResult HydraulicResult { get; set; } = new HydraulicCalculationResult();
 }
 
 public sealed class ComplianceWarning
@@ -177,6 +179,16 @@ public sealed class HydraulicNode
 
 public sealed class HydraulicCalculationResult
 {
+    public string ControllingHazardClassification { get; set; } = string.Empty;
+
+    public double DesignDensityGpmPerSqFt { get; set; }
+
+    public double RemoteAreaSquareFeet { get; set; }
+
+    public double SprinklerDemandFlowGpm { get; set; }
+
+    public double HoseStreamAllowanceGpm { get; set; }
+
     public double TotalFlowGpm { get; set; }
 
     public double SystemDemandPsi { get; set; }
@@ -184,6 +196,10 @@ public sealed class HydraulicCalculationResult
     public double AvailablePressurePsi { get; set; }
 
     public double SafetyMarginPsi { get; set; }
+
+    public double EquivalentKFactor { get; set; }
+
+    public string NfpaReference { get; set; } = string.Empty;
 
     public IList<HydraulicNode> CriticalPath { get; set; } = new List<HydraulicNode>();
 

@@ -95,8 +95,11 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
         context.ProjectState.ModelChangeAssessment = new ModelChangeAssessment
         {
             HasBaseline = true,
+            IsStale = false,
             Messages = { "Analysis refreshed in the current SprinkSnap session." }
         };
+        context.ProjectState.SessionProgress.ClashDetectionComplete = false;
+        context.ProjectState.SessionProgress.SprinklersPlacedInRevit = false;
         context.RequestPersistToRevit();
         context.RequestWorkflowRefresh();
         RefreshSummary();
@@ -240,14 +243,30 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
     private readonly SprinkSnapShellContext context;
     private readonly IHydraulicEngine hydraulicEngine = new HydraulicEngine();
     private HydraulicCalculationResult result = new HydraulicCalculationResult();
+    private string statusMessage = "Run NFPA 13 remote-area hydraulics after clash resolution and water supply entry.";
 
     public HydraulicsModuleViewModel(SprinkSnapShellContext context)
     {
         this.context = context;
         CalculateCommand = new ModuleRelayCommand(_ => Calculate());
+        if (context.ProjectState.HydraulicResult != null
+            && context.ProjectState.HydraulicResult.TotalFlowGpm > 0)
+        {
+            result = context.ProjectState.HydraulicResult;
+        }
     }
 
     public ICommand CalculateCommand { get; }
+
+    public string ControllingHazard => result.ControllingHazardClassification;
+
+    public double DesignDensity => result.DesignDensityGpmPerSqFt;
+
+    public double RemoteAreaSquareFeet => result.RemoteAreaSquareFeet;
+
+    public double SprinklerDemandFlowGpm => result.SprinklerDemandFlowGpm;
+
+    public double HoseStreamAllowanceGpm => result.HoseStreamAllowanceGpm;
 
     public double TotalFlowGpm => result.TotalFlowGpm;
 
@@ -257,19 +276,53 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public double SafetyMarginPsi => result.SafetyMarginPsi;
 
+    public string NfpaReference => result.NfpaReference;
+
+    public string StatusMessage
+    {
+        get => statusMessage;
+        private set
+        {
+            statusMessage = value;
+            OnPropertyChanged();
+        }
+    }
+
     public string WarningSummary => result.Warnings.Count == 0
         ? "No hydraulic warnings."
         : string.Join(Environment.NewLine, result.Warnings);
 
     private void Calculate()
     {
+        if (SprinkSnapWorkflowGate.IsModelStale(context.ProjectState))
+        {
+            StatusMessage = SprinkSnapWorkflowGate.StaleModelBlockReason;
+            return;
+        }
+
         result = hydraulicEngine.Calculate(context.ProjectState.Rooms, context.ProjectState.WaterSupply);
-        context.ProjectState.SessionProgress.HydraulicsComplete = true;
+        context.ProjectState.HydraulicResult = result;
+        context.ProjectState.SessionProgress.HydraulicsComplete = result.TotalFlowGpm > 0;
+        context.RequestPersistToRevit();
         context.RequestWorkflowRefresh();
+        StatusMessage = result.SafetyMarginPsi >= 0
+            ? "Hydraulic calculation complete. Supply meets calculated demand."
+            : "Hydraulic calculation complete with warnings — review demand vs available pressure.";
+        NotifyResultChanged();
+    }
+
+    private void NotifyResultChanged()
+    {
+        OnPropertyChanged(nameof(ControllingHazard));
+        OnPropertyChanged(nameof(DesignDensity));
+        OnPropertyChanged(nameof(RemoteAreaSquareFeet));
+        OnPropertyChanged(nameof(SprinklerDemandFlowGpm));
+        OnPropertyChanged(nameof(HoseStreamAllowanceGpm));
         OnPropertyChanged(nameof(TotalFlowGpm));
         OnPropertyChanged(nameof(SystemDemandPsi));
         OnPropertyChanged(nameof(AvailablePressurePsi));
         OnPropertyChanged(nameof(SafetyMarginPsi));
+        OnPropertyChanged(nameof(NfpaReference));
         OnPropertyChanged(nameof(WarningSummary));
     }
 }
@@ -433,6 +486,12 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
 
     private void DetectClashes()
     {
+        if (SprinkSnapWorkflowGate.IsModelStale(context.ProjectState))
+        {
+            StatusMessage = SprinkSnapWorkflowGate.StaleModelBlockReason;
+            return;
+        }
+
         if (context.ProjectState.Rooms.Count == 0)
         {
             StatusMessage = "Generate sprinkler design first — no rooms with layout candidates found.";
@@ -489,6 +548,12 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
 
     private void ResolveClashes()
     {
+        if (SprinkSnapWorkflowGate.IsModelStale(context.ProjectState))
+        {
+            StatusMessage = SprinkSnapWorkflowGate.StaleModelBlockReason;
+            return;
+        }
+
         SprinklerFamilyInfo sprinkler = context.SprinklerFamilies.FirstOrDefault()
             ?? context.GetOrCreateHazardViewModel().SelectedSprinklerFamily;
         if (sprinkler == null)
@@ -628,6 +693,12 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
 
     private void PlaceInRevit()
     {
+        if (SprinkSnapWorkflowGate.IsModelStale(context.ProjectState))
+        {
+            StatusMessage = SprinkSnapWorkflowGate.StaleModelBlockReason;
+            return;
+        }
+
         if (!hasValidatedPreflight)
         {
             RunPreflightValidation();
