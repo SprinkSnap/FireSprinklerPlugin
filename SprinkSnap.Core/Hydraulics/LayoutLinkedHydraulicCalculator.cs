@@ -147,6 +147,7 @@ public static class LayoutLinkedHydraulicCalculator
                 path,
                 totalSprinklerFlow,
                 hoseStreamAllowanceGpm);
+            HydraulicPipeSizingService.ApplyCriticalPathSuggestions(path);
         }
 
         path.Warnings.Add(
@@ -275,6 +276,7 @@ public static class LayoutLinkedHydraulicCalculator
             remotePressurePsi,
             fittings);
         HydraulicVelocityValidator.ValidateSegmentChain(path);
+        HydraulicPipeSizingService.ApplySegmentChainSuggestions(path);
         ApplySegmentVelocityToCriticalPath(path);
     }
 
@@ -311,6 +313,7 @@ public static class LayoutLinkedHydraulicCalculator
                 node.VelocityFeetPerSecond = matchingSegment.VelocityFeetPerSecond;
                 node.VelocityLimitFeetPerSecond = matchingSegment.VelocityLimitFeetPerSecond;
                 node.ExceedsVelocityLimit = matchingSegment.ExceedsVelocityLimit;
+                node.SuggestedDiameterInches = matchingSegment.SuggestedDiameterInches;
                 continue;
             }
 
@@ -319,6 +322,10 @@ public static class LayoutLinkedHydraulicCalculator
                 node.DiameterInches,
                 node.SegmentType);
             HydraulicVelocityValidator.ApplyVelocityToNode(node, check);
+            node.SuggestedDiameterInches = HydraulicPipeSizingService.SuggestCompliantDiameterInches(
+                node.FlowGpm,
+                node.SegmentType,
+                node.DiameterInches);
         }
     }
 

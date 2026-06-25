@@ -212,6 +212,7 @@ public static class SprinkSnapPdfReportExporter
                         AddRow(table, "Fitting friction loss", hydraulicResult.FittingFrictionPsi.ToString("N1") + " PSI");
                         AddRow(table, "Max critical-path velocity", hydraulicResult.MaxCriticalPathVelocityFeetPerSecond.ToString("N1") + " ft/s");
                         AddRow(table, "Velocity violations", hydraulicResult.CriticalPathVelocityViolationCount.ToString());
+                        AddRow(table, "Diameter suggestions", hydraulicResult.CriticalPathDiameterSuggestionCount.ToString());
                         AddRow(table, "System demand pressure", hydraulicResult.SystemDemandPsi.ToString("N1") + " PSI");
                         AddRow(table, "Demand flow (chart)", hydraulicResult.DemandFlowGpm.ToString("N1") + " GPM");
                         AddRow(table, "Available pressure at demand flow", hydraulicResult.AvailablePressurePsi.ToString("N1") + " PSI");
