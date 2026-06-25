@@ -51,7 +51,7 @@ public sealed class PipeDiameterSyncExternalEventHandler : IExternalEventHandler
                     pendingContext.ProjectState.PipePlacementSummary);
 
                 PlacedPipeDiameterSyncSummary syncSummary = RevitPipeDiameterSyncService.Sync(pendingDocument, plan);
-                PlacedFittingDiameterSyncPlan fittingPlan = SchematicFittingRevitDiameterSyncPlanner.BuildPlan(
+                PlacedFittingDiameterSyncPlan fittingPlan = FittingDiameterSyncPlanComposer.BuildCombinedPlan(
                     pendingContext.ProjectState.SchematicPipeRouting,
                     pendingContext.ProjectState.PipePlacementSummary);
                 PlacedFittingDiameterSyncSummary fittingSyncSummary = RevitFittingDiameterSyncService.Sync(
