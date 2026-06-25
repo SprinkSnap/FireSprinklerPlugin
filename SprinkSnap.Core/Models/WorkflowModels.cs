@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
+using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Models;
 
@@ -12,6 +13,7 @@ public enum SprinkSnapWorkflowStep
     WaterSupply,
     GenerateDesign,
     ClashDetection,
+    PlaceSprinklers,
     Hydraulics,
     Materials,
     Reports,
@@ -50,6 +52,8 @@ public sealed class SprinkSnapSessionProgress
 
     public bool ClashDetectionComplete { get; set; }
 
+    public bool SprinklersPlacedInRevit { get; set; }
+
     public bool HydraulicsComplete { get; set; }
 
     public bool MaterialsComplete { get; set; }
@@ -74,6 +78,8 @@ public sealed class SprinkSnapProjectState
     public IList<DesignException> Exceptions { get; set; } = new List<DesignException>();
 
     public ClashDetectionSummary ClashSummary { get; set; } = new ClashDetectionSummary();
+
+    public SprinklerPlacementSummary PlacementSummary { get; set; } = new SprinklerPlacementSummary();
 }
 
 public sealed class ComplianceWarning

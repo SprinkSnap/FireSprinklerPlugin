@@ -48,6 +48,12 @@ public static class ModuleWorkspaceFactory
                     DataContext = new ClashDetectionModuleViewModel(context)
                 };
 
+            case "Place Sprinklers":
+                return new PlaceSprinklersModuleView
+                {
+                    DataContext = new PlaceSprinklersModuleViewModel(context)
+                };
+
             case "Hydraulics":
                 return new HydraulicsModuleView
                 {

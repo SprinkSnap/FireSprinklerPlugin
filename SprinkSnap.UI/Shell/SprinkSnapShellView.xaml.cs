@@ -52,6 +52,8 @@ public partial class SprinkSnapShellView : UserControl
                 return "Generate Design";
             case SprinkSnapWorkflowStep.ClashDetection:
                 return "Clash Detection";
+            case SprinkSnapWorkflowStep.PlaceSprinklers:
+                return "Place Sprinklers";
             case SprinkSnapWorkflowStep.Hydraulics:
                 return "Hydraulics";
             case SprinkSnapWorkflowStep.Materials:

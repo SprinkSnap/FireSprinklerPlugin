@@ -10,6 +10,7 @@ using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
@@ -458,6 +459,108 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
             if (context.ProjectState.ClashSummary.Messages.Count > 0)
             {
                 StatusMessage = string.Join(" ", context.ProjectState.ClashSummary.Messages);
+            }
+        }
+    }
+}
+
+public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
+{
+    private readonly SprinkSnapShellContext context;
+    private string statusMessage = "Resolve clashes, then place approved sprinkler layouts in Revit.";
+
+    public PlaceSprinklersModuleViewModel(SprinkSnapShellContext context)
+    {
+        this.context = context;
+        RoomResults = new ObservableCollection<SprinklerPlacementRoomResult>();
+        PlaceInRevitCommand = new ModuleRelayCommand(_ => PlaceInRevit());
+        SyncFromState();
+    }
+
+    public ObservableCollection<SprinklerPlacementRoomResult> RoomResults { get; }
+
+    public ICommand PlaceInRevitCommand { get; }
+
+    public int TotalCandidates => context.ProjectState.PlacementSummary?.TotalCandidates
+        ?? context.ProjectState.Rooms.Sum(room => room.ProposedSprinklers.Count);
+
+    public int PlacedCount => context.ProjectState.PlacementSummary?.PlacedCount ?? 0;
+
+    public int SkippedRoomCount => context.ProjectState.PlacementSummary?.SkippedRoomCount ?? 0;
+
+    public int ReadyRoomCount => context.ProjectState.Rooms.Count(room =>
+        room.ProposedSprinklers.Count > 0
+        && room.DesignerApproved
+        && !room.RequiresExceptionReview);
+
+    public string StatusMessage
+    {
+        get => statusMessage;
+        private set
+        {
+            statusMessage = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private void PlaceInRevit()
+    {
+        if (ReadyRoomCount == 0)
+        {
+            StatusMessage = "No rooms are ready for placement. Complete hazard approval, layout, and clash resolution first.";
+            return;
+        }
+
+        if (context.IsPreviewMode)
+        {
+            StatusMessage = "WpfPreview cannot write to Revit. Open SprinkSnap in Revit and use Place Sprinklers from the ribbon or this module.";
+            return;
+        }
+
+        if (context.RequestPlaceSprinklers == null)
+        {
+            StatusMessage = "Revit placement is not connected for this session.";
+            return;
+        }
+
+        StatusMessage = "Placing sprinklers in Revit...";
+        context.RequestPlaceSprinklers(summary =>
+        {
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                ApplySummary(summary);
+                StatusMessage = summary.Messages.Count > 0
+                    ? string.Join(" ", summary.Messages)
+                    : "Placement complete.";
+                context.RequestWorkflowRefresh();
+            });
+        });
+    }
+
+    private void ApplySummary(SprinklerPlacementSummary summary)
+    {
+        context.ProjectState.PlacementSummary = summary;
+        RoomResults.Clear();
+        foreach (SprinklerPlacementRoomResult roomResult in summary.RoomResults)
+        {
+            RoomResults.Add(roomResult);
+        }
+
+        OnPropertyChanged(nameof(TotalCandidates));
+        OnPropertyChanged(nameof(PlacedCount));
+        OnPropertyChanged(nameof(SkippedRoomCount));
+        OnPropertyChanged(nameof(ReadyRoomCount));
+    }
+
+    private void SyncFromState()
+    {
+        if (context.ProjectState.PlacementSummary != null
+            && context.ProjectState.PlacementSummary.RoomResults.Count > 0)
+        {
+            ApplySummary(context.ProjectState.PlacementSummary);
+            if (context.ProjectState.PlacementSummary.Messages.Count > 0)
+            {
+                StatusMessage = string.Join(" ", context.ProjectState.PlacementSummary.Messages);
             }
         }
     }

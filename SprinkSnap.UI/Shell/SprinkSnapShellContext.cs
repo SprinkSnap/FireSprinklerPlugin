@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
@@ -32,6 +33,8 @@ public sealed class SprinkSnapShellContext
     public string DocumentTitle { get; private set; } = string.Empty;
 
     public Action PersistToRevitRequested { get; set; }
+
+    public Action<Action<SprinklerPlacementSummary>> RequestPlaceSprinklers { get; set; }
 
     public static SprinkSnapShellContext CreateEmpty()
     {

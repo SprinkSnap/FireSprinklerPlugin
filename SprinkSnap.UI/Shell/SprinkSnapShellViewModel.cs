@@ -36,6 +36,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
             CreatePanel("Water Supply", SprinkSnapWorkflowStep.WaterSupply, "Enter hydrant test data, static pressure, residual pressure, and flow at residual.", "Enter Water Supply"),
             CreatePanel("Generate Design", SprinkSnapWorkflowStep.GenerateDesign, "Generate sprinkler layout candidates after analysis, hazard approvals, sprinkler selections, and water supply are complete.", "Generate Sprinkler Design"),
             CreatePanel("Clash Detection", SprinkSnapWorkflowStep.ClashDetection, "Detect sprinkler conflicts with ducts, beams, lights, and geometry — then update layout per NFPA 13 Section 10.2.6.", "Run Clash Detection"),
+            CreatePanel("Place Sprinklers", SprinkSnapWorkflowStep.PlaceSprinklers, "Create Revit sprinkler family instances from approved layout candidates after clash resolution.", "Place in Revit"),
             CreatePanel("Hydraulics", SprinkSnapWorkflowStep.Hydraulics, "Build the hydraulic network, calculate demand, critical path, pressure loss, and safety margin.", "Run Hydraulics"),
             CreatePanel("Materials", SprinkSnapWorkflowStep.Materials, "Generate sprinkler, pipe, fitting, valve, and riser material takeoff quantities.", "Open Takeoff"),
             CreatePanel("Reports", SprinkSnapWorkflowStep.Reports, "Export design summary, hydraulic report, node diagram, and material takeoff PDFs.", "Export Reports"),
@@ -256,6 +257,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         progress.WaterSupplyComplete = SprinkSnapWorkflowGate.IsWaterSupplyComplete(context.ProjectState);
         progress.DesignGenerated = SprinkSnapWorkflowGate.IsDesignGenerated(context.ProjectState);
         progress.ClashDetectionComplete = SprinkSnapWorkflowGate.IsClashDetectionComplete(context.ProjectState);
+        progress.SprinklersPlacedInRevit = SprinkSnapWorkflowGate.IsSprinklersPlacedInRevit(context.ProjectState);
 
         WorkflowSteps.Clear();
         foreach (SprinkSnapModulePanel panel in ModulePanels)
@@ -520,6 +522,13 @@ public sealed class SprinkSnapModulePanel : INotifyPropertyChanged
                     "Detect conflicts with ducts, beams, lights, cable trays, and pipes.",
                     "Reference NFPA 13 Section 10.2.6 obstruction rules for each clash.",
                     "Automatically reposition sprinklers and update layout before hydraulics."
+                };
+            case "Place Sprinklers":
+                return new ObservableCollection<string>
+                {
+                    "Place listed sprinkler families at approved layout coordinates in Revit.",
+                    "Skip rooms with unresolved exceptions or missing family mappings.",
+                    "Tag placed heads with room number and hazard classification metadata."
                 };
             case "Hydraulics":
                 return new ObservableCollection<string>

@@ -28,6 +28,7 @@ public static class SprinkSnapWorkflowGate
         bool waterSupplyComplete = IsWaterSupplyComplete(state);
         bool designComplete = IsDesignGenerated(state);
         bool clashComplete = IsClashDetectionComplete(state);
+        bool placementComplete = IsSprinklersPlacedInRevit(state);
         bool hydraulicsComplete = state.SessionProgress.HydraulicsComplete;
         bool materialsComplete = state.SessionProgress.MaterialsComplete;
 
@@ -90,6 +91,15 @@ public static class SprinkSnapWorkflowGate
                         ? string.Empty
                         : "Generate sprinkler design before running clash detection.");
 
+            case SprinkSnapWorkflowStep.PlaceSprinklers:
+                return CreateAccess(
+                    step,
+                    isUnlocked: clashComplete,
+                    isComplete: placementComplete,
+                    blockReason: clashComplete
+                        ? string.Empty
+                        : "Resolve clashes and update layout before placing sprinklers in Revit.");
+
             case SprinkSnapWorkflowStep.Hydraulics:
                 return CreateAccess(
                     step,
@@ -102,9 +112,11 @@ public static class SprinkSnapWorkflowGate
             case SprinkSnapWorkflowStep.Materials:
                 return CreateAccess(
                     step,
-                    isUnlocked: designComplete,
+                    isUnlocked: designComplete || placementComplete,
                     isComplete: materialsComplete,
-                    blockReason: designComplete ? string.Empty : "Generate sprinkler design before opening material takeoff.");
+                    blockReason: (designComplete || placementComplete)
+                        ? string.Empty
+                        : "Generate sprinkler design or place sprinklers before opening material takeoff.");
 
             case SprinkSnapWorkflowStep.Reports:
                 bool reportsUnlocked = hydraulicsComplete || materialsComplete;
@@ -175,6 +187,12 @@ public static class SprinkSnapWorkflowGate
             || (state.ClashSummary != null
                 && state.ClashSummary.TotalClashes > 0
                 && state.ClashSummary.UnresolvedClashes == 0);
+    }
+
+    public static bool IsSprinklersPlacedInRevit(SprinkSnapProjectState state)
+    {
+        return state.SessionProgress.SprinklersPlacedInRevit
+            || (state.PlacementSummary != null && state.PlacementSummary.PlacedCount > 0);
     }
 
     private static WorkflowModuleAccess CreateAccess(

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Placement;
+using FireSprinklerPlugin.SprinkSnap.Revit.ExternalEvents;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 namespace FireSprinklerPlugin.SprinkSnap.Revit.Session;
@@ -17,6 +19,7 @@ public sealed class SprinkSnapRevitSession
         Document = document;
         Context = context;
         Context.PersistToRevitRequested = PersistApprovedHazardsToRevit;
+        Context.RequestPlaceSprinklers = RequestPlaceSprinklersInRevit;
     }
 
     public Document Document { get; }
@@ -97,5 +100,10 @@ public sealed class SprinkSnapRevitSession
     private void PersistApprovedHazardsToRevit()
     {
         RevitHazardPersistence.SaveApprovedHazards(Document, Context.ProjectState.Rooms);
+    }
+
+    private void RequestPlaceSprinklersInRevit(Action<SprinklerPlacementSummary> callback)
+    {
+        SprinklerPlacementExternalEventHandler.Instance.RequestPlacement(Document, Context, callback);
     }
 }

@@ -13,6 +13,7 @@ public sealed class SprinkSnapApplication : IExternalApplication
         TryCreateRibbonTab(application);
         CreateRibbonPanels(application);
         SprinkSnapDockablePaneRegistration.Register(application);
+        ExternalEvents.SprinklerPlacementExternalEventHandler.Register();
         return Result.Succeeded;
     }
 
@@ -44,6 +45,7 @@ public sealed class SprinkSnapApplication : IExternalApplication
             new RibbonButtonDefinition("Water Supply", "Water\nSupply", typeof(Commands.WaterSupplyCommand).FullName),
             new RibbonButtonDefinition("Generate Design", "Generate\nDesign", typeof(Commands.GenerateDesignCommand).FullName),
             new RibbonButtonDefinition("Clash Detection", "Clash\nDetection", typeof(Commands.ClashDetectionCommand).FullName),
+            new RibbonButtonDefinition("Place Sprinklers", "Place\nSprinklers", typeof(Commands.PlaceSprinklersCommand).FullName),
             new RibbonButtonDefinition("Hydraulics", "Hydraulics", typeof(Commands.HydraulicsCommand).FullName),
             new RibbonButtonDefinition("Materials", "Materials", typeof(Commands.MaterialsCommand).FullName),
             new RibbonButtonDefinition("Reports", "Reports", typeof(Commands.ReportsCommand).FullName),

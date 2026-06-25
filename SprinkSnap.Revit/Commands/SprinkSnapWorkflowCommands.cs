@@ -112,6 +112,13 @@ public sealed class ClashDetectionCommand : SprinkSnapWorkflowCommandBase
     protected override string DisplayName => "Clash Detection";
 }
 
+public sealed class PlaceSprinklersCommand : SprinkSnapWorkflowCommandBase
+{
+    protected override SprinkSnapWorkflowStep WorkflowStep => SprinkSnapWorkflowStep.PlaceSprinklers;
+
+    protected override string DisplayName => "Place Sprinklers";
+}
+
 public sealed class HydraulicsCommand : SprinkSnapWorkflowCommandBase
 {
     protected override SprinkSnapWorkflowStep WorkflowStep => SprinkSnapWorkflowStep.Hydraulics;
