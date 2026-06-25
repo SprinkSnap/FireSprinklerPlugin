@@ -92,6 +92,9 @@
                     <TextBlock FontSize="26" FontWeight="SemiBold">
                         <Run Text="{Binding PlacedFittingCount}" /><Run Text=" / " /><Run Text="{Binding SchematicFittingCount}" />
                     </TextBlock>
+                    <TextBlock Foreground="#6B7280" FontSize="11" Margin="0,4,0,0">
+                        <Run Text="{Binding ConnectedFittingCount}" /><Run Text=" connector · " /><Run Text="{Binding ConnectedJointCount}" /><Run Text=" joints" />
+                    </TextBlock>
                 </StackPanel>
             </Border>
         </UniformGrid>

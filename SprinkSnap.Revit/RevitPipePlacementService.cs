@@ -236,7 +236,8 @@ public static class RevitPipePlacementService
                 document,
                 segments,
                 placedPipes,
-                first.RoomNumber);
+                first.RoomNumber,
+                result);
             result.ConnectedJointCount = connectionResult.ConnectedJointCount;
             result.SkippedConnectionCount = connectionResult.SkippedConnectionCount;
             result.ConnectedFittingCount = connectionResult.CreatedFittingCount;

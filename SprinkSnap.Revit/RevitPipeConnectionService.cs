@@ -27,7 +27,8 @@ public static class RevitPipeConnectionService
         Document document,
         IList<PipeSegment> segments,
         IList<PlacedPipeRecord> placedPipes,
-        string roomNumber)
+        string roomNumber,
+        PipePlacementRoomResult placementResult = null)
     {
         RevitPipeConnectionResult result = new RevitPipeConnectionResult();
         if (document == null || segments == null || segments.Count == 0 || placedPipes == null || placedPipes.Count == 0)
@@ -44,7 +45,7 @@ public static class RevitPipeConnectionService
                      .Where(intent => intent.Kind != PipeConnectionKind.Takeoff)
                      .OrderBy(intent => ConnectionPriority(intent.Kind)))
         {
-            ExecuteIntent(document, intent, pipesBySegmentIndex, roomNumber, result);
+            ExecuteIntent(document, intent, pipesBySegmentIndex, roomNumber, placementResult, result);
         }
 
         foreach (IGrouping<int, PipeConnectionIntent> takeoffGroup in plan.Connections
@@ -70,6 +71,7 @@ public static class RevitPipeConnectionService
                         branchRecord.Pipe,
                         ToXyz(intent.Location),
                         roomNumber,
+                        placementResult,
                         result))
                 {
                     result.ConnectedJointCount++;
@@ -105,6 +107,7 @@ public static class RevitPipeConnectionService
         PipeConnectionIntent intent,
         Dictionary<int, PlacedPipeRecord> pipesBySegmentIndex,
         string roomNumber,
+        PipePlacementRoomResult placementResult,
         RevitPipeConnectionResult result)
     {
         if (!pipesBySegmentIndex.TryGetValue(intent.SegmentIndexA, out PlacedPipeRecord pipeA)
@@ -124,12 +127,12 @@ public static class RevitPipeConnectionService
                     connected = TryConnectDirect(pipeA.Pipe, pipeB.Pipe, location);
                     break;
                 case PipeConnectionKind.Elbow:
-                    connected = TryCreateElbow(document, pipeA.Pipe, pipeB.Pipe, location, roomNumber, result);
+                    connected = TryCreateElbow(document, pipeA.Pipe, pipeB.Pipe, location, roomNumber, placementResult, result);
                     break;
                 case PipeConnectionKind.Tee:
                     if (pipesBySegmentIndex.TryGetValue(intent.SegmentIndexC, out PlacedPipeRecord pipeC))
                     {
-                        connected = TryCreateTee(document, pipeA.Pipe, pipeB.Pipe, pipeC.Pipe, location, roomNumber, result);
+                        connected = TryCreateTee(document, pipeA.Pipe, pipeB.Pipe, pipeC.Pipe, location, roomNumber, placementResult, result);
                     }
 
                     break;
@@ -185,6 +188,7 @@ public static class RevitPipeConnectionService
         Pipe secondPipe,
         XYZ location,
         string roomNumber,
+        PipePlacementRoomResult placementResult,
         RevitPipeConnectionResult result)
     {
         Connector firstConnector = FindOpenConnectorNear(firstPipe, location);
@@ -194,10 +198,13 @@ public static class RevitPipeConnectionService
             return false;
         }
 
+        double diameterInches = ResolveElbowDiameterInches(firstPipe, secondPipe);
         FamilyInstance fitting = document.Create.NewElbowFitting(firstConnector, secondConnector);
         if (fitting != null)
         {
-            TagFitting(fitting, "Elbow", roomNumber);
+            string description = diameterInches.ToString("0.##") + "\" elbow at connector routing joint";
+            TagFitting(fitting, PipeJointTypes.Elbow, roomNumber, diameterInches, description);
+            RecordConnectedFitting(placementResult, fitting, PipeJointTypes.Elbow, diameterInches, description);
             result.CreatedFittingCount++;
             return true;
         }
@@ -213,6 +220,7 @@ public static class RevitPipeConnectionService
         Pipe branchPipe,
         XYZ location,
         string roomNumber,
+        PipePlacementRoomResult placementResult,
         RevitPipeConnectionResult result)
     {
         Connector firstConnector = FindOpenConnectorNear(firstPipe, location);
@@ -223,13 +231,16 @@ public static class RevitPipeConnectionService
             return false;
         }
 
+        double diameterInches = ResolveTeeDiameterInches(branchPipe, firstPipe, secondPipe);
         FamilyInstance tee = document.Create.NewTeeFitting(firstConnector, secondConnector, branchConnector);
         if (tee == null)
         {
             return false;
         }
 
-        TagFitting(tee, "Tee", roomNumber);
+        string description = diameterInches.ToString("0.##") + "\" tee at connector routing joint";
+        TagFitting(tee, PipeJointTypes.Tee, roomNumber, diameterInches, description);
+        RecordConnectedFitting(placementResult, tee, PipeJointTypes.Tee, diameterInches, description);
         result.CreatedFittingCount++;
         return true;
     }
@@ -240,8 +251,10 @@ public static class RevitPipeConnectionService
         Pipe branchPipe,
         XYZ location,
         string roomNumber,
+        PipePlacementRoomResult placementResult,
         RevitPipeConnectionResult result)
     {
+        double diameterInches = ResolveTeeDiameterInches(branchPipe, trunkPipe);
         if (TrySplitTrunkAtLocation(document, trunkPipe, location, out Pipe upstreamPipe, out Pipe downstreamPipe))
         {
             trunkPipe = downstreamPipe ?? trunkPipe;
@@ -253,7 +266,9 @@ public static class RevitPipeConnectionService
                 FamilyInstance tee = document.Create.NewTeeFitting(upstreamConnector, downstreamConnector, branchConnector);
                 if (tee != null)
                 {
-                    TagFitting(tee, "Tee", roomNumber);
+                    string description = diameterInches.ToString("0.##") + "\" tee at cross main tie-in";
+                    TagFitting(tee, PipeJointTypes.Tee, roomNumber, diameterInches, description);
+                    RecordConnectedFitting(placementResult, tee, PipeJointTypes.Tee, diameterInches, description);
                     result.CreatedFittingCount++;
                     return true;
                 }
@@ -273,7 +288,9 @@ public static class RevitPipeConnectionService
             return false;
         }
 
-        TagFitting(takeoff, "Tee", roomNumber);
+        string takeoffDescription = diameterInches.ToString("0.##") + "\" takeoff at cross main tie-in";
+        TagFitting(takeoff, PipeJointTypes.Tee, roomNumber, diameterInches, takeoffDescription);
+        RecordConnectedFitting(placementResult, takeoff, PipeJointTypes.Tee, diameterInches, takeoffDescription);
         result.CreatedFittingCount++;
         return true;
     }
@@ -347,16 +364,96 @@ public static class RevitPipeConnectionService
         return bestConnector;
     }
 
-    private static void TagFitting(FamilyInstance fitting, string jointType, string roomNumber)
+    private static void TagFitting(
+        FamilyInstance fitting,
+        string jointType,
+        string roomNumber,
+        double diameterInches,
+        string description)
     {
         if (fitting == null)
         {
             return;
         }
 
-        SetParameter(fitting, "Comments", "SprinkSnap Schematic Fitting | Room " + roomNumber + " | " + jointType + " | connected");
+        SetParameter(
+            fitting,
+            "Comments",
+            "SprinkSnap Schematic Fitting | Room "
+            + roomNumber
+            + " | "
+            + jointType
+            + " | "
+            + diameterInches.ToString("0.##")
+            + "\" | connected");
         SetParameter(fitting, "SS_RoomNumber", roomNumber);
         SetParameter(fitting, "SS_SegmentType", jointType);
+        SetParameter(fitting, "SS_PlacementBasis", description);
+    }
+
+    private static void RecordConnectedFitting(
+        PipePlacementRoomResult placementResult,
+        FamilyInstance fitting,
+        string jointType,
+        double diameterInches,
+        string description)
+    {
+        if (placementResult == null || fitting == null)
+        {
+            return;
+        }
+
+        placementResult.PlacedFittingElementIds.Add(fitting.Id.IntegerValue);
+        placementResult.PlacedFittings.Add(new PipePlacementFittingResult
+        {
+            JointType = jointType,
+            DiameterInches = diameterInches,
+            PlacedElementId = fitting.Id.IntegerValue,
+            Description = description
+        });
+        placementResult.PlacedFittingCount++;
+    }
+
+    private static double ResolveElbowDiameterInches(Pipe firstPipe, Pipe secondPipe)
+    {
+        double firstDiameter = ReadPipeDiameterInches(firstPipe);
+        double secondDiameter = ReadPipeDiameterInches(secondPipe);
+        return Math.Max(firstDiameter, secondDiameter);
+    }
+
+    private static double ResolveTeeDiameterInches(Pipe branchPipe, params Pipe[] runPipes)
+    {
+        double branchDiameter = ReadPipeDiameterInches(branchPipe);
+        if (branchDiameter > 0)
+        {
+            return branchDiameter;
+        }
+
+        return runPipes
+            .Select(ReadPipeDiameterInches)
+            .Where(diameter => diameter > 0)
+            .DefaultIfEmpty(0)
+            .Max();
+    }
+
+    private static double ReadPipeDiameterInches(Pipe pipe)
+    {
+        Parameter diameter = pipe?.get_Parameter(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM);
+        if (diameter != null && diameter.HasValue)
+        {
+            return diameter.AsDouble();
+        }
+
+        if (pipe?.PipeType != null)
+        {
+            Parameter typeDiameter = pipe.PipeType.get_Parameter(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM);
+            if (typeDiameter != null && typeDiameter.HasValue)
+            {
+                return typeDiameter.AsDouble();
+            }
+        }
+
+        return 0.0;
     }
 
     private static void SetParameter(Element element, string parameterName, string value)

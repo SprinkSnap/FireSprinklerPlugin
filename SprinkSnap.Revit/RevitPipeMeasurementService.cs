@@ -252,6 +252,20 @@ public static class RevitPipeMeasurementService
             return string.Empty;
         }
 
+        for (int index = parts.Length - 1; index >= 2; index--)
+        {
+            string token = parts[index].Trim();
+            if (string.Equals(token, "connected", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (TryParseDiameterToken(token, out _))
+            {
+                return parts[index - 1].Trim();
+            }
+        }
+
         if (parts.Length >= 4 && TryParseDiameterToken(parts[parts.Length - 1], out _))
         {
             return parts[parts.Length - 2].Trim();
@@ -269,7 +283,15 @@ public static class RevitPipeMeasurementService
             return false;
         }
 
-        return TryParseDiameterToken(parts[parts.Length - 1], out diameterInches);
+        for (int index = parts.Length - 1; index >= 2; index--)
+        {
+            if (TryParseDiameterToken(parts[index], out diameterInches))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool TryParseDiameterToken(string token, out double diameterInches)

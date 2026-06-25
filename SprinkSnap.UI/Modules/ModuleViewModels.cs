@@ -1124,6 +1124,10 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
 
     public int PlacedFittingCount => context.ProjectState.PipePlacementSummary?.PlacedFittingCount ?? 0;
 
+    public int ConnectedFittingCount => context.ProjectState.PipePlacementSummary?.ConnectedFittingCount ?? 0;
+
+    public int ConnectedJointCount => context.ProjectState.PipePlacementSummary?.ConnectedJointCount ?? 0;
+
     public int SchematicFittingCount => context.ProjectState.SchematicPipeRouting?.TotalSegmentCount > 0
         ? SchematicPipeJointBuilder.BuildFromRouting(context.ProjectState.SchematicPipeRouting).Count
         : 0;
@@ -1348,6 +1352,8 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(PlacedPipeSegmentCount));
         OnPropertyChanged(nameof(PlacedPipeLengthFeet));
         OnPropertyChanged(nameof(PlacedFittingCount));
+        OnPropertyChanged(nameof(ConnectedFittingCount));
+        OnPropertyChanged(nameof(ConnectedJointCount));
         OnPropertyChanged(nameof(SchematicPipeSegmentCount));
         OnPropertyChanged(nameof(SchematicFittingCount));
     }
