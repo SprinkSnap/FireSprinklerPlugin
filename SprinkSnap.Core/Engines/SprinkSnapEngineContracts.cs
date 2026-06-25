@@ -50,7 +50,8 @@ public interface IMaterialTakeoffEngine
     IReadOnlyList<MaterialTakeoffItem> Generate(
         IEnumerable<RoomInfo> rooms,
         SprinklerPlacementSummary placementSummary = null,
-        SchematicPipeRoutingSummary schematicPipeRouting = null);
+        SchematicPipeRoutingSummary schematicPipeRouting = null,
+        PipePlacementSummary pipePlacementSummary = null);
 }
 
 public interface IReportEngine

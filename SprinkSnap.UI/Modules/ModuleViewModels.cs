@@ -501,7 +501,7 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private readonly IMaterialTakeoffEngine takeoffEngine = new MaterialTakeoffEngine();
-    private string statusMessage = "Refresh takeoff to generate room-level sprinkler BOM rows.";
+    private string statusMessage = "Refresh takeoff to generate sprinkler, pipe, fitting, and valve BOM rows.";
 
     public MaterialsModuleViewModel(SprinkSnapShellContext context)
     {
@@ -534,20 +534,28 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
         foreach (MaterialTakeoffItem item in takeoffEngine.Generate(
                      context.ProjectState.Rooms,
                      context.ProjectState.PlacementSummary,
-                     context.ProjectState.SchematicPipeRouting))
+                     context.ProjectState.SchematicPipeRouting,
+                     context.ProjectState.PipePlacementSummary))
         {
             Items.Add(item);
         }
 
         int detailCount = Items.Count(item => !item.IsSummaryRow);
-        int totalQuantity = Items.Where(item => !item.IsSummaryRow).Sum(item => (int)item.Quantity);
+        int sprinklerRows = Items.Count(item => !item.IsSummaryRow && string.Equals(item.ItemType, "Sprinkler", StringComparison.OrdinalIgnoreCase));
+        int pipeRows = Items.Count(item => !item.IsSummaryRow && string.Equals(item.ItemType, "Pipe", StringComparison.OrdinalIgnoreCase));
+        int fittingRows = Items.Count(item => !item.IsSummaryRow && (
+            string.Equals(item.ItemType, "Fitting", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(item.ItemType, "Valve", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(item.ItemType, "Riser Assembly", StringComparison.OrdinalIgnoreCase)));
         StatusMessage = detailCount == 0
-            ? "No sprinkler quantities found. Generate layout or place sprinklers in Revit first."
+            ? "No material quantities found. Generate layout, schematic routing, or place elements in Revit first."
             : "Takeoff includes "
-              + detailCount
-              + " room row(s) totaling "
-              + totalQuantity
-              + " sprinkler(s). Summary rows are included for Excel export.";
+              + sprinklerRows
+              + " sprinkler row(s), "
+              + pipeRows
+              + " pipe row(s), and "
+              + fittingRows
+              + " fitting/valve row(s). Summary rows are included for Excel export.";
 
         context.ProjectState.SessionProgress.MaterialsComplete = detailCount > 0;
         context.RequestWorkflowRefresh();
@@ -706,7 +714,8 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
         IReadOnlyList<MaterialTakeoffItem> materialTakeoff = takeoffEngine.Generate(
             context.ProjectState.Rooms,
             context.ProjectState.PlacementSummary,
-            context.ProjectState.SchematicPipeRouting);
+            context.ProjectState.SchematicPipeRouting,
+            context.ProjectState.PipePlacementSummary);
         ReportExportResult exportResult = reportEngine.ExportAll(
             context.ProjectState,
             hydraulicResult,
