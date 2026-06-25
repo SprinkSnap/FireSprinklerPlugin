@@ -35,6 +35,49 @@ public sealed class PipePlacementSummary
 
     public int RevitPipeDiameterSyncCount { get; set; }
 
+    public bool UsesRevitFittingDiameterSync { get; set; }
+
+    public int RevitFittingDiameterSyncCount { get; set; }
+
+    public IList<string> Messages { get; set; } = new List<string>();
+}
+
+public sealed class PlacedFittingDiameterSyncPlan
+{
+    public IList<PlacedFittingDiameterSyncTarget> Targets { get; set; } = new List<PlacedFittingDiameterSyncTarget>();
+
+    public int SkippedCount { get; set; }
+
+    public IList<string> Messages { get; set; } = new List<string>();
+}
+
+public sealed class PlacedFittingDiameterSyncTarget
+{
+    public int PlacedElementId { get; set; }
+
+    public int RoomRevitElementId { get; set; }
+
+    public string RoomNumber { get; set; } = string.Empty;
+
+    public string JointType { get; set; } = string.Empty;
+
+    public double TargetDiameterInches { get; set; }
+
+    public double CurrentDiameterInches { get; set; }
+
+    public string UpdatedDescription { get; set; } = string.Empty;
+}
+
+public sealed class PlacedFittingDiameterSyncSummary
+{
+    public int UpdatedCount { get; set; }
+
+    public int SkippedCount { get; set; }
+
+    public int FailedCount { get; set; }
+
+    public bool UsesRevitFittingDiameterSync { get; set; }
+
     public IList<string> Messages { get; set; } = new List<string>();
 }
 

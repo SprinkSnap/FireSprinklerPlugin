@@ -51,6 +51,13 @@ public sealed class PipeDiameterSyncExternalEventHandler : IExternalEventHandler
                     pendingContext.ProjectState.PipePlacementSummary);
 
                 PlacedPipeDiameterSyncSummary syncSummary = RevitPipeDiameterSyncService.Sync(pendingDocument, plan);
+                PlacedFittingDiameterSyncPlan fittingPlan = SchematicFittingRevitDiameterSyncPlanner.BuildPlan(
+                    pendingContext.ProjectState.SchematicPipeRouting,
+                    pendingContext.ProjectState.PipePlacementSummary);
+                PlacedFittingDiameterSyncSummary fittingSyncSummary = RevitFittingDiameterSyncService.Sync(
+                    pendingDocument,
+                    fittingPlan);
+
                 summary = RevitPipeMeasurementService.Measure(
                     pendingDocument,
                     pendingContext.ProjectState.Rooms,
@@ -58,7 +65,17 @@ public sealed class PipeDiameterSyncExternalEventHandler : IExternalEventHandler
 
                 summary.UsesRevitPipeDiameterSync = syncSummary.UsesRevitPipeDiameterSync;
                 summary.RevitPipeDiameterSyncCount = syncSummary.UpdatedCount;
+                summary.UsesRevitFittingDiameterSync = fittingSyncSummary.UsesRevitFittingDiameterSync;
+                summary.RevitFittingDiameterSyncCount = fittingSyncSummary.UpdatedCount;
                 foreach (string message in syncSummary.Messages)
+                {
+                    if (!summary.Messages.Contains(message))
+                    {
+                        summary.Messages.Add(message);
+                    }
+                }
+
+                foreach (string message in fittingSyncSummary.Messages)
                 {
                     if (!summary.Messages.Contains(message))
                     {
@@ -71,6 +88,8 @@ public sealed class PipeDiameterSyncExternalEventHandler : IExternalEventHandler
                 {
                     pendingContext.ProjectState.HydraulicResult.UsesRevitPipeDiameterSync = syncSummary.UsesRevitPipeDiameterSync;
                     pendingContext.ProjectState.HydraulicResult.RevitPipeDiameterSyncCount = syncSummary.UpdatedCount;
+                    pendingContext.ProjectState.HydraulicResult.UsesRevitFittingDiameterSync = fittingSyncSummary.UsesRevitFittingDiameterSync;
+                    pendingContext.ProjectState.HydraulicResult.RevitFittingDiameterSyncCount = fittingSyncSummary.UpdatedCount;
                 }
 
                 RevitSessionPersistence.Save(pendingDocument, pendingContext.ProjectState);
@@ -90,6 +109,6 @@ public sealed class PipeDiameterSyncExternalEventHandler : IExternalEventHandler
 
     public string GetName()
     {
-        return "SprinkSnap Sync Placed Pipe Diameters";
+        return "SprinkSnap Sync Placed Pipe and Fitting Diameters";
     }
 }
