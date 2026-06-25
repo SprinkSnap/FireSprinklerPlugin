@@ -8,7 +8,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="4" MaxWidth="820">
             <TextBlock Text="Hydraulics" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
-            <TextBlock Text="Calculate NFPA 13 remote-area demand using layout-linked pipe lengths, per-head Q = K√P, and Hazen-Williams friction."
+            <TextBlock Text="Calculate NFPA 13 remote-area demand using layout-linked pipe lengths, per-head Q = K√P, and Hazen-Williams friction. In Revit, placed pipe lengths are re-measured from current geometry before each run."
                        TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,8" />
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,16" />
 

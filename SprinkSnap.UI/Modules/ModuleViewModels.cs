@@ -13,6 +13,7 @@ using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
+using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Materials;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
@@ -546,6 +547,29 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
             return;
         }
 
+        if (HydraulicsPipeDataRefreshPolicy.ShouldRemeasureBeforeCalculation(
+                context.ProjectState.SchematicPipeRouting,
+                context.ProjectState.PipePlacementSummary,
+                context.IsPreviewMode,
+                context.RequestRemeasurePlacedPipes != null))
+        {
+            StatusMessage = "Re-measuring placed pipe lengths from Revit before hydraulic calculation...";
+            context.RequestRemeasurePlacedPipes(summary =>
+            {
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    context.ProjectState.PipePlacementSummary = summary;
+                    RunHydraulicCalculation(summary.Messages);
+                });
+            });
+            return;
+        }
+
+        RunHydraulicCalculation(null);
+    }
+
+    private void RunHydraulicCalculation(IList<string> remeasureMessages)
+    {
         result = hydraulicEngine.Calculate(
             context.ProjectState.Rooms,
             context.ProjectState.WaterSupply,
@@ -556,9 +580,23 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         context.ProjectState.SessionProgress.HydraulicsComplete = result.TotalFlowGpm > 0;
         context.RequestPersistToRevit();
         context.RequestWorkflowRefresh();
-        StatusMessage = result.SafetyMarginPsi >= 0
+
+        if (remeasureMessages != null && remeasureMessages.Count > 0)
+        {
+            StatusMessage = string.Join(" ", remeasureMessages);
+        }
+        else
+        {
+            StatusMessage = string.Empty;
+        }
+
+        string completionMessage = result.SafetyMarginPsi >= 0
             ? "Hydraulic calculation complete. Supply meets calculated demand."
             : "Hydraulic calculation complete with warnings — review demand vs available pressure.";
+        StatusMessage = string.IsNullOrWhiteSpace(StatusMessage)
+            ? completionMessage
+            : StatusMessage + " " + completionMessage;
+
         NotifyResultChanged();
     }
 
