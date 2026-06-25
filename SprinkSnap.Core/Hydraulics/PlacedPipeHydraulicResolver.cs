@@ -71,6 +71,21 @@ public static class PlacedPipeHydraulicResolver
         double defaultBranchDiameterInches,
         double defaultMainDiameterInches)
     {
+        PipePlacementRoomResult placedRoom = (pipePlacementSummary?.RoomResults ?? new List<PipePlacementRoomResult>())
+            .Where(result => result.RoomRevitElementId == roomRevitElementId && roomRevitElementId > 0)
+            .GroupBy(result => result.RoomRevitElementId)
+            .Select(group => group.Last())
+            .FirstOrDefault();
+
+        if (PlacedPipeGraphBuilder.RoomHasPlacedTopology(placedRoom))
+        {
+            return PlacedPipeGraphBuilder.BuildRoomSegments(
+                placedRoom,
+                roomRevitElementId,
+                defaultBranchDiameterInches,
+                defaultMainDiameterInches);
+        }
+
         IList<PipeSegment> schematicSegments = SchematicPipeRoutingService.GetSegmentsForRoom(
             schematicPipeRouting,
             roomRevitElementId);
@@ -78,12 +93,6 @@ public static class PlacedPipeHydraulicResolver
         {
             return new List<HydraulicGraphSegment>();
         }
-
-        PipePlacementRoomResult placedRoom = (pipePlacementSummary?.RoomResults ?? new List<PipePlacementRoomResult>())
-            .Where(result => result.RoomRevitElementId == roomRevitElementId && roomRevitElementId > 0)
-            .GroupBy(result => result.RoomRevitElementId)
-            .Select(group => group.Last())
-            .FirstOrDefault();
 
         string dataSource = placedRoom?.PlacedSegments != null && placedRoom.PlacedSegments.Count > 0
             ? "Placed"

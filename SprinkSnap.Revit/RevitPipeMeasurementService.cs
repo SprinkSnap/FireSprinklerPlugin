@@ -57,6 +57,7 @@ public static class RevitPipeMeasurementService
                 continue;
             }
 
+            bool hasTopology = TryReadPipeEndpoints(pipe, out Point3D start, out Point3D end);
             PipePlacementRoomResult roomResult = GetOrCreateRoomResult(
                 roomResults,
                 roomsByNumber,
@@ -67,7 +68,10 @@ public static class RevitPipeMeasurementService
                 DiameterInches = ReadPipeDiameterInches(pipe),
                 LengthFeet = lengthFeet,
                 PlacedElementId = pipe.Id.IntegerValue,
-                Description = ReadParameterValue(pipe, "SS_PlacementBasis")
+                Description = ReadParameterValue(pipe, "SS_PlacementBasis"),
+                Start = start,
+                End = end,
+                HasTopology = hasTopology
             });
             roomResult.PlacedElementIds.Add(pipe.Id.IntegerValue);
             roomResult.PlacedSegmentCount++;
@@ -319,6 +323,22 @@ public static class RevitPipeMeasurementService
         }
 
         return 0.0;
+    }
+
+    private static bool TryReadPipeEndpoints(Pipe pipe, out Point3D start, out Point3D end)
+    {
+        start = new Point3D();
+        end = new Point3D();
+        if (pipe?.Location is not LocationCurve locationCurve || locationCurve.Curve == null)
+        {
+            return false;
+        }
+
+        XYZ curveStart = locationCurve.Curve.GetEndPoint(0);
+        XYZ curveEnd = locationCurve.Curve.GetEndPoint(1);
+        start = new Point3D(curveStart.X, curveStart.Y, curveStart.Z);
+        end = new Point3D(curveEnd.X, curveEnd.Y, curveEnd.Z);
+        return true;
     }
 
     private static double ReadPipeDiameterInches(Pipe pipe)

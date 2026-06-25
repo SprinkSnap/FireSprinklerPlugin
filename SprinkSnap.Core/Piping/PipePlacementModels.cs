@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
@@ -83,6 +84,12 @@ public sealed class PipePlacementSegmentResult
     public int PlacedElementId { get; set; }
 
     public string Description { get; set; } = string.Empty;
+
+    public Point3D Start { get; set; } = new Point3D();
+
+    public Point3D End { get; set; } = new Point3D();
+
+    public bool HasTopology { get; set; }
 }
 
 public sealed class PipePlacementFittingResult

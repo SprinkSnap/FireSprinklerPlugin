@@ -161,6 +161,7 @@ public sealed class HydraulicEngine : IHydraulicEngine
         result.UsesProjectTrunk = layoutPath.UsesProjectTrunk;
         result.CriticalPathSegmentCount = layoutPath.CriticalPathSegmentCount;
         result.UsesPlacedPipeLengths = layoutPath.UsesPlacedPipeLengths;
+        result.UsesPlacedPipeTopology = layoutPath.UsesPlacedPipeTopology;
         result.PipeLengthDataSource = layoutPath.PipeLengthDataSource ?? string.Empty;
         result.BranchLengthFeet = layoutPath.BranchLengthFeet;
         result.MainLengthFeet = layoutPath.MainLengthFeet;

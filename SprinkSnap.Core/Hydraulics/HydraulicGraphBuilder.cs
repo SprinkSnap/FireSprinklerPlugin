@@ -194,7 +194,16 @@ public static class HydraulicGraphBuilder
                     + " room(s) to a shared building riser at the hydraulic source.");
             }
 
-            if (path.UsesPlacedPipeLengths)
+            if (path.UsesPlacedPipeTopology)
+            {
+                path.Warnings.Add(
+                    "Segment-graph critical path uses placed Revit pipe topology in room "
+                    + (path.MostRemoteSprinkler.Room?.Number ?? string.Empty)
+                    + " with "
+                    + path.CriticalPathSegmentCount
+                    + " segment(s).");
+            }
+            else if (path.UsesPlacedPipeLengths)
             {
                 path.Warnings.Add(
                     "Segment-graph critical path uses placed Revit pipe lengths in room "

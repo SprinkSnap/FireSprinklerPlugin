@@ -51,6 +51,9 @@ public static class HydraulicSegmentGraphBuilder
                 roomSegments[0].DataSource,
                 "Placed",
                 StringComparison.OrdinalIgnoreCase);
+            path.UsesPlacedPipeTopology = chain.Any(segment =>
+                string.Equals(segment.DataSource, "Placed", StringComparison.OrdinalIgnoreCase))
+                && PlacedPipeGraphBuilder.RoomHasPlacedTopology(FindPlacedRoom(pipePlacementSummary, remoteRoomId));
         }
         else
         {
@@ -139,6 +142,29 @@ public static class HydraulicSegmentGraphBuilder
         Point3D sourcePoint,
         SchematicPipeRoutingSummary schematicPipeRouting)
     {
+        List<HydraulicGraphSegment> chain;
+        if (RoomSegmentsUsePlacedTopology(roomSegments))
+        {
+            chain = PlacedPipeGraphBuilder.TraceCriticalPath(remoteSprinkler, roomSegments, sourcePoint).ToList();
+        }
+        else
+        {
+            chain = BuildSchematicChainFromRoomSegments(remoteSprinkler, roomSegments, sourcePoint).ToList();
+        }
+
+        if (schematicPipeRouting?.UsesProjectTrunk == true)
+        {
+            chain.AddRange(BuildProjectTrunkSegments(remoteSprinkler.Room?.RevitElementId ?? 0, schematicPipeRouting));
+        }
+
+        return chain.Where(segment => segment.LengthFeet > 0.01).ToList();
+    }
+
+    private static IList<HydraulicGraphSegment> BuildSchematicChainFromRoomSegments(
+        LayoutSprinklerPoint remoteSprinkler,
+        IList<HydraulicGraphSegment> roomSegments,
+        Point3D sourcePoint)
+    {
         List<HydraulicGraphSegment> chain = new List<HydraulicGraphSegment>();
         HydraulicGraphSegment branchDrop = FindBranchDropSegment(remoteSprinkler, roomSegments);
         if (branchDrop != null)
@@ -163,16 +189,28 @@ public static class HydraulicSegmentGraphBuilder
             roomSegments);
         chain.AddRange(crossMainSegments);
 
-        if (schematicPipeRouting?.UsesProjectTrunk == true)
-        {
-            chain.AddRange(BuildProjectTrunkSegments(remoteSprinkler.Room?.RevitElementId ?? 0, schematicPipeRouting));
-        }
-        else if (riser != null)
+        if (riser != null)
         {
             chain.Add(CloneSegment(riser));
         }
 
-        return chain.Where(segment => segment.LengthFeet > 0.01).ToList();
+        return chain;
+    }
+
+    private static bool RoomSegmentsUsePlacedTopology(IList<HydraulicGraphSegment> roomSegments)
+    {
+        return roomSegments != null
+            && roomSegments.Count > 0
+            && roomSegments.All(segment => string.Equals(segment.DataSource, "Placed", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static PipePlacementRoomResult FindPlacedRoom(PipePlacementSummary pipePlacementSummary, int roomRevitElementId)
+    {
+        return (pipePlacementSummary?.RoomResults ?? new List<PipePlacementRoomResult>())
+            .Where(result => result.RoomRevitElementId == roomRevitElementId && roomRevitElementId > 0)
+            .GroupBy(result => result.RoomRevitElementId)
+            .Select(group => group.Last())
+            .FirstOrDefault();
     }
 
     private static IList<HydraulicGraphSegment> BuildProjectTrunkSegments(
