@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -17,6 +18,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using FireSprinklerPlugin.SprinkSnap.Core.Reports;
+using FireSprinklerPlugin.SprinkSnap.Core.WaterSupply;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
@@ -141,7 +143,8 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
     private string residualPressurePsi = string.Empty;
     private string flowGpm = string.Empty;
     private string hydrantTestDate = string.Empty;
-    private string validationSummary = "Enter hydrant test data and click Validate Supply.";
+    private string importedSourcePath = string.Empty;
+    private string validationSummary = "Enter hydrant test data and click Validate Supply, or import a CSV file.";
     private IList<WaterSupplyCurvePoint> supplyCurve = new List<WaterSupplyCurvePoint>();
     private double demandFlowGpm;
     private double demandPressurePsi;
@@ -151,9 +154,12 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         this.context = context;
         LoadFromState();
         ValidateCommand = new ModuleRelayCommand(_ => ValidateSupply());
+        ImportCsvCommand = new ModuleRelayCommand(_ => ImportCsv());
     }
 
     public ICommand ValidateCommand { get; }
+
+    public ICommand ImportCsvCommand { get; }
 
     public string StaticPressurePsi
     {
@@ -205,6 +211,24 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         }
     }
 
+    public string ImportedSourcePath
+    {
+        get => importedSourcePath;
+        private set
+        {
+            importedSourcePath = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasImportedSource));
+            OnPropertyChanged(nameof(ImportedSourceSummary));
+        }
+    }
+
+    public bool HasImportedSource => !string.IsNullOrWhiteSpace(ImportedSourcePath);
+
+    public string ImportedSourceSummary => HasImportedSource
+        ? "Imported from " + Path.GetFileName(ImportedSourcePath)
+        : "No CSV import loaded.";
+
     public IList<WaterSupplyCurvePoint> SupplyCurve => supplyCurve;
 
     public double DemandFlowGpm => demandFlowGpm;
@@ -220,6 +244,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         ResidualPressurePsi = input.ResidualPressurePsi?.ToString() ?? string.Empty;
         FlowGpm = input.FlowAtResidualGpm?.ToString() ?? string.Empty;
         HydrantTestDate = input.HydrantTestDate?.ToShortDateString() ?? string.Empty;
+        ImportedSourcePath = input.ImportedSourcePath ?? string.Empty;
         if (context.ProjectState.WaterSupplyValidation?.Curve?.Count > 0)
         {
             supplyCurve = context.ProjectState.WaterSupplyValidation.Curve.ToList();
@@ -236,6 +261,57 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         }
     }
 
+    private void ImportCsv()
+    {
+        OpenFileDialog dialog = new OpenFileDialog
+        {
+            Title = "Import Hydrant Test CSV",
+            Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        HydrantTestImportResult importResult = HydrantTestCsvImporter.Import(dialog.FileName);
+        if (!importResult.Success)
+        {
+            ValidationSummary = "CSV import failed: " + string.Join(" ", importResult.Errors);
+            return;
+        }
+
+        ApplyImportedInput(importResult.Input, dialog.FileName);
+        ValidateSupply();
+
+        string summaryPrefix = "Imported "
+            + Path.GetFileName(dialog.FileName)
+            + ". ";
+        if (importResult.Warnings.Count > 0)
+        {
+            summaryPrefix += string.Join(" ", importResult.Warnings) + " ";
+        }
+
+        ValidationSummary = summaryPrefix + ValidationSummary;
+    }
+
+    private void ApplyImportedInput(WaterSupplyInput input, string sourcePath)
+    {
+        WaterSupplyInput stateInput = context.ProjectState.WaterSupply;
+        stateInput.StaticPressurePsi = input.StaticPressurePsi;
+        stateInput.ResidualPressurePsi = input.ResidualPressurePsi;
+        stateInput.FlowAtResidualGpm = input.FlowAtResidualGpm;
+        stateInput.HydrantTestDate = input.HydrantTestDate;
+        stateInput.ImportedSourcePath = sourcePath;
+
+        StaticPressurePsi = input.StaticPressurePsi?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;
+        ResidualPressurePsi = input.ResidualPressurePsi?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;
+        FlowGpm = input.FlowAtResidualGpm?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;
+        HydrantTestDate = input.HydrantTestDate?.ToShortDateString() ?? string.Empty;
+        ImportedSourcePath = sourcePath;
+    }
+
     private void ValidateSupply()
     {
         WaterSupplyInput input = context.ProjectState.WaterSupply;
@@ -243,6 +319,10 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         input.ResidualPressurePsi = TryParse(ResidualPressurePsi);
         input.FlowAtResidualGpm = TryParse(FlowGpm);
         input.HydrantTestDate = DateTime.TryParse(HydrantTestDate, out DateTime testDate) ? testDate : null;
+        if (!string.IsNullOrWhiteSpace(ImportedSourcePath))
+        {
+            input.ImportedSourcePath = ImportedSourcePath;
+        }
 
         HydraulicCalculationResult demand = hydraulicEngine.Calculate(
             context.ProjectState.Rooms,

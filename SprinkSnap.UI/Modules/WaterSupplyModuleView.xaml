@@ -8,8 +8,22 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="4" MaxWidth="720">
             <TextBlock Text="Water Supply" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
-            <TextBlock Text="Enter hydrant test data used for the water supply curve and adequacy check."
-                       TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,16" />
+            <TextBlock Text="Enter hydrant test data used for the water supply curve and adequacy check, or import a hydrant flow test CSV."
+                       TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,12" />
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                <Button Content="Import CSV"
+                        Command="{Binding ImportCsvCommand}"
+                        Padding="14,8"
+                        Margin="0,0,8,0" />
+                <Button Content="Validate Supply"
+                        Command="{Binding ValidateCommand}"
+                        Padding="14,8" />
+            </StackPanel>
+
+            <TextBlock Text="{Binding ImportedSourceSummary}"
+                       Foreground="#6B7280"
+                       Margin="0,0,0,16" />
 
             <TextBlock Text="Static pressure (PSI)" Margin="0,0,0,4" />
             <TextBox Text="{Binding StaticPressurePsi, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,12" />
@@ -22,8 +36,6 @@
 
             <TextBlock Text="Hydrant test date" Margin="0,0,0,4" />
             <TextBox Text="{Binding HydrantTestDate, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,16" />
-
-            <Button Content="Validate Supply" Command="{Binding ValidateCommand}" HorizontalAlignment="Left" Padding="14,8" Margin="0,0,0,16" />
 
             <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16">
                 <TextBlock Text="{Binding ValidationSummary}" TextWrapping="Wrap" Foreground="#1E3A8A" />

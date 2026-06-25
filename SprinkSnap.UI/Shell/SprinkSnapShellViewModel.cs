@@ -515,7 +515,7 @@ public sealed class SprinkSnapModulePanel : INotifyPropertyChanged
                 return new ObservableCollection<string>
                 {
                     "Enter static pressure, residual pressure, flow at residual, and hydrant test date.",
-                    "Import future PDF/CSV hydrant test data.",
+                    "Import hydrant test data from CSV.",
                     "Generate water supply curve and adequacy warnings."
                 };
             case "Generate Design":
