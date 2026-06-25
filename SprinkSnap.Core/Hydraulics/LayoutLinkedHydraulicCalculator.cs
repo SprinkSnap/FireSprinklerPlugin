@@ -141,7 +141,10 @@ public static class LayoutLinkedHydraulicCalculator
             + (path.UsesSegmentGraphHydraulics
                 ? path.CriticalPathSegmentCount + " segment-graph"
                 : path.UsesPlacedPipeLengths ? "placed Revit" : path.PipeLengthDataSource.ToLowerInvariant())
-            + " pipe lengths.");
+            + " pipe lengths"
+            + (path.CriticalPathFittingCount > 0
+                ? " plus " + path.CriticalPathFittingCount + " fitting equivalent-length loss(es)."
+                : "."));
 
         return path;
     }
@@ -188,19 +191,38 @@ public static class LayoutLinkedHydraulicCalculator
             pipePlacementSummary,
             supplyAnchor);
 
+        IList<CriticalPathFitting> fittings = HydraulicCriticalPathFittingResolver.ResolveForSegmentChain(
+            path.SegmentChain,
+            schematicPipeRouting,
+            pipePlacementSummary);
+        ILookup<int, CriticalPathFitting> fittingsBySegment = fittings.ToLookup(fitting => fitting.SegmentIndex);
+
         double downstreamPressurePsi = remotePressurePsi;
         double branchFrictionPsi = 0.0;
         double mainFrictionPsi = 0.0;
+        double fittingFrictionPsi = 0.0;
 
-        foreach (HydraulicGraphSegment segment in path.SegmentChain)
+        for (int segmentIndex = 0; segmentIndex < path.SegmentChain.Count; segmentIndex++)
         {
+            HydraulicGraphSegment segment = path.SegmentChain[segmentIndex];
             segment.DownstreamPressurePsi = downstreamPressurePsi;
+
+            foreach (CriticalPathFitting fitting in fittingsBySegment[segmentIndex]
+                .Where(item => item.AtSegmentStart)
+                .OrderBy(item => item.Joint?.Description ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+            {
+                downstreamPressurePsi = ApplyFittingFrictionLoss(
+                    fitting,
+                    segment,
+                    downstreamPressurePsi,
+                    ref fittingFrictionPsi);
+            }
+
             segment.FrictionLossPsi = HazenWilliamsCalculator.FrictionLossPsi(
                 segment.FlowGpm,
                 segment.DiameterInches,
                 segment.LengthFeet);
-            segment.UpstreamPressurePsi = downstreamPressurePsi + segment.FrictionLossPsi;
-            downstreamPressurePsi = segment.UpstreamPressurePsi;
+            downstreamPressurePsi += segment.FrictionLossPsi;
 
             if (IsBranchSegment(segment.SegmentType))
             {
@@ -210,26 +232,65 @@ public static class LayoutLinkedHydraulicCalculator
             {
                 mainFrictionPsi += segment.FrictionLossPsi;
             }
+
+            foreach (CriticalPathFitting fitting in fittingsBySegment[segmentIndex]
+                .Where(item => !item.AtSegmentStart)
+                .OrderBy(item => item.Joint?.Description ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+            {
+                downstreamPressurePsi = ApplyFittingFrictionLoss(
+                    fitting,
+                    segment,
+                    downstreamPressurePsi,
+                    ref fittingFrictionPsi);
+            }
+
+            segment.UpstreamPressurePsi = downstreamPressurePsi;
         }
 
         path.BranchFrictionPsi = branchFrictionPsi;
         path.MainFrictionPsi = mainFrictionPsi;
+        path.FittingFrictionPsi = fittingFrictionPsi;
+        path.CriticalPathFittingCount = fittings.Count;
         path.JunctionPressurePsi = remotePressurePsi + branchFrictionPsi;
+        path.CriticalPathDemandPsi = downstreamPressurePsi;
         path.CriticalPath = BuildSegmentCriticalPath(
             path,
             headFlows,
             hoseStreamAllowanceGpm,
-            remotePressurePsi);
+            remotePressurePsi,
+            fittings);
+    }
+
+    private static double ApplyFittingFrictionLoss(
+        CriticalPathFitting fitting,
+        HydraulicGraphSegment segment,
+        double downstreamPressurePsi,
+        ref double fittingFrictionPsi)
+    {
+        double diameterInches = fitting.Joint?.DiameterInches > 0
+            ? fitting.Joint.DiameterInches
+            : segment.DiameterInches;
+        fitting.FlowGpm = segment.FlowGpm;
+        fitting.DownstreamPressurePsi = downstreamPressurePsi;
+        fitting.FrictionLossPsi = HazenWilliamsCalculator.FrictionLossPsi(
+            segment.FlowGpm,
+            diameterInches,
+            fitting.EquivalentLengthFeet);
+        fitting.UpstreamPressurePsi = downstreamPressurePsi + fitting.FrictionLossPsi;
+        fittingFrictionPsi += fitting.FrictionLossPsi;
+        return fitting.UpstreamPressurePsi;
     }
 
     private static IList<HydraulicNode> BuildSegmentCriticalPath(
         LayoutLinkedHydraulicPath path,
         IDictionary<LayoutSprinklerPoint, double> headFlows,
         double hoseStreamAllowanceGpm,
-        double remotePressurePsi)
+        double remotePressurePsi,
+        IList<CriticalPathFitting> fittings)
     {
         LayoutSprinklerPoint remote = path.MostRemoteSprinkler;
         double remoteFlow = headFlows.TryGetValue(remote, out double flow) ? flow : 0.0;
+        ILookup<int, CriticalPathFitting> fittingsBySegment = fittings.ToLookup(fitting => fitting.SegmentIndex);
         List<HydraulicNode> nodes = new List<HydraulicNode>
         {
             new HydraulicNode
@@ -245,21 +306,47 @@ public static class LayoutLinkedHydraulicCalculator
             }
         };
 
-        foreach (HydraulicGraphSegment segment in path.SegmentChain)
+        foreach (CriticalPathFitting fitting in fittingsBySegment.SelectMany(group => group)
+            .Where(item => item.SegmentIndex == 0 && item.AtSegmentStart)
+            .OrderBy(item => item.Joint?.Description ?? string.Empty, StringComparer.OrdinalIgnoreCase))
         {
+            nodes.Add(CreateFittingNode(fitting));
+        }
+
+        for (int segmentIndex = 0; segmentIndex < path.SegmentChain.Count; segmentIndex++)
+        {
+            HydraulicGraphSegment segment = path.SegmentChain[segmentIndex];
+            double pressureAfterPipePsi = segment.DownstreamPressurePsi + segment.FrictionLossPsi;
             nodes.Add(new HydraulicNode
             {
                 NodeId = string.IsNullOrWhiteSpace(segment.SegmentId)
                     ? segment.Description
                     : segment.SegmentId,
                 Location = segment.End,
-                PressurePsi = segment.UpstreamPressurePsi,
+                PressurePsi = pressureAfterPipePsi,
                 FlowGpm = segment.FlowGpm,
                 LengthFeet = segment.LengthFeet,
                 DiameterInches = segment.DiameterInches,
                 FrictionLossPsi = segment.FrictionLossPsi,
                 SegmentType = segment.SegmentType
             });
+
+            foreach (CriticalPathFitting fitting in fittingsBySegment[segmentIndex]
+                .Where(item => !item.AtSegmentStart)
+                .OrderBy(item => item.Joint?.Description ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+            {
+                nodes.Add(CreateFittingNode(fitting));
+            }
+
+            if (segmentIndex + 1 < path.SegmentChain.Count)
+            {
+                foreach (CriticalPathFitting fitting in fittingsBySegment[segmentIndex + 1]
+                    .Where(item => item.AtSegmentStart)
+                    .OrderBy(item => item.Joint?.Description ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+                {
+                    nodes.Add(CreateFittingNode(fitting));
+                }
+            }
         }
 
         HydraulicGraphSegment lastSegment = path.SegmentChain[path.SegmentChain.Count - 1];
@@ -267,7 +354,9 @@ public static class LayoutLinkedHydraulicCalculator
         {
             NodeId = "Riser / Source",
             Location = path.SourcePoint,
-            PressurePsi = lastSegment.UpstreamPressurePsi,
+            PressurePsi = path.CriticalPathDemandPsi > 0
+                ? path.CriticalPathDemandPsi
+                : lastSegment.UpstreamPressurePsi,
             FlowGpm = lastSegment.FlowGpm,
             LengthFeet = 0.0,
             DiameterInches = lastSegment.DiameterInches,
@@ -276,6 +365,24 @@ public static class LayoutLinkedHydraulicCalculator
         });
 
         return nodes;
+    }
+
+    private static HydraulicNode CreateFittingNode(CriticalPathFitting fitting)
+    {
+        PipeJoint joint = fitting.Joint;
+        return new HydraulicNode
+        {
+            NodeId = string.IsNullOrWhiteSpace(joint?.Description)
+                ? (joint?.JointType ?? "Fitting")
+                : joint.Description,
+            Location = joint?.Location ?? new Point3D(),
+            PressurePsi = fitting.UpstreamPressurePsi,
+            FlowGpm = fitting.FlowGpm,
+            LengthFeet = fitting.EquivalentLengthFeet,
+            DiameterInches = joint?.DiameterInches ?? 0.0,
+            FrictionLossPsi = fitting.FrictionLossPsi,
+            SegmentType = joint?.JointType ?? "Fitting"
+        };
     }
 
     private static bool IsBranchSegment(string segmentType)

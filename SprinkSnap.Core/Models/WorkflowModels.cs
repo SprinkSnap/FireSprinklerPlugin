@@ -260,6 +260,10 @@ public sealed class HydraulicCalculationResult
 
     public int CriticalPathSegmentCount { get; set; }
 
+    public double FittingFrictionPsi { get; set; }
+
+    public int CriticalPathFittingCount { get; set; }
+
     public bool UsesUserSupplyAnchor { get; set; }
 
     public string UserSupplyAnchorLabel { get; set; } = string.Empty;
