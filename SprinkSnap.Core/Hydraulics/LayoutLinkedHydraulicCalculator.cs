@@ -143,6 +143,10 @@ public static class LayoutLinkedHydraulicCalculator
                 totalSprinklerFlow,
                 hoseStreamAllowanceGpm,
                 remotePressurePsi);
+            HydraulicVelocityValidator.ValidateFallbackCriticalPath(
+                path,
+                totalSprinklerFlow,
+                hoseStreamAllowanceGpm);
         }
 
         path.Warnings.Add(
@@ -270,6 +274,52 @@ public static class LayoutLinkedHydraulicCalculator
             hoseStreamAllowanceGpm,
             remotePressurePsi,
             fittings);
+        HydraulicVelocityValidator.ValidateSegmentChain(path);
+        ApplySegmentVelocityToCriticalPath(path);
+    }
+
+    private static void ApplySegmentVelocityToCriticalPath(LayoutLinkedHydraulicPath path)
+    {
+        if (path.CriticalPath == null || path.SegmentChain == null)
+        {
+            return;
+        }
+
+        Dictionary<string, HydraulicGraphSegment> segmentsByDescription = path.SegmentChain
+            .GroupBy(segment => segment.Description ?? segment.SegmentId ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (HydraulicNode node in path.CriticalPath)
+        {
+            if (node.DiameterInches <= 0 || node.FlowGpm <= 0)
+            {
+                continue;
+            }
+
+            HydraulicGraphSegment matchingSegment = path.SegmentChain.FirstOrDefault(segment =>
+                string.Equals(segment.SegmentType, node.SegmentType, StringComparison.OrdinalIgnoreCase)
+                && (
+                    string.Equals(segment.Description, node.NodeId, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(segment.SegmentId, node.NodeId, StringComparison.OrdinalIgnoreCase)));
+            if (matchingSegment == null && !string.IsNullOrWhiteSpace(node.NodeId))
+            {
+                segmentsByDescription.TryGetValue(node.NodeId, out matchingSegment);
+            }
+
+            if (matchingSegment != null)
+            {
+                node.VelocityFeetPerSecond = matchingSegment.VelocityFeetPerSecond;
+                node.VelocityLimitFeetPerSecond = matchingSegment.VelocityLimitFeetPerSecond;
+                node.ExceedsVelocityLimit = matchingSegment.ExceedsVelocityLimit;
+                continue;
+            }
+
+            HydraulicVelocityCheck check = HydraulicVelocityValidator.Evaluate(
+                node.FlowGpm,
+                node.DiameterInches,
+                node.SegmentType);
+            HydraulicVelocityValidator.ApplyVelocityToNode(node, check);
+        }
     }
 
     private static double ApplyFittingFrictionLoss(

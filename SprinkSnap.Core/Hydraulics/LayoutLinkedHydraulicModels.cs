@@ -30,6 +30,12 @@ public sealed class HydraulicGraphSegment
     public double DownstreamPressurePsi { get; set; }
 
     public double UpstreamPressurePsi { get; set; }
+
+    public double VelocityFeetPerSecond { get; set; }
+
+    public double VelocityLimitFeetPerSecond { get; set; }
+
+    public bool ExceedsVelocityLimit { get; set; }
 }
 
 public sealed class LayoutSprinklerPoint
@@ -106,6 +112,10 @@ public sealed class LayoutLinkedHydraulicPath
     public IList<HydraulicGraphSegment> SegmentChain { get; set; } = new List<HydraulicGraphSegment>();
 
     public int CriticalPathSegmentCount { get; set; }
+
+    public int CriticalPathVelocityViolationCount { get; set; }
+
+    public double MaxCriticalPathVelocityFeetPerSecond { get; set; }
 
     public IList<HydraulicNode> CriticalPath { get; set; } = new List<HydraulicNode>();
 
