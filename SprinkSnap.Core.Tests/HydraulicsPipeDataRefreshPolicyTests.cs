@@ -1,4 +1,5 @@
 using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
+using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using Xunit;
 
@@ -52,5 +53,59 @@ public sealed class HydraulicsPipeDataRefreshPolicyTests
             remeasureAvailable: false);
 
         Assert.False(shouldRemeasure);
+    }
+
+    [Fact]
+    public void ShouldReSolveAfterDiameterSync_ReturnsTrue_WhenSyncWasAttemptedInRevit()
+    {
+        bool shouldReSolve = HydraulicsPipeDataRefreshPolicy.ShouldReSolveAfterDiameterSync(
+            diameterSyncWasAttempted: true,
+            isPreviewMode: false);
+
+        Assert.True(shouldReSolve);
+    }
+
+    [Fact]
+    public void ShouldReSolveAfterDiameterSync_ReturnsFalse_InPreviewMode()
+    {
+        bool shouldReSolve = HydraulicsPipeDataRefreshPolicy.ShouldReSolveAfterDiameterSync(
+            diameterSyncWasAttempted: true,
+            isPreviewMode: true);
+
+        Assert.False(shouldReSolve);
+    }
+
+    [Fact]
+    public void ShouldReSolveAfterDiameterSync_ReturnsFalse_WhenSyncWasNotAttempted()
+    {
+        bool shouldReSolve = HydraulicsPipeDataRefreshPolicy.ShouldReSolveAfterDiameterSync(
+            diameterSyncWasAttempted: false,
+            isPreviewMode: false);
+
+        Assert.False(shouldReSolve);
+    }
+
+    [Fact]
+    public void ShouldSyncPlacedPipeDiametersAfterCalculation_ReturnsTrue_WhenWritebackOccurredAndPipesPlaced()
+    {
+        bool shouldSync = HydraulicsPipeDataRefreshPolicy.ShouldSyncPlacedPipeDiametersAfterCalculation(
+            new HydraulicCalculationResult { UsesSchematicPipeSizingWriteback = true },
+            new PipePlacementSummary { PlacedSegmentCount = 2 },
+            isPreviewMode: false,
+            syncAvailable: true);
+
+        Assert.True(shouldSync);
+    }
+
+    [Fact]
+    public void ShouldSyncPlacedPipeDiametersAfterCalculation_ReturnsFalse_InPreviewMode()
+    {
+        bool shouldSync = HydraulicsPipeDataRefreshPolicy.ShouldSyncPlacedPipeDiametersAfterCalculation(
+            new HydraulicCalculationResult { UsesSchematicPipeSizingWriteback = true },
+            new PipePlacementSummary { PlacedSegmentCount = 2 },
+            isPreviewMode: true,
+            syncAvailable: true);
+
+        Assert.False(shouldSync);
     }
 }
