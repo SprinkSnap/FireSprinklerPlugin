@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Materials;
@@ -17,7 +18,8 @@ public sealed class MaterialTakeoffEngine : Engines.IMaterialTakeoffEngine
 
     public IReadOnlyList<MaterialTakeoffItem> Generate(
         IEnumerable<RoomInfo> rooms,
-        SprinklerPlacementSummary placementSummary = null)
+        SprinklerPlacementSummary placementSummary = null,
+        SchematicPipeRoutingSummary schematicPipeRouting = null)
     {
         List<RoomInfo> roomList = rooms?.ToList() ?? new List<RoomInfo>();
         List<MaterialTakeoffItem> detailRows = new List<MaterialTakeoffItem>();
@@ -48,12 +50,13 @@ public sealed class MaterialTakeoffEngine : Engines.IMaterialTakeoffEngine
             });
         }
 
-        if (detailRows.Count == 0)
+        if (detailRows.Count == 0 && (schematicPipeRouting?.Segments?.Count ?? 0) == 0)
         {
             return detailRows;
         }
 
-        List<MaterialTakeoffItem> summaryRows = detailRows
+        List<MaterialTakeoffItem> sprinklerSummaryRows = detailRows
+            .Where(item => string.Equals(item.ItemType, "Sprinkler", StringComparison.OrdinalIgnoreCase))
             .GroupBy(item => item.Manufacturer + "|" + item.FamilyName, StringComparer.OrdinalIgnoreCase)
             .OrderBy(group => group.Key)
             .Select(group =>
@@ -73,7 +76,8 @@ public sealed class MaterialTakeoffEngine : Engines.IMaterialTakeoffEngine
             })
             .ToList();
 
-        detailRows.AddRange(summaryRows);
+        detailRows.AddRange(sprinklerSummaryRows);
+        AppendPipeRows(detailRows, schematicPipeRouting);
         return detailRows;
     }
 
@@ -161,5 +165,54 @@ public sealed class MaterialTakeoffEngine : Engines.IMaterialTakeoffEngine
 
         int separatorIndex = familyName.IndexOf(' ');
         return separatorIndex > 0 ? familyName.Substring(0, separatorIndex) : string.Empty;
+    }
+
+    private static void AppendPipeRows(
+        List<MaterialTakeoffItem> detailRows,
+        SchematicPipeRoutingSummary schematicPipeRouting)
+    {
+        List<PipeSegment> segments = schematicPipeRouting?.Segments?.ToList() ?? new List<PipeSegment>();
+        if (segments.Count == 0)
+        {
+            return;
+        }
+
+        foreach (IGrouping<string, PipeSegment> group in segments
+                     .GroupBy(segment => segment.RoomRevitElementId + "|" + segment.SegmentType + "|" + segment.DiameterInches.ToString("0.##"))
+                     .OrderBy(group => group.First().RoomNumber)
+                     .ThenBy(group => group.First().SegmentType))
+        {
+            PipeSegment first = group.First();
+            detailRows.Add(new MaterialTakeoffItem
+            {
+                ItemType = "Pipe",
+                RoomNumber = first.RoomNumber,
+                RoomName = first.RoomName,
+                LevelName = first.LevelName,
+                FamilyName = first.DiameterInches.ToString("0.##") + "\" " + first.SegmentType,
+                HazardClassification = string.Empty,
+                Description = first.SegmentType + " — " + first.DiameterInches.ToString("0.##") + "\" schematic pipe",
+                Quantity = group.Sum(segment => segment.LengthFeet),
+                Unit = "FT",
+                Source = "Schematic"
+            });
+        }
+
+        foreach (IGrouping<string, PipeSegment> group in segments
+                     .GroupBy(segment => segment.DiameterInches.ToString("0.##") + "|" + segment.SegmentType)
+                     .OrderBy(group => group.Key))
+        {
+            PipeSegment first = group.First();
+            detailRows.Add(new MaterialTakeoffItem
+            {
+                ItemType = "Summary",
+                FamilyName = first.DiameterInches.ToString("0.##") + "\" " + first.SegmentType,
+                Description = "Project total — " + first.SegmentType + " " + first.DiameterInches.ToString("0.##") + "\"",
+                Quantity = group.Sum(segment => segment.LengthFeet),
+                Unit = "FT",
+                Source = "Project",
+                IsSummaryRow = true
+            });
+        }
     }
 }

@@ -12,6 +12,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI;
@@ -197,6 +198,26 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         set
         {
             // Display-only binding compatibility for WPF controls that attempt source updates.
+        }
+    }
+
+    public int TotalPipeSegments => EmbeddedProjectState?.SchematicPipeRouting?.TotalSegmentCount ?? 0;
+
+    public double TotalPipeLengthFeet => EmbeddedProjectState?.SchematicPipeRouting?.TotalLengthFeet ?? 0.0;
+
+    public string PipeRoutingSummary
+    {
+        get
+        {
+            if (TotalPipeSegments == 0)
+            {
+                return "Run Auto-Layout All to generate schematic branch lines, cross mains, and risers.";
+            }
+
+            return TotalPipeSegments
+                + " pipe segment(s), "
+                + TotalPipeLengthFeet.ToString("N0")
+                + " ft total schematic pipe.";
         }
     }
 
@@ -739,8 +760,29 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         }
 
         RoomsView.Refresh();
+        RefreshSchematicPipeRouting();
         NotifyDashboardState();
-        ValidationMessage = "Auto-layout complete. Confident rooms were solved automatically; exceptions remain for review.";
+        ValidationMessage = "Auto-layout complete. Confident rooms were solved automatically; schematic pipe routing was generated for branch lines, cross mains, and risers.";
+    }
+
+    private void RefreshSchematicPipeRouting()
+    {
+        if (EmbeddedProjectState == null)
+        {
+            return;
+        }
+
+        SchematicPipeRoutingService.RefreshProjectRouting(EmbeddedProjectState);
+        foreach (RoomHazardReviewItem item in Rooms)
+        {
+            item.UpdatePipeRouting(EmbeddedProjectState.SchematicPipeRouting);
+        }
+
+        PersistToRevitRequested?.Invoke();
+        OnPropertyChanged(nameof(TotalPipeSegments));
+        OnPropertyChanged(nameof(TotalPipeLengthFeet));
+        OnPropertyChanged(nameof(PipeRoutingSummary));
+        NotifyWorkflowProgressChanged();
     }
 
     private void OverrideVisibleExceptions()
@@ -994,6 +1036,9 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ExceptionRoomCount));
         OnPropertyChanged(nameof(AutoSolvedRoomCount));
         OnPropertyChanged(nameof(AverageConfidenceText));
+        OnPropertyChanged(nameof(TotalPipeSegments));
+        OnPropertyChanged(nameof(TotalPipeLengthFeet));
+        OnPropertyChanged(nameof(PipeRoutingSummary));
     }
 }
 
@@ -1254,6 +1299,48 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
         {
             // Display-only binding compatibility for WPF controls that attempt source updates.
         }
+    }
+
+    public int PipeSegmentCount
+    {
+        get => pipeSegmentCount;
+        private set
+        {
+            if (pipeSegmentCount == value)
+            {
+                return;
+            }
+
+            pipeSegmentCount = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PipeSegmentCount)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PipeLengthFeet)));
+        }
+    }
+
+    public double PipeLengthFeet
+    {
+        get => pipeLengthFeet;
+        private set
+        {
+            if (Math.Abs(pipeLengthFeet - value) < 0.0001)
+            {
+                return;
+            }
+
+            pipeLengthFeet = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PipeLengthFeet)));
+        }
+    }
+
+    private int pipeSegmentCount;
+
+    private double pipeLengthFeet;
+
+    public void UpdatePipeRouting(SchematicPipeRoutingSummary summary)
+    {
+        IList<PipeSegment> segments = SchematicPipeRoutingService.GetSegmentsForRoom(summary, Room.RevitElementId);
+        PipeSegmentCount = segments.Count;
+        PipeLengthFeet = segments.Sum(segment => segment.LengthFeet);
     }
 
     public string UserOverride

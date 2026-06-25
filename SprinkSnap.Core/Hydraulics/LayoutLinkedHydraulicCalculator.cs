@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 
@@ -19,7 +20,8 @@ public static class LayoutLinkedHydraulicCalculator
         double hoseStreamAllowanceGpm,
         double defaultKFactor,
         double branchDiameterInches,
-        double mainDiameterInches)
+        double mainDiameterInches,
+        SchematicPipeRoutingSummary schematicPipeRouting = null)
     {
         Point3D sourcePoint = HydraulicGraphBuilder.ResolveSourcePoint(controllingRooms);
         IList<LayoutSprinklerPoint> sprinklerPoints = HydraulicGraphBuilder.CollectSprinklerPoints(
@@ -35,7 +37,8 @@ public static class LayoutLinkedHydraulicCalculator
             operatingSprinklers,
             sourcePoint,
             branchDiameterInches,
-            mainDiameterInches);
+            mainDiameterInches,
+            schematicPipeRouting);
 
         double targetSprinklerFlow = designFlowPerSprinklerGpm * Math.Max(operatingSprinklers.Count, 1);
         if (operatingSprinklers.Count == 0)

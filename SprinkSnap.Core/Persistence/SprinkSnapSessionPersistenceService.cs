@@ -8,6 +8,7 @@ using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Persistence;
@@ -42,6 +43,7 @@ public static class SprinkSnapSessionPersistenceService
             PlacementSummary = state.PlacementSummary,
             HydraulicResult = state.HydraulicResult,
             WaterSupplyValidation = state.WaterSupplyValidation,
+            SchematicPipeRouting = state.SchematicPipeRouting,
             ReportExport = CloneReportExport(state.ReportExport)
         };
     }
@@ -69,6 +71,7 @@ public static class SprinkSnapSessionPersistenceService
         state.PlacementSummary = snapshot.PlacementSummary ?? new SprinklerPlacementSummary();
         state.HydraulicResult = snapshot.HydraulicResult ?? new HydraulicCalculationResult();
         state.WaterSupplyValidation = snapshot.WaterSupplyValidation ?? new WaterSupplyValidationResult();
+        state.SchematicPipeRouting = snapshot.SchematicPipeRouting ?? new SchematicPipeRoutingSummary();
         state.ReportExport = CloneReportExport(snapshot.ReportExport);
 
         Dictionary<int, PersistedRoomSnapshot> roomSnapshots = (snapshot.Rooms ?? new List<PersistedRoomSnapshot>())

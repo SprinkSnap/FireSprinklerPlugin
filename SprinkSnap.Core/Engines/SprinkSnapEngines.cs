@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using FireSprinklerPlugin.SprinkSnap.Core.Reports;
 using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
@@ -101,7 +102,8 @@ public sealed class HydraulicEngine : IHydraulicEngine
     public HydraulicCalculationResult Calculate(
         IEnumerable<RoomInfo> rooms,
         WaterSupplyInput waterSupply,
-        SprinklerPlacementSummary placementSummary = null)
+        SprinklerPlacementSummary placementSummary = null,
+        SchematicPipeRoutingSummary schematicPipeRouting = null)
     {
         List<RoomInfo> roomList = rooms?.ToList() ?? new List<RoomInfo>();
         HydraulicCalculationResult result = new HydraulicCalculationResult();
@@ -149,7 +151,8 @@ public sealed class HydraulicEngine : IHydraulicEngine
             controllingCriteria.HoseStreamAllowanceGpm,
             equivalentKFactor,
             BranchDiameterInches,
-            MainDiameterInches);
+            MainDiameterInches,
+            schematicPipeRouting);
 
         result.UsesLayoutLinkedHydraulics = layoutPath.UsesLayoutGeometry;
         result.BranchLengthFeet = layoutPath.BranchLengthFeet;

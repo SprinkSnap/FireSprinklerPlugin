@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Models;
@@ -96,6 +97,8 @@ public sealed class SprinkSnapProjectState
     public WaterSupplyValidationResult WaterSupplyValidation { get; set; } = new WaterSupplyValidationResult();
 
     public ReportExportRequest ReportExport { get; set; } = new ReportExportRequest();
+
+    public SchematicPipeRoutingSummary SchematicPipeRouting { get; set; } = new SchematicPipeRoutingSummary();
 }
 
 public sealed class ComplianceWarning

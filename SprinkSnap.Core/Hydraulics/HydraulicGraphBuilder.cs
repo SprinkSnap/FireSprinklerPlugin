@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 
@@ -78,7 +79,8 @@ public static class HydraulicGraphBuilder
         IEnumerable<LayoutSprinklerPoint> operatingSprinklers,
         Point3D sourcePoint,
         double branchDiameterInches,
-        double mainDiameterInches)
+        double mainDiameterInches,
+        SchematicPipeRoutingSummary schematicPipeRouting = null)
     {
         LayoutLinkedHydraulicPath path = new LayoutLinkedHydraulicPath
         {
@@ -102,16 +104,36 @@ public static class HydraulicGraphBuilder
             .OrderByDescending(point => HydraulicGeometry.DistanceFeet(point.Location, sourcePoint))
             .First();
 
-        RoomInfo remoteRoom = path.MostRemoteSprinkler.Room;
-        Point3D branchJunction = HydraulicGeometry.ResolveBranchJunction(remoteRoom);
-        path.BranchLengthFeet = Math.Max(
-            MinimumBranchLengthFeet,
-            HydraulicGeometry.DistanceFeet(path.MostRemoteSprinkler.Location, branchJunction));
+        IList<PipeSegment> roomSegments = SchematicPipeRoutingService.GetSegmentsForRoom(
+            schematicPipeRouting,
+            path.MostRemoteSprinkler.Room?.RevitElementId ?? 0);
+        if (roomSegments.Count > 0)
+        {
+            path.BranchLengthFeet = roomSegments
+                .Where(segment => string.Equals(segment.SegmentType, PipeSegmentTypes.Branch, StringComparison.OrdinalIgnoreCase))
+                .Sum(segment => segment.LengthFeet);
+            path.MainLengthFeet = roomSegments
+                .Where(segment => !string.Equals(segment.SegmentType, PipeSegmentTypes.Branch, StringComparison.OrdinalIgnoreCase))
+                .Sum(segment => segment.LengthFeet);
+            path.TotalPipeLengthFeet = roomSegments.Sum(segment => segment.LengthFeet);
+            path.Warnings.Add(
+                "Critical path pipe lengths derived from schematic routing in room "
+                + (path.MostRemoteSprinkler.Room?.Number ?? string.Empty)
+                + ".");
+        }
+        else
+        {
+            RoomInfo remoteRoom = path.MostRemoteSprinkler.Room;
+            Point3D branchJunction = HydraulicGeometry.ResolveBranchJunction(remoteRoom);
+            path.BranchLengthFeet = Math.Max(
+                MinimumBranchLengthFeet,
+                HydraulicGeometry.DistanceFeet(path.MostRemoteSprinkler.Location, branchJunction));
 
-        double horizontalMain = HydraulicGeometry.HorizontalDistanceFeet(branchJunction, sourcePoint);
-        double elevationMain = Math.Abs(branchJunction.Z - sourcePoint.Z);
-        path.MainLengthFeet = Math.Max(MinimumMainLengthFeet, horizontalMain + elevationMain);
-        path.TotalPipeLengthFeet = path.BranchLengthFeet + path.MainLengthFeet;
+            double horizontalMain = HydraulicGeometry.HorizontalDistanceFeet(branchJunction, sourcePoint);
+            double elevationMain = Math.Abs(branchJunction.Z - sourcePoint.Z);
+            path.MainLengthFeet = Math.Max(MinimumMainLengthFeet, horizontalMain + elevationMain);
+            path.TotalPipeLengthFeet = path.BranchLengthFeet + path.MainLengthFeet;
+        }
 
         if (path.OperatingSprinklers.Select(point => point.Room.RevitElementId).Distinct().Count() > 1)
         {

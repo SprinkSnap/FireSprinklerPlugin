@@ -160,6 +160,10 @@ public sealed class SprinkSnapShellContext
         };
         hazardViewModel.ApplyModelChangeAssessment(ProjectState.ModelChangeAssessment);
         hazardViewModel.WorkflowProgressChanged += (_, _) => RequestWorkflowRefresh();
+        foreach (RoomHazardReviewItem roomItem in hazardViewModel.Rooms)
+        {
+            roomItem.UpdatePipeRouting(ProjectState.SchematicPipeRouting);
+        }
 
         return hazardViewModel;
     }

@@ -116,6 +116,8 @@ public static class SprinkSnapPdfReportExporter
                     column.Item().Text("Existing sprinklers in model: " + projectState.ModelAnalysis.ExistingSprinklerCount);
                     column.Item().Text("Total clashes: " + clashSummary.TotalClashes + " (host " + clashSummary.HostClashCount + ", linked " + clashSummary.LinkedClashCount + ")");
                     column.Item().Text("Sprinklers placed in Revit: " + placementSummary.PlacedCount);
+                    column.Item().Text("Schematic pipe segments: " + (projectState.SchematicPipeRouting?.TotalSegmentCount ?? 0));
+                    column.Item().Text("Schematic pipe length: " + (projectState.SchematicPipeRouting?.TotalLengthFeet ?? 0).ToString("N0") + " ft");
 
                     column.Item().PaddingTop(8).Text("Room design table").FontSize(14).SemiBold();
                     column.Item().Table(table =>

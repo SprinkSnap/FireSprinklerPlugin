@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Reports;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Engines;
@@ -40,14 +41,16 @@ public interface IHydraulicEngine
     HydraulicCalculationResult Calculate(
         IEnumerable<RoomInfo> rooms,
         WaterSupplyInput waterSupply,
-        SprinklerPlacementSummary placementSummary = null);
+        SprinklerPlacementSummary placementSummary = null,
+        SchematicPipeRoutingSummary schematicPipeRouting = null);
 }
 
 public interface IMaterialTakeoffEngine
 {
     IReadOnlyList<MaterialTakeoffItem> Generate(
         IEnumerable<RoomInfo> rooms,
-        SprinklerPlacementSummary placementSummary = null);
+        SprinklerPlacementSummary placementSummary = null,
+        SchematicPipeRoutingSummary schematicPipeRouting = null);
 }
 
 public interface IReportEngine

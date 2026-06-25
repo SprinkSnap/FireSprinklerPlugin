@@ -17,6 +17,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Materials;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Reports;
 using FireSprinklerPlugin.SprinkSnap.Core.WaterSupply;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
@@ -327,7 +328,8 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         HydraulicCalculationResult demand = hydraulicEngine.Calculate(
             context.ProjectState.Rooms,
             input,
-            context.ProjectState.PlacementSummary);
+            context.ProjectState.PlacementSummary,
+            context.ProjectState.SchematicPipeRouting);
         WaterSupplyValidationResult result = waterSupplyEngine.Validate(input, demand);
 
         context.ProjectState.HydraulicResult = demand;
@@ -455,7 +457,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         result = hydraulicEngine.Calculate(
             context.ProjectState.Rooms,
             context.ProjectState.WaterSupply,
-            context.ProjectState.PlacementSummary);
+            context.ProjectState.PlacementSummary,
+            context.ProjectState.SchematicPipeRouting);
         context.ProjectState.HydraulicResult = result;
         context.ProjectState.SessionProgress.HydraulicsComplete = result.TotalFlowGpm > 0;
         context.RequestPersistToRevit();
@@ -530,7 +533,8 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
         Items.Clear();
         foreach (MaterialTakeoffItem item in takeoffEngine.Generate(
                      context.ProjectState.Rooms,
-                     context.ProjectState.PlacementSummary))
+                     context.ProjectState.PlacementSummary,
+                     context.ProjectState.SchematicPipeRouting))
         {
             Items.Add(item);
         }
@@ -695,12 +699,14 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
             : hydraulicEngine.Calculate(
                 context.ProjectState.Rooms,
                 context.ProjectState.WaterSupply,
-                context.ProjectState.PlacementSummary);
+                context.ProjectState.PlacementSummary,
+                context.ProjectState.SchematicPipeRouting);
         context.ProjectState.HydraulicResult = hydraulicResult;
 
         IReadOnlyList<MaterialTakeoffItem> materialTakeoff = takeoffEngine.Generate(
             context.ProjectState.Rooms,
-            context.ProjectState.PlacementSummary);
+            context.ProjectState.PlacementSummary,
+            context.ProjectState.SchematicPipeRouting);
         ReportExportResult exportResult = reportEngine.ExportAll(
             context.ProjectState,
             hydraulicResult,
@@ -866,8 +872,16 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
             context.ProjectState.Rooms,
             layoutOptimizer,
             sprinkler);
+        SchematicPipeRoutingService.RefreshProjectRouting(context.ProjectState);
         context.ProjectState.ClashSummary = summary;
-        context.GetOrCreateHazardViewModel().NotifyExternalRefresh();
+        HazardClassificationViewModel hazardViewModel = context.GetOrCreateHazardViewModel();
+        hazardViewModel.NotifyExternalRefresh();
+        foreach (RoomHazardReviewItem roomItem in hazardViewModel.Rooms)
+        {
+            roomItem.UpdatePipeRouting(context.ProjectState.SchematicPipeRouting);
+        }
+
+        context.RequestPersistToRevit();
 
         if (context.RequestClashDetection != null && !context.IsPreviewMode)
         {
