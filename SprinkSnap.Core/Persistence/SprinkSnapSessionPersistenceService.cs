@@ -41,6 +41,7 @@ public static class SprinkSnapSessionPersistenceService
             ClashSummary = state.ClashSummary,
             PlacementSummary = state.PlacementSummary,
             HydraulicResult = state.HydraulicResult,
+            WaterSupplyValidation = state.WaterSupplyValidation,
             ReportExport = CloneReportExport(state.ReportExport)
         };
     }
@@ -67,6 +68,7 @@ public static class SprinkSnapSessionPersistenceService
         state.ClashSummary = snapshot.ClashSummary ?? new ClashDetectionSummary();
         state.PlacementSummary = snapshot.PlacementSummary ?? new SprinklerPlacementSummary();
         state.HydraulicResult = snapshot.HydraulicResult ?? new HydraulicCalculationResult();
+        state.WaterSupplyValidation = snapshot.WaterSupplyValidation ?? new WaterSupplyValidationResult();
         state.ReportExport = CloneReportExport(snapshot.ReportExport);
 
         Dictionary<int, PersistedRoomSnapshot> roomSnapshots = (snapshot.Rooms ?? new List<PersistedRoomSnapshot>())

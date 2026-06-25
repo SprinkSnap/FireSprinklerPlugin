@@ -93,6 +93,8 @@ public sealed class SprinkSnapProjectState
 
     public HydraulicCalculationResult HydraulicResult { get; set; } = new HydraulicCalculationResult();
 
+    public WaterSupplyValidationResult WaterSupplyValidation { get; set; } = new WaterSupplyValidationResult();
+
     public ReportExportRequest ReportExport { get; set; } = new ReportExportRequest();
 }
 
@@ -200,6 +202,18 @@ public sealed class HydraulicCalculationResult
     public double SafetyMarginPsi { get; set; }
 
     public double EquivalentKFactor { get; set; }
+
+    public int OperatingSprinklerCount { get; set; }
+
+    public double FlowPerOperatingSprinklerGpm { get; set; }
+
+    public double MaxCoverageSquareFeet { get; set; }
+
+    public double DemandFlowGpm { get; set; }
+
+    public double DemandPressurePsi { get; set; }
+
+    public IList<WaterSupplyCurvePoint> SupplyCurve { get; set; } = new List<WaterSupplyCurvePoint>();
 
     public string NfpaReference { get; set; } = string.Empty;
 

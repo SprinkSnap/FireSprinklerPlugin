@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using FireSprinklerPlugin.SprinkSnap.Core.Reports;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Engines;
@@ -36,7 +37,10 @@ public interface ILayoutEngine
 
 public interface IHydraulicEngine
 {
-    HydraulicCalculationResult Calculate(IEnumerable<RoomInfo> rooms, WaterSupplyInput waterSupply);
+    HydraulicCalculationResult Calculate(
+        IEnumerable<RoomInfo> rooms,
+        WaterSupplyInput waterSupply,
+        SprinklerPlacementSummary placementSummary = null);
 }
 
 public interface IMaterialTakeoffEngine

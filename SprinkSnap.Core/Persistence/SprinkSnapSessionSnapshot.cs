@@ -84,6 +84,8 @@ public sealed class SprinkSnapSessionSnapshot
 
     public HydraulicCalculationResult HydraulicResult { get; set; } = new HydraulicCalculationResult();
 
+    public WaterSupplyValidationResult WaterSupplyValidation { get; set; } = new WaterSupplyValidationResult();
+
     public ReportExportRequest ReportExport { get; set; } = new ReportExportRequest();
 }
 

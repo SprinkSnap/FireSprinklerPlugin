@@ -140,6 +140,9 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
     private string flowGpm = string.Empty;
     private string hydrantTestDate = string.Empty;
     private string validationSummary = "Enter hydrant test data and click Validate Supply.";
+    private IList<WaterSupplyCurvePoint> supplyCurve = new List<WaterSupplyCurvePoint>();
+    private double demandFlowGpm;
+    private double demandPressurePsi;
 
     public WaterSupplyModuleViewModel(SprinkSnapShellContext context)
     {
@@ -200,6 +203,14 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         }
     }
 
+    public IList<WaterSupplyCurvePoint> SupplyCurve => supplyCurve;
+
+    public double DemandFlowGpm => demandFlowGpm;
+
+    public double DemandPressurePsi => demandPressurePsi;
+
+    public bool ShowSupplyChart => supplyCurve.Count > 1;
+
     private void LoadFromState()
     {
         WaterSupplyInput input = context.ProjectState.WaterSupply;
@@ -207,6 +218,20 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         ResidualPressurePsi = input.ResidualPressurePsi?.ToString() ?? string.Empty;
         FlowGpm = input.FlowAtResidualGpm?.ToString() ?? string.Empty;
         HydrantTestDate = input.HydrantTestDate?.ToShortDateString() ?? string.Empty;
+        if (context.ProjectState.WaterSupplyValidation?.Curve?.Count > 0)
+        {
+            supplyCurve = context.ProjectState.WaterSupplyValidation.Curve.ToList();
+            if (context.ProjectState.HydraulicResult?.TotalFlowGpm > 0)
+            {
+                demandFlowGpm = context.ProjectState.HydraulicResult.DemandFlowGpm;
+                demandPressurePsi = context.ProjectState.HydraulicResult.DemandPressurePsi;
+            }
+
+            OnPropertyChanged(nameof(SupplyCurve));
+            OnPropertyChanged(nameof(ShowSupplyChart));
+            OnPropertyChanged(nameof(DemandFlowGpm));
+            OnPropertyChanged(nameof(DemandPressurePsi));
+        }
     }
 
     private void ValidateSupply()
@@ -217,12 +242,30 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         input.FlowAtResidualGpm = TryParse(FlowGpm);
         input.HydrantTestDate = DateTime.TryParse(HydrantTestDate, out DateTime testDate) ? testDate : null;
 
-        HydraulicCalculationResult demand = hydraulicEngine.Calculate(context.ProjectState.Rooms, input);
+        HydraulicCalculationResult demand = hydraulicEngine.Calculate(
+            context.ProjectState.Rooms,
+            input,
+            context.ProjectState.PlacementSummary);
         WaterSupplyValidationResult result = waterSupplyEngine.Validate(input, demand);
 
+        context.ProjectState.HydraulicResult = demand;
+        context.ProjectState.WaterSupplyValidation = result;
+        supplyCurve = result.Curve?.ToList() ?? new List<WaterSupplyCurvePoint>();
+        demandFlowGpm = demand.DemandFlowGpm;
+        demandPressurePsi = demand.DemandPressurePsi;
+
         ValidationSummary = result.IsAdequate
-            ? "Water supply is adequate. Safety margin: " + result.SafetyMarginPsi.ToString("N1") + " PSI."
+            ? "Water supply is adequate at "
+              + demand.TotalFlowGpm.ToString("N0")
+              + " GPM. Safety margin: "
+              + result.SafetyMarginPsi.ToString("N1")
+              + " PSI."
             : "Water supply warning: " + string.Join(" ", result.Warnings);
+
+        OnPropertyChanged(nameof(SupplyCurve));
+        OnPropertyChanged(nameof(ShowSupplyChart));
+        OnPropertyChanged(nameof(DemandFlowGpm));
+        OnPropertyChanged(nameof(DemandPressurePsi));
 
         if (input.StaticPressurePsi.HasValue
             && input.ResidualPressurePsi.HasValue
@@ -255,6 +298,7 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
             && context.ProjectState.HydraulicResult.TotalFlowGpm > 0)
         {
             result = context.ProjectState.HydraulicResult;
+            NotifyResultChanged();
         }
     }
 
@@ -277,6 +321,18 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
     public double AvailablePressurePsi => result.AvailablePressurePsi;
 
     public double SafetyMarginPsi => result.SafetyMarginPsi;
+
+    public int OperatingSprinklerCount => result.OperatingSprinklerCount;
+
+    public double FlowPerOperatingSprinklerGpm => result.FlowPerOperatingSprinklerGpm;
+
+    public IList<WaterSupplyCurvePoint> SupplyCurve => result.SupplyCurve;
+
+    public double DemandFlowGpm => result.DemandFlowGpm;
+
+    public double DemandPressurePsi => result.DemandPressurePsi;
+
+    public bool ShowSupplyChart => result.SupplyCurve?.Count > 1;
 
     public string NfpaReference => result.NfpaReference;
 
@@ -302,7 +358,10 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
             return;
         }
 
-        result = hydraulicEngine.Calculate(context.ProjectState.Rooms, context.ProjectState.WaterSupply);
+        result = hydraulicEngine.Calculate(
+            context.ProjectState.Rooms,
+            context.ProjectState.WaterSupply,
+            context.ProjectState.PlacementSummary);
         context.ProjectState.HydraulicResult = result;
         context.ProjectState.SessionProgress.HydraulicsComplete = result.TotalFlowGpm > 0;
         context.RequestPersistToRevit();
@@ -324,6 +383,12 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(SystemDemandPsi));
         OnPropertyChanged(nameof(AvailablePressurePsi));
         OnPropertyChanged(nameof(SafetyMarginPsi));
+        OnPropertyChanged(nameof(OperatingSprinklerCount));
+        OnPropertyChanged(nameof(FlowPerOperatingSprinklerGpm));
+        OnPropertyChanged(nameof(SupplyCurve));
+        OnPropertyChanged(nameof(DemandFlowGpm));
+        OnPropertyChanged(nameof(DemandPressurePsi));
+        OnPropertyChanged(nameof(ShowSupplyChart));
         OnPropertyChanged(nameof(NfpaReference));
         OnPropertyChanged(nameof(WarningSummary));
     }
@@ -467,7 +532,10 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
 
         HydraulicCalculationResult hydraulicResult = context.ProjectState.HydraulicResult?.TotalFlowGpm > 0
             ? context.ProjectState.HydraulicResult
-            : hydraulicEngine.Calculate(context.ProjectState.Rooms, context.ProjectState.WaterSupply);
+            : hydraulicEngine.Calculate(
+                context.ProjectState.Rooms,
+                context.ProjectState.WaterSupply,
+                context.ProjectState.PlacementSummary);
         context.ProjectState.HydraulicResult = hydraulicResult;
 
         IReadOnlyList<MaterialTakeoffItem> materialTakeoff = takeoffEngine.Generate(context.ProjectState.Rooms);

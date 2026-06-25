@@ -183,12 +183,16 @@ public static class SprinkSnapPdfReportExporter
 
                         AddRow(table, "Design density", hydraulicResult.DesignDensityGpmPerSqFt.ToString("N2") + " gpm/sq ft");
                         AddRow(table, "Remote area", hydraulicResult.RemoteAreaSquareFeet.ToString("N0") + " sq ft");
+                        AddRow(table, "Operating sprinklers", hydraulicResult.OperatingSprinklerCount.ToString());
+                        AddRow(table, "Flow per operating sprinkler", hydraulicResult.FlowPerOperatingSprinklerGpm.ToString("N1") + " GPM");
+                        AddRow(table, "Max coverage per head", hydraulicResult.MaxCoverageSquareFeet.ToString("N0") + " sq ft");
                         AddRow(table, "Sprinkler demand", hydraulicResult.SprinklerDemandFlowGpm.ToString("N1") + " GPM");
                         AddRow(table, "Hose stream allowance", hydraulicResult.HoseStreamAllowanceGpm.ToString("N0") + " GPM");
                         AddRow(table, "Total calculated flow", hydraulicResult.TotalFlowGpm.ToString("N1") + " GPM");
                         AddRow(table, "Equivalent K-factor", hydraulicResult.EquivalentKFactor.ToString("N1"));
                         AddRow(table, "System demand pressure", hydraulicResult.SystemDemandPsi.ToString("N1") + " PSI");
-                        AddRow(table, "Available residual pressure", hydraulicResult.AvailablePressurePsi.ToString("N1") + " PSI");
+                        AddRow(table, "Demand flow (chart)", hydraulicResult.DemandFlowGpm.ToString("N1") + " GPM");
+                        AddRow(table, "Available pressure at demand flow", hydraulicResult.AvailablePressurePsi.ToString("N1") + " PSI");
                         AddRow(table, "Safety margin", hydraulicResult.SafetyMarginPsi.ToString("N1") + " PSI");
                         AddRow(table, "Static pressure (test)", FormatNullable(supply.StaticPressurePsi, "PSI"));
                         AddRow(table, "Residual pressure (test)", FormatNullable(supply.ResidualPressurePsi, "PSI"));
