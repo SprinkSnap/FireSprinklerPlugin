@@ -313,24 +313,6 @@ public sealed class HydraulicEngine : IHydraulicEngine
     }
 }
 
-public sealed class MaterialTakeoffEngine : IMaterialTakeoffEngine
-{
-    public IReadOnlyList<MaterialTakeoffItem> Generate(IEnumerable<RoomInfo> rooms)
-    {
-        int sprinklerCount = rooms.Sum(room => room.ProposedSprinklers.Count);
-        return new List<MaterialTakeoffItem>
-        {
-            new MaterialTakeoffItem
-            {
-                ItemType = "Sprinkler",
-                Description = "Proposed sprinkler heads",
-                Quantity = sprinklerCount,
-                Unit = "EA"
-            }
-        };
-    }
-}
-
 public sealed class ReportEngine : IReportEngine
 {
     public ReportExportResult ExportAll(

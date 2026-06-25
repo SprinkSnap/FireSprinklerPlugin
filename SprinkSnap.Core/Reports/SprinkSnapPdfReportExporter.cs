@@ -61,9 +61,13 @@ public static class SprinkSnapPdfReportExporter
 
             if (request.IncludeMaterialTakeoff)
             {
-                string path = Path.Combine(exportFolder, "SprinkSnap_Material_Takeoff.pdf");
-                GenerateMaterialTakeoff(materialTakeoff, path);
-                result.ExportedFiles.Add(path);
+                string pdfPath = Path.Combine(exportFolder, "SprinkSnap_Material_Takeoff.pdf");
+                GenerateMaterialTakeoff(materialTakeoff, pdfPath);
+                result.ExportedFiles.Add(pdfPath);
+
+                string excelPath = Path.Combine(exportFolder, "SprinkSnap_Material_Takeoff.xlsx");
+                MaterialTakeoffExcelExporter.Export(materialTakeoff, excelPath);
+                result.ExportedFiles.Add(excelPath);
             }
 
             if (result.ExportedFiles.Count == 0)
@@ -270,6 +274,10 @@ public static class SprinkSnapPdfReportExporter
                     table.ColumnsDefinition(columns =>
                     {
                         columns.RelativeColumn();
+                        columns.RelativeColumn();
+                        columns.RelativeColumn();
+                        columns.RelativeColumn();
+                        columns.RelativeColumn();
                         columns.RelativeColumn(2);
                         columns.RelativeColumn();
                         columns.RelativeColumn();
@@ -278,14 +286,22 @@ public static class SprinkSnapPdfReportExporter
                     table.Header(header =>
                     {
                         header.Cell().Element(CellStyle).Text("Type");
+                        header.Cell().Element(CellStyle).Text("Room");
+                        header.Cell().Element(CellStyle).Text("Level");
+                        header.Cell().Element(CellStyle).Text("Manufacturer");
+                        header.Cell().Element(CellStyle).Text("Source");
                         header.Cell().Element(CellStyle).Text("Description");
-                        header.Cell().Element(CellStyle).Text("Quantity");
+                        header.Cell().Element(CellStyle).Text("Qty");
                         header.Cell().Element(CellStyle).Text("Unit");
                     });
 
                     foreach (MaterialTakeoffItem item in items)
                     {
                         table.Cell().Element(CellStyle).Text(item.ItemType);
+                        table.Cell().Element(CellStyle).Text(item.RoomNumber);
+                        table.Cell().Element(CellStyle).Text(item.LevelName);
+                        table.Cell().Element(CellStyle).Text(item.Manufacturer);
+                        table.Cell().Element(CellStyle).Text(item.Source);
                         table.Cell().Element(CellStyle).Text(item.Description);
                         table.Cell().Element(CellStyle).Text(item.Quantity.ToString("N0"));
                         table.Cell().Element(CellStyle).Text(item.Unit);

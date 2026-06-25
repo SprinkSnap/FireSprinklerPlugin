@@ -7,10 +7,12 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
+using Microsoft.Win32;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
+using FireSprinklerPlugin.SprinkSnap.Core.Materials;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
@@ -398,28 +400,88 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private readonly IMaterialTakeoffEngine takeoffEngine = new MaterialTakeoffEngine();
+    private string statusMessage = "Refresh takeoff to generate room-level sprinkler BOM rows.";
 
     public MaterialsModuleViewModel(SprinkSnapShellContext context)
     {
         this.context = context;
-        Items = new ObservableCollection<MaterialTakeoffItem>(takeoffEngine.Generate(context.ProjectState.Rooms));
+        Items = new ObservableCollection<MaterialTakeoffItem>();
+        Refresh();
         RefreshCommand = new ModuleRelayCommand(_ => Refresh());
+        ExportExcelCommand = new ModuleRelayCommand(_ => ExportExcel());
     }
 
     public ObservableCollection<MaterialTakeoffItem> Items { get; }
 
     public ICommand RefreshCommand { get; }
 
+    public ICommand ExportExcelCommand { get; }
+
+    public string StatusMessage
+    {
+        get => statusMessage;
+        private set
+        {
+            statusMessage = value;
+            OnPropertyChanged();
+        }
+    }
+
     private void Refresh()
     {
         Items.Clear();
-        foreach (MaterialTakeoffItem item in takeoffEngine.Generate(context.ProjectState.Rooms))
+        foreach (MaterialTakeoffItem item in takeoffEngine.Generate(
+                     context.ProjectState.Rooms,
+                     context.ProjectState.PlacementSummary))
         {
             Items.Add(item);
         }
 
-        context.ProjectState.SessionProgress.MaterialsComplete = Items.Count > 0;
+        int detailCount = Items.Count(item => !item.IsSummaryRow);
+        int totalQuantity = Items.Where(item => !item.IsSummaryRow).Sum(item => (int)item.Quantity);
+        StatusMessage = detailCount == 0
+            ? "No sprinkler quantities found. Generate layout or place sprinklers in Revit first."
+            : "Takeoff includes "
+              + detailCount
+              + " room row(s) totaling "
+              + totalQuantity
+              + " sprinkler(s). Summary rows are included for Excel export.";
+
+        context.ProjectState.SessionProgress.MaterialsComplete = detailCount > 0;
         context.RequestWorkflowRefresh();
+    }
+
+    private void ExportExcel()
+    {
+        if (!Items.Any(item => !item.IsSummaryRow))
+        {
+            StatusMessage = "Refresh takeoff before exporting — no sprinkler quantities are available.";
+            return;
+        }
+
+        SaveFileDialog dialog = new SaveFileDialog
+        {
+            Title = "Export Material Takeoff",
+            Filter = "Excel workbook (*.xlsx)|*.xlsx",
+            FileName = "SprinkSnap_Material_Takeoff_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".xlsx",
+            AddExtension = true,
+            OverwritePrompt = true
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            MaterialTakeoffExcelExporter.Export(Items.ToList(), dialog.FileName);
+            StatusMessage = "Exported material takeoff to " + dialog.FileName;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Excel export failed: " + ex.Message;
+        }
     }
 }
 
@@ -538,7 +600,9 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
                 context.ProjectState.PlacementSummary);
         context.ProjectState.HydraulicResult = hydraulicResult;
 
-        IReadOnlyList<MaterialTakeoffItem> materialTakeoff = takeoffEngine.Generate(context.ProjectState.Rooms);
+        IReadOnlyList<MaterialTakeoffItem> materialTakeoff = takeoffEngine.Generate(
+            context.ProjectState.Rooms,
+            context.ProjectState.PlacementSummary);
         ReportExportResult exportResult = reportEngine.ExportAll(
             context.ProjectState,
             hydraulicResult,
@@ -553,7 +617,7 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
 
         StatusMessage = "Exported "
             + exportResult.ExportedFiles.Count
-            + " PDF(s) to "
+            + " file(s) to "
             + exportResult.ExportFolder
             + ": "
             + string.Join(", ", exportResult.ExportedFiles.Select(Path.GetFileName));

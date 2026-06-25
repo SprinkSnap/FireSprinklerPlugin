@@ -5,18 +5,28 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <TextBlock Text="Materials" FontSize="22" FontWeight="SemiBold" />
-        <Button Grid.Row="1"
-                Content="Refresh Takeoff"
-                Command="{Binding RefreshCommand}"
-                HorizontalAlignment="Left"
-                Padding="14,8"
-                Margin="0,12,0,12" />
+        <TextBlock Grid.Row="1"
+                   Text="{Binding StatusMessage}"
+                   TextWrapping="Wrap"
+                   Foreground="#4B5563"
+                   Margin="0,8,0,12" />
 
-        <DataGrid Grid.Row="2"
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12">
+            <Button Content="Refresh Takeoff"
+                    Command="{Binding RefreshCommand}"
+                    Padding="14,8"
+                    Margin="0,0,8,0" />
+            <Button Content="Export Excel"
+                    Command="{Binding ExportExcelCommand}"
+                    Padding="14,8" />
+        </StackPanel>
+
+        <DataGrid Grid.Row="3"
                   ItemsSource="{Binding Items}"
                   AutoGenerateColumns="False"
                   CanUserAddRows="False"
@@ -24,10 +34,16 @@
                   MinHeight="240"
                   HeadersVisibility="Column">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Type" Binding="{Binding ItemType}" Width="120" />
+                <DataGridTextColumn Header="Type" Binding="{Binding ItemType}" Width="90" />
+                <DataGridTextColumn Header="Room #" Binding="{Binding RoomNumber}" Width="80" />
+                <DataGridTextColumn Header="Room" Binding="{Binding RoomName}" Width="140" />
+                <DataGridTextColumn Header="Level" Binding="{Binding LevelName}" Width="100" />
+                <DataGridTextColumn Header="Manufacturer" Binding="{Binding Manufacturer}" Width="110" />
+                <DataGridTextColumn Header="Hazard" Binding="{Binding HazardClassification}" Width="120" />
+                <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="90" />
                 <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="2*" />
-                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity, StringFormat=N0}" Width="100" />
-                <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="80" />
+                <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, StringFormat=N0}" Width="70" />
+                <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="60" />
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

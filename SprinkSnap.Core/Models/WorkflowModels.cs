@@ -226,11 +226,27 @@ public sealed class MaterialTakeoffItem
 {
     public string ItemType { get; set; } = string.Empty;
 
+    public string RoomNumber { get; set; } = string.Empty;
+
+    public string RoomName { get; set; } = string.Empty;
+
+    public string LevelName { get; set; } = string.Empty;
+
+    public string Manufacturer { get; set; } = string.Empty;
+
+    public string FamilyName { get; set; } = string.Empty;
+
+    public string HazardClassification { get; set; } = string.Empty;
+
+    public string Source { get; set; } = string.Empty;
+
     public string Description { get; set; } = string.Empty;
 
     public double Quantity { get; set; }
 
     public string Unit { get; set; } = string.Empty;
+
+    public bool IsSummaryRow { get; set; }
 }
 
 public sealed class ReportExportRequest

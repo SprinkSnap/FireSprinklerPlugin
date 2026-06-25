@@ -45,7 +45,9 @@ public interface IHydraulicEngine
 
 public interface IMaterialTakeoffEngine
 {
-    IReadOnlyList<MaterialTakeoffItem> Generate(IEnumerable<RoomInfo> rooms);
+    IReadOnlyList<MaterialTakeoffItem> Generate(
+        IEnumerable<RoomInfo> rooms,
+        SprinklerPlacementSummary placementSummary = null);
 }
 
 public interface IReportEngine
