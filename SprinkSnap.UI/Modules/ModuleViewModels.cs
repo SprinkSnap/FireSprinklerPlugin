@@ -479,6 +479,11 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
                   + " PSI."
                 : "Water supply warning: " + string.Join(" ", result.Warnings));
 
+        if (DownstreamOutputsStaleService.IsMaterialsTakeoffStale(context.ProjectState))
+        {
+            ValidationSummary += " " + DownstreamOutputsStaleService.PostHydraulicsRefreshPrompt;
+        }
+
         OnPropertyChanged(nameof(SupplyCurve));
         OnPropertyChanged(nameof(ShowSupplyChart));
         OnPropertyChanged(nameof(DemandFlowGpm));
@@ -511,6 +516,7 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
     public HydraulicsModuleViewModel(SprinkSnapShellContext context)
     {
         this.context = context;
+        context.WorkflowChanged += OnWorkflowChanged;
         CalculateCommand = new ModuleRelayCommand(_ => Calculate());
         PickSupplyAnchorCommand = new ModuleRelayCommand(_ => PickSupplyAnchor(), _ => CanPickSupplyAnchor);
         ClearSupplyAnchorCommand = new ModuleRelayCommand(_ => ClearSupplyAnchor(), _ => HasUserSupplyAnchor);
@@ -520,6 +526,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
             result = context.ProjectState.HydraulicResult;
             NotifyResultChanged();
         }
+
+        RefreshDownstreamStaleBindings();
     }
 
     public ICommand CalculateCommand { get; }
@@ -628,6 +636,24 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         ? "No hydraulic warnings."
         : string.Join(Environment.NewLine, result.Warnings);
 
+    public bool IsDownstreamStaleActive => DownstreamOutputsStaleService.IsDownstreamStaleActive(context.ProjectState);
+
+    public string DownstreamStaleBannerTitle => DownstreamOutputsStaleService.GetBannerTitle(context.ProjectState);
+
+    public string DownstreamStaleBannerMessage => DownstreamOutputsStaleService.GetBannerMessage(context.ProjectState);
+
+    private void OnWorkflowChanged(object sender, EventArgs e)
+    {
+        RefreshDownstreamStaleBindings();
+    }
+
+    private void RefreshDownstreamStaleBindings()
+    {
+        OnPropertyChanged(nameof(IsDownstreamStaleActive));
+        OnPropertyChanged(nameof(DownstreamStaleBannerTitle));
+        OnPropertyChanged(nameof(DownstreamStaleBannerMessage));
+    }
+
     private void Calculate()
     {
         if (SprinkSnapWorkflowGate.IsModelStale(context.ProjectState))
@@ -688,7 +714,13 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
             ? completionMessage
             : StatusMessage + " " + completionMessage;
 
+        if (DownstreamOutputsStaleService.IsMaterialsTakeoffStale(context.ProjectState))
+        {
+            StatusMessage += " " + DownstreamOutputsStaleService.PostHydraulicsRefreshPrompt;
+        }
+
         NotifyResultChanged();
+        RefreshDownstreamStaleBindings();
     }
 
     private void NotifyResultChanged()
@@ -793,8 +825,9 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
     public MaterialsModuleViewModel(SprinkSnapShellContext context)
     {
         this.context = context;
+        context.WorkflowChanged += OnWorkflowChanged;
         Items = new ObservableCollection<MaterialTakeoffItem>();
-        Refresh();
+        InitializeTakeoffDisplay();
         RefreshCommand = new ModuleRelayCommand(_ => Refresh(remeasureFromRevit: true));
         ExportExcelCommand = new ModuleRelayCommand(_ => ExportExcel());
     }
@@ -805,6 +838,12 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
 
     public ICommand ExportExcelCommand { get; }
 
+    public bool IsDownstreamStaleActive => DownstreamOutputsStaleService.IsDownstreamStaleActive(context.ProjectState);
+
+    public string DownstreamStaleBannerTitle => DownstreamOutputsStaleService.GetBannerTitle(context.ProjectState);
+
+    public string DownstreamStaleBannerMessage => DownstreamOutputsStaleService.GetBannerMessage(context.ProjectState);
+
     public string StatusMessage
     {
         get => statusMessage;
@@ -813,6 +852,45 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
             statusMessage = value;
             OnPropertyChanged();
         }
+    }
+
+    private void OnWorkflowChanged(object sender, EventArgs e)
+    {
+        RefreshDownstreamStaleBindings();
+        if (DownstreamOutputsStaleService.IsMaterialsTakeoffStale(context.ProjectState))
+        {
+            ApplyStaleTakeoffState();
+        }
+    }
+
+    private void RefreshDownstreamStaleBindings()
+    {
+        OnPropertyChanged(nameof(IsDownstreamStaleActive));
+        OnPropertyChanged(nameof(DownstreamStaleBannerTitle));
+        OnPropertyChanged(nameof(DownstreamStaleBannerMessage));
+    }
+
+    private void InitializeTakeoffDisplay()
+    {
+        if (context.ProjectState.SessionProgress.MaterialsComplete)
+        {
+            GenerateTakeoff(null, markComplete: true);
+            return;
+        }
+
+        if (DownstreamOutputsStaleService.IsMaterialsTakeoffStale(context.ProjectState))
+        {
+            ApplyStaleTakeoffState();
+            return;
+        }
+
+        StatusMessage = "Refresh takeoff to generate sprinkler, pipe, fitting, and valve BOM rows.";
+    }
+
+    private void ApplyStaleTakeoffState()
+    {
+        Items.Clear();
+        StatusMessage = DownstreamOutputsStaleService.GetBannerMessage(context.ProjectState);
     }
 
     private void Refresh(bool remeasureFromRevit = false)
@@ -825,16 +903,16 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
                 Application.Current?.Dispatcher.Invoke(() =>
                 {
                     context.ProjectState.PipePlacementSummary = summary;
-                    GenerateTakeoff(summary.Messages);
+                    GenerateTakeoff(summary.Messages, markComplete: true);
                 });
             });
             return;
         }
 
-        GenerateTakeoff(null);
+        GenerateTakeoff(null, markComplete: true);
     }
 
-    private void GenerateTakeoff(IList<string> remeasureMessages)
+    private void GenerateTakeoff(IList<string> remeasureMessages, bool markComplete)
     {
         Items.Clear();
         foreach (MaterialTakeoffItem item in takeoffEngine.Generate(
@@ -886,12 +964,23 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
                   + " fitting/valve row(s). Summary rows are included for Excel export.";
         }
 
-        context.ProjectState.SessionProgress.MaterialsComplete = detailCount > 0;
+        if (markComplete)
+        {
+            context.ProjectState.SessionProgress.MaterialsComplete = detailCount > 0;
+        }
+
         context.RequestWorkflowRefresh();
+        RefreshDownstreamStaleBindings();
     }
 
     private void ExportExcel()
     {
+        if (DownstreamOutputsStaleService.RequiresMaterialsRefreshBeforeExport(context.ProjectState))
+        {
+            StatusMessage = DownstreamOutputsStaleService.MaterialsRefreshRequiredMessage;
+            return;
+        }
+
         if (!Items.Any(item => !item.IsSummaryRow))
         {
             StatusMessage = "Refresh takeoff before exporting — no sprinkler quantities are available.";
@@ -940,6 +1029,7 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
     public ReportsModuleViewModel(SprinkSnapShellContext context)
     {
         this.context = context;
+        context.WorkflowChanged += OnWorkflowChanged;
         outputFolder = string.IsNullOrWhiteSpace(context.ProjectState.ReportExport.OutputFolder)
             ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
             : context.ProjectState.ReportExport.OutputFolder;
@@ -948,6 +1038,25 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
         includeNodeDiagram = context.ProjectState.ReportExport.IncludeNodeDiagram;
         includeMaterialTakeoff = context.ProjectState.ReportExport.IncludeMaterialTakeoff;
         ExportCommand = new ModuleRelayCommand(_ => ExportReports());
+        RefreshDownstreamStaleBindings();
+    }
+
+    public bool IsDownstreamStaleActive => DownstreamOutputsStaleService.IsDownstreamStaleActive(context.ProjectState);
+
+    public string DownstreamStaleBannerTitle => DownstreamOutputsStaleService.GetBannerTitle(context.ProjectState);
+
+    public string DownstreamStaleBannerMessage => DownstreamOutputsStaleService.GetBannerMessage(context.ProjectState);
+
+    private void OnWorkflowChanged(object sender, EventArgs e)
+    {
+        RefreshDownstreamStaleBindings();
+    }
+
+    private void RefreshDownstreamStaleBindings()
+    {
+        OnPropertyChanged(nameof(IsDownstreamStaleActive));
+        OnPropertyChanged(nameof(DownstreamStaleBannerTitle));
+        OnPropertyChanged(nameof(DownstreamStaleBannerMessage));
     }
 
     public ICommand ExportCommand { get; }
@@ -1017,6 +1126,13 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
         if (string.IsNullOrWhiteSpace(OutputFolder))
         {
             StatusMessage = "Enter an output folder before exporting reports.";
+            return;
+        }
+
+        if (IncludeMaterialTakeoff
+            && DownstreamOutputsStaleService.RequiresMaterialsRefreshBeforeExport(context.ProjectState))
+        {
+            StatusMessage = DownstreamOutputsStaleService.MaterialsRefreshRequiredMessage;
             return;
         }
 
