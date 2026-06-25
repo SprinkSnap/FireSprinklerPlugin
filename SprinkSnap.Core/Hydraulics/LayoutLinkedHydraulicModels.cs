@@ -1,6 +1,36 @@
+using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
+
+public sealed class HydraulicGraphSegment
+{
+    public string SegmentId { get; set; } = string.Empty;
+
+    public Point3D Start { get; set; } = new Point3D();
+
+    public Point3D End { get; set; } = new Point3D();
+
+    public double LengthFeet { get; set; }
+
+    public double DiameterInches { get; set; }
+
+    public string SegmentType { get; set; } = string.Empty;
+
+    public int RoomRevitElementId { get; set; }
+
+    public string Description { get; set; } = string.Empty;
+
+    public string DataSource { get; set; } = string.Empty;
+
+    public double FlowGpm { get; set; }
+
+    public double FrictionLossPsi { get; set; }
+
+    public double DownstreamPressurePsi { get; set; }
+
+    public double UpstreamPressurePsi { get; set; }
+}
 
 public sealed class LayoutSprinklerPoint
 {
@@ -54,6 +84,12 @@ public sealed class LayoutLinkedHydraulicPath
     public double JunctionPressurePsi { get; set; }
 
     public double CalculatedSprinklerFlowGpm { get; set; }
+
+    public bool UsesSegmentGraphHydraulics { get; set; }
+
+    public IList<HydraulicGraphSegment> SegmentChain { get; set; } = new List<HydraulicGraphSegment>();
+
+    public int CriticalPathSegmentCount { get; set; }
 
     public IList<HydraulicNode> CriticalPath { get; set; } = new List<HydraulicNode>();
 

@@ -64,6 +64,146 @@ public static class PlacedPipeHydraulicResolver
         };
     }
 
+    public static IList<HydraulicGraphSegment> ResolveSegmentsForRoom(
+        int roomRevitElementId,
+        PipePlacementSummary pipePlacementSummary,
+        SchematicPipeRoutingSummary schematicPipeRouting,
+        double defaultBranchDiameterInches,
+        double defaultMainDiameterInches)
+    {
+        IList<PipeSegment> schematicSegments = SchematicPipeRoutingService.GetSegmentsForRoom(
+            schematicPipeRouting,
+            roomRevitElementId);
+        if (schematicSegments.Count == 0)
+        {
+            return new List<HydraulicGraphSegment>();
+        }
+
+        PipePlacementRoomResult placedRoom = (pipePlacementSummary?.RoomResults ?? new List<PipePlacementRoomResult>())
+            .Where(result => result.RoomRevitElementId == roomRevitElementId && roomRevitElementId > 0)
+            .GroupBy(result => result.RoomRevitElementId)
+            .Select(group => group.Last())
+            .FirstOrDefault();
+
+        string dataSource = placedRoom?.PlacedSegments != null && placedRoom.PlacedSegments.Count > 0
+            ? "Placed"
+            : "Schematic";
+
+        List<HydraulicGraphSegment> segments = new List<HydraulicGraphSegment>();
+        foreach (PipeSegment schematicSegment in schematicSegments)
+        {
+            PipePlacementSegmentResult placedMatch = FindPlacedMatch(placedRoom, schematicSegment);
+            double lengthFeet = placedMatch != null && placedMatch.LengthFeet > 0
+                ? placedMatch.LengthFeet
+                : schematicSegment.LengthFeet;
+            double diameterInches = placedMatch != null && placedMatch.DiameterInches > 0
+                ? placedMatch.DiameterInches
+                : schematicSegment.DiameterInches;
+
+            segments.Add(new HydraulicGraphSegment
+            {
+                SegmentId = schematicSegment.Description,
+                Start = schematicSegment.Start,
+                End = schematicSegment.End,
+                LengthFeet = lengthFeet,
+                DiameterInches = diameterInches > 0
+                    ? diameterInches
+                    : IsBranchSegment(schematicSegment.SegmentType)
+                        ? defaultBranchDiameterInches
+                        : defaultMainDiameterInches,
+                SegmentType = schematicSegment.SegmentType,
+                RoomRevitElementId = schematicSegment.RoomRevitElementId,
+                Description = schematicSegment.Description,
+                DataSource = placedMatch != null ? "Placed" : dataSource
+            });
+        }
+
+        return segments;
+    }
+
+    private static PipePlacementSegmentResult FindPlacedMatch(
+        PipePlacementRoomResult placedRoom,
+        PipeSegment schematicSegment)
+    {
+        if (placedRoom?.PlacedSegments == null || placedRoom.PlacedSegments.Count == 0)
+        {
+            return null;
+        }
+
+        string schematicDescription = schematicSegment.Description ?? string.Empty;
+        string schematicIndex = ExtractDescriptionIndex(schematicDescription);
+        if (!string.IsNullOrWhiteSpace(schematicIndex))
+        {
+            PipePlacementSegmentResult indexedMatch = placedRoom.PlacedSegments
+                .FirstOrDefault(segment =>
+                    string.Equals(segment.SegmentType, schematicSegment.SegmentType, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(ExtractDescriptionIndex(segment.Description ?? string.Empty), schematicIndex, StringComparison.OrdinalIgnoreCase));
+            if (indexedMatch != null)
+            {
+                return indexedMatch;
+            }
+        }
+
+        PipePlacementSegmentResult descriptionMatch = placedRoom.PlacedSegments
+            .FirstOrDefault(segment =>
+                string.Equals(segment.SegmentType, schematicSegment.SegmentType, StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(segment.Description)
+                && schematicDescription.IndexOf(segment.Description, StringComparison.OrdinalIgnoreCase) >= 0);
+        if (descriptionMatch != null)
+        {
+            return descriptionMatch;
+        }
+
+        descriptionMatch = placedRoom.PlacedSegments
+            .FirstOrDefault(segment =>
+                string.Equals(segment.SegmentType, schematicSegment.SegmentType, StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(segment.Description)
+                && segment.Description.IndexOf(schematicDescription, StringComparison.OrdinalIgnoreCase) >= 0);
+        if (descriptionMatch != null)
+        {
+            return descriptionMatch;
+        }
+
+        return placedRoom.PlacedSegments
+            .FirstOrDefault(segment =>
+                string.Equals(segment.SegmentType, schematicSegment.SegmentType, StringComparison.OrdinalIgnoreCase)
+                && ContainsMatchingKeyword(schematicDescription, segment.Description));
+    }
+
+    private static bool ContainsMatchingKeyword(string left, string right)
+    {
+        string[] keywords = { "branch drop", "branch tie-in", "cross main", "riser", "main" };
+        foreach (string keyword in keywords)
+        {
+            if ((left ?? string.Empty).IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0
+                && (right ?? string.Empty).IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string ExtractDescriptionIndex(string description)
+    {
+        int hashIndex = (description ?? string.Empty).LastIndexOf('#');
+        if (hashIndex < 0 || hashIndex >= description.Length - 1)
+        {
+            return string.Empty;
+        }
+
+        int endIndex = hashIndex + 1;
+        while (endIndex < description.Length && char.IsDigit(description[endIndex]))
+        {
+            endIndex++;
+        }
+
+        return endIndex > hashIndex + 1
+            ? description.Substring(hashIndex + 1, endIndex - hashIndex - 1)
+            : string.Empty;
+    }
+
     private static HydraulicPipeLengthSource ResolveFromPlacedSegments(
         PipePlacementRoomResult placedRoom,
         double defaultBranchDiameterInches,

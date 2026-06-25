@@ -165,16 +165,42 @@ public static class HydraulicGraphBuilder
             }
         }
 
-        if (path.OperatingSprinklers.Select(point => point.Room.RevitElementId).Distinct().Count() > 1)
-        {
-            path.Warnings.Add(
-                "Operating sprinklers span multiple rooms. Critical path uses the most remote head relative to the calculated source point.");
-        }
-
         List<RoomInfo> rooms = controllingRooms?.ToList() ?? new List<RoomInfo>();
         if (rooms.Count > 0 && path.MainLengthFeet < 25.0)
         {
             path.Warnings.Add("Calculated main length is short. Verify riser location and room geometry in Revit.");
+        }
+
+        HydraulicSegmentGraphBuilder.BuildSegmentChain(path, schematicPipeRouting, pipePlacementSummary);
+        if (path.UsesSegmentGraphHydraulics)
+        {
+            if (path.UsesPlacedPipeLengths)
+            {
+                path.Warnings.Add(
+                    "Segment-graph critical path uses placed Revit pipe lengths in room "
+                    + (path.MostRemoteSprinkler.Room?.Number ?? string.Empty)
+                    + " with "
+                    + path.CriticalPathSegmentCount
+                    + " segment(s).");
+            }
+            else if (!string.Equals(path.PipeLengthDataSource, "Geometry", StringComparison.OrdinalIgnoreCase))
+            {
+                path.Warnings.Add(
+                    "Segment-graph critical path uses schematic routing in room "
+                    + (path.MostRemoteSprinkler.Room?.Number ?? string.Empty)
+                    + " with "
+                    + path.CriticalPathSegmentCount
+                    + " segment(s).");
+            }
+        }
+
+        int operatingRoomCount = path.OperatingSprinklers.Select(point => point.Room.RevitElementId).Distinct().Count();
+        if (operatingRoomCount > 1)
+        {
+            path.Warnings.Add(
+                "Operating sprinklers span "
+                + operatingRoomCount
+                + " room(s). Segment graph traces the most remote head; trunk segments carry combined operating flow.");
         }
 
         return path;

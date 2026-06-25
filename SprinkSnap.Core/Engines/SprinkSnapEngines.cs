@@ -157,6 +157,8 @@ public sealed class HydraulicEngine : IHydraulicEngine
             pipePlacementSummary);
 
         result.UsesLayoutLinkedHydraulics = layoutPath.UsesLayoutGeometry;
+        result.UsesSegmentGraphHydraulics = layoutPath.UsesSegmentGraphHydraulics;
+        result.CriticalPathSegmentCount = layoutPath.CriticalPathSegmentCount;
         result.UsesPlacedPipeLengths = layoutPath.UsesPlacedPipeLengths;
         result.PipeLengthDataSource = layoutPath.PipeLengthDataSource ?? string.Empty;
         result.BranchLengthFeet = layoutPath.BranchLengthFeet;

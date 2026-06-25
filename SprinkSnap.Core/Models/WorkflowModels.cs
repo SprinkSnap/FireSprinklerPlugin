@@ -249,6 +249,10 @@ public sealed class HydraulicCalculationResult
 
     public double TotalPipeLengthFeet { get; set; }
 
+    public bool UsesSegmentGraphHydraulics { get; set; }
+
+    public int CriticalPathSegmentCount { get; set; }
+
     public string RemoteSprinklerLabel { get; set; } = string.Empty;
 
     public string NfpaReference { get; set; } = string.Empty;
