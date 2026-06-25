@@ -49,6 +49,8 @@ public sealed class SprinkSnapShellContext
 
     public Action<Action<PipePlacementSummary>> RequestRemeasurePlacedPipes { get; set; }
 
+    public Action<Action<PipePlacementSummary>> RequestSyncPlacedPipeDiameters { get; set; }
+
     public Action<Action<ClashDetectionSummary>> RequestClashDetection { get; set; }
 
     public Action<Action<RevitProjectLoadResult>> RequestReanalyze { get; set; }

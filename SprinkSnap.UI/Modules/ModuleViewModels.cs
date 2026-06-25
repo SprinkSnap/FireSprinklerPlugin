@@ -553,6 +553,10 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public int SchematicWritebackSegmentCount => result.SchematicWritebackSegmentCount;
 
+    public bool UsesRevitPipeDiameterSync => result.UsesRevitPipeDiameterSync;
+
+    public int RevitPipeDiameterSyncCount => result.RevitPipeDiameterSyncCount;
+
     public IList<HydraulicNode> CriticalPath => result.CriticalPath ?? new List<HydraulicNode>();
 
     public string NfpaReference => result.NfpaReference;
@@ -614,6 +618,34 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         context.RequestPersistToRevit();
         context.RequestWorkflowRefresh();
 
+        if (HydraulicsPipeDataRefreshPolicy.ShouldSyncPlacedPipeDiametersAfterCalculation(
+                result,
+                context.ProjectState.PipePlacementSummary,
+                context.IsPreviewMode,
+                context.RequestSyncPlacedPipeDiameters != null))
+        {
+            StatusMessage = "Syncing velocity-sized pipe diameters to placed Revit pipes...";
+            context.RequestSyncPlacedPipeDiameters(summary =>
+            {
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    context.ProjectState.PipePlacementSummary = summary;
+                    if (context.ProjectState.HydraulicResult != null)
+                    {
+                        result = context.ProjectState.HydraulicResult;
+                    }
+
+                    CompleteHydraulicCalculationStatus(remeasureMessages, summary.Messages);
+                });
+            });
+            return;
+        }
+
+        CompleteHydraulicCalculationStatus(remeasureMessages, null);
+    }
+
+    private void CompleteHydraulicCalculationStatus(IList<string> remeasureMessages, IList<string> syncMessages)
+    {
         if (remeasureMessages != null && remeasureMessages.Count > 0)
         {
             StatusMessage = string.Join(" ", remeasureMessages);
@@ -621,6 +653,13 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         else
         {
             StatusMessage = string.Empty;
+        }
+
+        if (syncMessages != null && syncMessages.Count > 0)
+        {
+            StatusMessage = string.IsNullOrWhiteSpace(StatusMessage)
+                ? string.Join(" ", syncMessages)
+                : StatusMessage + " " + string.Join(" ", syncMessages);
         }
 
         string completionMessage = result.SafetyMarginPsi >= 0
@@ -664,6 +703,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(AppliedPipeSizingSegmentCount));
         OnPropertyChanged(nameof(UsesSchematicPipeSizingWriteback));
         OnPropertyChanged(nameof(SchematicWritebackSegmentCount));
+        OnPropertyChanged(nameof(UsesRevitPipeDiameterSync));
+        OnPropertyChanged(nameof(RevitPipeDiameterSyncCount));
         OnPropertyChanged(nameof(CriticalPath));
         OnPropertyChanged(nameof(NfpaReference));
         OnPropertyChanged(nameof(WarningSummary));

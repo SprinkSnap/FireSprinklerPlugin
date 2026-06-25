@@ -288,6 +288,10 @@ public sealed class HydraulicCalculationResult
 
     public int SchematicWritebackSegmentCount { get; set; }
 
+    public bool UsesRevitPipeDiameterSync { get; set; }
+
+    public int RevitPipeDiameterSyncCount { get; set; }
+
     public bool UsesUserSupplyAnchor { get; set; }
 
     public string UserSupplyAnchorLabel { get; set; } = string.Empty;
