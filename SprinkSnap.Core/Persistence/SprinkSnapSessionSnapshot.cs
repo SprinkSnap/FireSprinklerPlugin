@@ -89,6 +89,8 @@ public sealed class SprinkSnapSessionSnapshot
 
     public SchematicPipeRoutingSummary SchematicPipeRouting { get; set; } = new SchematicPipeRoutingSummary();
 
+    public PipePlacementSummary PipePlacementSummary { get; set; } = new PipePlacementSummary();
+
     public ReportExportRequest ReportExport { get; set; } = new ReportExportRequest();
 }
 

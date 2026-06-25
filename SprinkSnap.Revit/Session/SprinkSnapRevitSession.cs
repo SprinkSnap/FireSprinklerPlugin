@@ -4,6 +4,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Revit.ExternalEvents;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
@@ -21,6 +22,7 @@ public sealed class SprinkSnapRevitSession
         Context = context;
         Context.PersistToRevitRequested = PersistApprovedHazardsToRevit;
         Context.RequestPlaceSprinklers = RequestPlaceSprinklersInRevit;
+        Context.RequestPlacePipes = RequestPlacePipesInRevit;
         Context.RequestClashDetection = RequestClashDetectionInRevit;
         Context.RequestShowClashInRevit = ShowClashInRevit;
         Context.RequestShowRoomInRevit = ShowRoomInRevit;
@@ -110,6 +112,11 @@ public sealed class SprinkSnapRevitSession
     private void RequestPlaceSprinklersInRevit(Action<SprinklerPlacementSummary> callback)
     {
         SprinklerPlacementExternalEventHandler.Instance.RequestPlacement(Document, Context, callback);
+    }
+
+    private void RequestPlacePipesInRevit(Action<PipePlacementSummary> callback)
+    {
+        PipePlacementExternalEventHandler.Instance.RequestPlacement(Document, Context, callback);
     }
 
     private void RequestClashDetectionInRevit(Action<ClashDetectionSummary> callback)

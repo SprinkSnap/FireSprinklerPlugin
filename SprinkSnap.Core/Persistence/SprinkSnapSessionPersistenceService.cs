@@ -44,6 +44,7 @@ public static class SprinkSnapSessionPersistenceService
             HydraulicResult = state.HydraulicResult,
             WaterSupplyValidation = state.WaterSupplyValidation,
             SchematicPipeRouting = state.SchematicPipeRouting,
+            PipePlacementSummary = state.PipePlacementSummary,
             ReportExport = CloneReportExport(state.ReportExport)
         };
     }
@@ -72,6 +73,7 @@ public static class SprinkSnapSessionPersistenceService
         state.HydraulicResult = snapshot.HydraulicResult ?? new HydraulicCalculationResult();
         state.WaterSupplyValidation = snapshot.WaterSupplyValidation ?? new WaterSupplyValidationResult();
         state.SchematicPipeRouting = snapshot.SchematicPipeRouting ?? new SchematicPipeRoutingSummary();
+        state.PipePlacementSummary = snapshot.PipePlacementSummary ?? new PipePlacementSummary();
         state.ReportExport = CloneReportExport(snapshot.ReportExport);
 
         Dictionary<int, PersistedRoomSnapshot> roomSnapshots = (snapshot.Rooms ?? new List<PersistedRoomSnapshot>())

@@ -17,6 +17,10 @@
                             Command="{Binding ValidateCommand}"
                             Padding="14,8"
                             Margin="0,0,8,0" />
+                    <Button Content="Place Schematic Pipes"
+                            Command="{Binding PlacePipesInRevitCommand}"
+                            Padding="14,8"
+                            Margin="0,0,8,0" />
                     <Button Content="Place in Revit"
                             Command="{Binding PlaceInRevitCommand}"
                             Background="#2563EB"
@@ -26,13 +30,13 @@
                 </StackPanel>
                 <StackPanel>
                     <TextBlock Text="Place Sprinklers" Foreground="White" FontSize="22" FontWeight="SemiBold" />
-                    <TextBlock Text="Validate family mapping and layout readiness, then create Revit sprinkler family instances from approved candidates."
+                    <TextBlock Text="Validate family mapping and layout readiness, then create Revit sprinkler instances and schematic pipe segments from approved design."
                                Foreground="#CBD5E1" TextWrapping="Wrap" Margin="0,6,0,0" />
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <UniformGrid Grid.Row="1" Columns="5" Margin="0,0,0,12">
+        <UniformGrid Grid.Row="1" Columns="6" Margin="0,0,0,12">
             <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="Candidates" Foreground="#6B7280" />
@@ -57,10 +61,24 @@
                     <TextBlock Text="{Binding ExceptionRoomCount}" FontSize="26" FontWeight="SemiBold" Foreground="#B91C1C" />
                 </StackPanel>
             </Border>
-            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12">
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="Placed" Foreground="#6B7280" />
                     <TextBlock Text="{Binding PlacedCount}" FontSize="26" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Pipe segments" Foreground="#6B7280" />
+                    <TextBlock Text="{Binding SchematicPipeSegmentCount}" FontSize="26" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12">
+                <StackPanel>
+                    <TextBlock Text="Pipes placed" Foreground="#6B7280" />
+                    <TextBlock FontSize="26" FontWeight="SemiBold">
+                        <Run Text="{Binding PlacedPipeSegmentCount}" /><Run Text=" / " /><Run Text="{Binding PlacedPipeLengthFeet, StringFormat=N0}" /><Run Text=" ft" />
+                    </TextBlock>
                 </StackPanel>
             </Border>
         </UniformGrid>
@@ -69,7 +87,10 @@
             <StackPanel>
                 <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,8" />
                 <CheckBox Content="Allow placement when some rooms have unmapped families (designer override)"
-                          IsChecked="{Binding AllowUnmappedPlacement}" />
+                          IsChecked="{Binding AllowUnmappedPlacement}"
+                          Margin="0,0,0,8" />
+                <CheckBox Content="Place schematic pipes after sprinklers"
+                          IsChecked="{Binding PlaceSchematicPipesWithSprinklers}" />
             </StackPanel>
         </Border>
 

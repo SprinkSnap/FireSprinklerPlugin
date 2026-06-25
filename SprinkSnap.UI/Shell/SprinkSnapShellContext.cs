@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
@@ -38,6 +39,8 @@ public sealed class SprinkSnapShellContext
     public Action PersistToRevitRequested { get; set; }
 
     public Action<Action<SprinklerPlacementSummary>> RequestPlaceSprinklers { get; set; }
+
+    public Action<Action<PipePlacementSummary>> RequestPlacePipes { get; set; }
 
     public Action<Action<ClashDetectionSummary>> RequestClashDetection { get; set; }
 

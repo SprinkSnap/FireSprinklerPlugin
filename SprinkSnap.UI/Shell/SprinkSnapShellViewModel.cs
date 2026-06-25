@@ -536,8 +536,8 @@ public sealed class SprinkSnapModulePanel : INotifyPropertyChanged
                 return new ObservableCollection<string>
                 {
                     "Place listed sprinkler families at approved layout coordinates in Revit.",
-                    "Skip rooms with unresolved exceptions or missing family mappings.",
-                    "Tag placed heads with room number and hazard classification metadata."
+                    "Create schematic branch, cross main, and riser pipe segments from routing.",
+                    "Tag placed heads and pipes with room number and SprinkSnap metadata."
                 };
             case "Hydraulics":
                 return new ObservableCollection<string>

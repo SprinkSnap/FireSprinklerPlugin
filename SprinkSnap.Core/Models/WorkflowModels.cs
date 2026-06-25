@@ -99,6 +99,8 @@ public sealed class SprinkSnapProjectState
     public ReportExportRequest ReportExport { get; set; } = new ReportExportRequest();
 
     public SchematicPipeRoutingSummary SchematicPipeRouting { get; set; } = new SchematicPipeRoutingSummary();
+
+    public PipePlacementSummary PipePlacementSummary { get; set; } = new PipePlacementSummary();
 }
 
 public sealed class ComplianceWarning

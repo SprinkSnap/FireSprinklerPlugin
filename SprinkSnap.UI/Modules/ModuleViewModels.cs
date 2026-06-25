@@ -934,8 +934,9 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
 public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
-    private string statusMessage = "Run pre-flight validation, then place approved sprinkler layouts in Revit.";
+    private string statusMessage = "Run pre-flight validation, then place approved sprinkler layouts and schematic pipes in Revit.";
     private bool allowUnmappedPlacement;
+    private bool placeSchematicPipesWithSprinklers = true;
     private bool hasValidatedPreflight;
 
     public PlaceSprinklersModuleViewModel(SprinkSnapShellContext context)
@@ -945,6 +946,7 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
         PreflightRooms = new ObservableCollection<PlacementPreflightRoomResult>();
         ValidateCommand = new ModuleRelayCommand(_ => RunPreflightValidation());
         PlaceInRevitCommand = new ModuleRelayCommand(_ => PlaceInRevit());
+        PlacePipesInRevitCommand = new ModuleRelayCommand(_ => PlacePipesInRevit());
         SyncFromState();
     }
 
@@ -956,10 +958,18 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
 
     public ICommand PlaceInRevitCommand { get; }
 
+    public ICommand PlacePipesInRevitCommand { get; }
+
     public int TotalCandidates => context.ProjectState.PlacementSummary?.TotalCandidates
         ?? context.ProjectState.Rooms.Sum(room => room.ProposedSprinklers.Count);
 
     public int PlacedCount => context.ProjectState.PlacementSummary?.PlacedCount ?? 0;
+
+    public int SchematicPipeSegmentCount => context.ProjectState.SchematicPipeRouting?.TotalSegmentCount ?? 0;
+
+    public int PlacedPipeSegmentCount => context.ProjectState.PipePlacementSummary?.PlacedSegmentCount ?? 0;
+
+    public double PlacedPipeLengthFeet => context.ProjectState.PipePlacementSummary?.PlacedLengthFeet ?? 0.0;
 
     public int SkippedRoomCount => context.ProjectState.PlacementSummary?.SkippedRoomCount ?? 0;
 
@@ -979,6 +989,16 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
         set
         {
             allowUnmappedPlacement = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool PlaceSchematicPipesWithSprinklers
+    {
+        get => placeSchematicPipesWithSprinklers;
+        set
+        {
+            placeSchematicPipesWithSprinklers = value;
             OnPropertyChanged();
         }
     }
@@ -1049,9 +1069,61 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
             Application.Current?.Dispatcher.Invoke(() =>
             {
                 ApplySummary(summary);
+                if (placeSchematicPipesWithSprinklers && SchematicPipeSegmentCount > 0)
+                {
+                    PlacePipesInRevit(skipPreflightCheck: true);
+                    return;
+                }
+
                 StatusMessage = summary.Messages.Count > 0
                     ? string.Join(" ", summary.Messages)
                     : "Placement complete.";
+                context.RequestWorkflowRefresh();
+            });
+        });
+    }
+
+    private void PlacePipesInRevit(bool skipPreflightCheck = false)
+    {
+        if (SprinkSnapWorkflowGate.IsModelStale(context.ProjectState))
+        {
+            StatusMessage = SprinkSnapWorkflowGate.StaleModelBlockReason;
+            return;
+        }
+
+        if (SchematicPipeSegmentCount == 0)
+        {
+            StatusMessage = "No schematic pipe routing found. Run Generate Design and Auto-Layout All first.";
+            return;
+        }
+
+        if (!skipPreflightCheck && ReadyRoomCount == 0)
+        {
+            StatusMessage = "No rooms are ready for placement. Complete hazard approval, layout, and clash resolution first.";
+            return;
+        }
+
+        if (context.IsPreviewMode)
+        {
+            StatusMessage = "WpfPreview cannot write to Revit. Open SprinkSnap in Revit to place schematic pipes.";
+            return;
+        }
+
+        if (context.RequestPlacePipes == null)
+        {
+            StatusMessage = "Revit pipe placement is not connected for this session.";
+            return;
+        }
+
+        StatusMessage = "Placing schematic pipes in Revit...";
+        context.RequestPlacePipes(summary =>
+        {
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                ApplyPipeSummary(summary);
+                StatusMessage = summary.Messages.Count > 0
+                    ? string.Join(" ", summary.Messages)
+                    : "Schematic pipe placement complete.";
                 context.RequestWorkflowRefresh();
             });
         });
@@ -1069,6 +1141,14 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(TotalCandidates));
         OnPropertyChanged(nameof(PlacedCount));
         OnPropertyChanged(nameof(SkippedRoomCount));
+    }
+
+    private void ApplyPipeSummary(PipePlacementSummary summary)
+    {
+        context.ProjectState.PipePlacementSummary = summary;
+        OnPropertyChanged(nameof(PlacedPipeSegmentCount));
+        OnPropertyChanged(nameof(PlacedPipeLengthFeet));
+        OnPropertyChanged(nameof(SchematicPipeSegmentCount));
     }
 
     private void ApplyPreflight(PlacementPreflightSummary summary)
@@ -1108,6 +1188,14 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
                 StatusMessage = string.Join(" ", context.ProjectState.PlacementSummary.Messages);
             }
         }
+
+        if (context.ProjectState.PipePlacementSummary != null
+            && context.ProjectState.PipePlacementSummary.PlacedSegmentCount > 0)
+        {
+            ApplyPipeSummary(context.ProjectState.PipePlacementSummary);
+        }
+
+        OnPropertyChanged(nameof(SchematicPipeSegmentCount));
     }
 }
 
