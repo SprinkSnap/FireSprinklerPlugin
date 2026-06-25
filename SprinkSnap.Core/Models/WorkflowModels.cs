@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
+using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Models;
@@ -80,6 +81,10 @@ public sealed class SprinkSnapProjectState
     public ClashDetectionSummary ClashSummary { get; set; } = new ClashDetectionSummary();
 
     public SprinklerPlacementSummary PlacementSummary { get; set; } = new SprinklerPlacementSummary();
+
+    public IList<SprinklerFamilyMappingOverride> FamilyMappingOverrides { get; set; } = new List<SprinklerFamilyMappingOverride>();
+
+    public PlacementPreflightSummary PlacementPreflight { get; set; } = new PlacementPreflightSummary();
 }
 
 public sealed class ComplianceWarning

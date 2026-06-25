@@ -103,6 +103,8 @@ public sealed class RoomInfo
 
     public string AlternateSprinklerSummary { get; set; } = string.Empty;
 
+    public string RevitFamilyMappingStatus { get; set; } = "Not Evaluated";
+
     public IList<SprinklerPlacementCandidate> ProposedSprinklers { get; set; } = new List<SprinklerPlacementCandidate>();
 
     public IList<LayoutMarker> LayoutPreviewMarkers { get; set; } = new List<LayoutMarker>();

@@ -47,6 +47,7 @@ public sealed class SprinklerPlacementExternalEventHandler : IExternalEventHandl
         {
             if (pendingDocument != null && pendingContext != null)
             {
+                pendingContext.ApplyFamilyMapping();
                 summary = RevitSprinklerPlacementService.Place(
                     pendingDocument,
                     pendingContext.ProjectState.Rooms,

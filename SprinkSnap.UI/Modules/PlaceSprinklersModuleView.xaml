@@ -6,27 +6,33 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <Border Background="#0F172A" CornerRadius="12" Padding="16" Margin="0,0,0,12">
             <DockPanel>
-                <Button DockPanel.Dock="Right"
-                        Content="Place in Revit"
-                        Command="{Binding PlaceInRevitCommand}"
-                        Background="#2563EB"
-                        Foreground="White"
-                        FontWeight="SemiBold"
-                        Padding="14,8" />
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="Validate"
+                            Command="{Binding ValidateCommand}"
+                            Padding="14,8"
+                            Margin="0,0,8,0" />
+                    <Button Content="Place in Revit"
+                            Command="{Binding PlaceInRevitCommand}"
+                            Background="#2563EB"
+                            Foreground="White"
+                            FontWeight="SemiBold"
+                            Padding="14,8" />
+                </StackPanel>
                 <StackPanel>
                     <TextBlock Text="Place Sprinklers" Foreground="White" FontSize="22" FontWeight="SemiBold" />
-                    <TextBlock Text="Create Revit sprinkler family instances from approved layout candidates after clash resolution."
+                    <TextBlock Text="Validate family mapping and layout readiness, then create Revit sprinkler family instances from approved candidates."
                                Foreground="#CBD5E1" TextWrapping="Wrap" Margin="0,6,0,0" />
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,12">
+        <UniformGrid Grid.Row="1" Columns="5" Margin="0,0,0,12">
             <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="Candidates" Foreground="#6B7280" />
@@ -35,33 +41,47 @@
             </Border>
             <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock Text="Placed" Foreground="#6B7280" />
-                    <TextBlock Text="{Binding PlacedCount}" FontSize="26" FontWeight="SemiBold" Foreground="#15803D" />
+                    <TextBlock Text="Ready" Foreground="#6B7280" />
+                    <TextBlock Text="{Binding ReadyRoomCount}" FontSize="26" FontWeight="SemiBold" Foreground="#15803D" />
                 </StackPanel>
             </Border>
             <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock Text="Skipped rooms" Foreground="#6B7280" />
-                    <TextBlock Text="{Binding SkippedRoomCount}" FontSize="26" FontWeight="SemiBold" Foreground="#B45309" />
+                    <TextBlock Text="Unmapped" Foreground="#6B7280" />
+                    <TextBlock Text="{Binding UnmappedRoomCount}" FontSize="26" FontWeight="SemiBold" Foreground="#B45309" />
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Exceptions" Foreground="#6B7280" />
+                    <TextBlock Text="{Binding ExceptionRoomCount}" FontSize="26" FontWeight="SemiBold" Foreground="#B91C1C" />
                 </StackPanel>
             </Border>
             <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12">
                 <StackPanel>
-                    <TextBlock Text="Ready rooms" Foreground="#6B7280" />
-                    <TextBlock Text="{Binding ReadyRoomCount}" FontSize="26" FontWeight="SemiBold" />
+                    <TextBlock Text="Placed" Foreground="#6B7280" />
+                    <TextBlock Text="{Binding PlacedCount}" FontSize="26" FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
         </UniformGrid>
 
-        <Border Grid.Row="2" Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="10" Padding="12">
+        <Border Grid.Row="2" Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,12">
+            <StackPanel>
+                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,8" />
+                <CheckBox Content="Allow placement when some rooms have unmapped families (designer override)"
+                          IsChecked="{Binding AllowUnmappedPlacement}" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="3" Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="10" Padding="12">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,10" />
+                <TextBlock Text="Pre-flight validation" FontWeight="SemiBold" Margin="0,0,0,10" />
                 <DataGrid Grid.Row="1"
-                          ItemsSource="{Binding RoomResults}"
+                          ItemsSource="{Binding PreflightRooms}"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
                           IsReadOnly="True"
@@ -70,8 +90,9 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Room" Binding="{Binding RoomNumber}" Width="80" />
                         <DataGridTextColumn Header="Name" Binding="{Binding RoomName}" Width="1.2*" />
-                        <DataGridTextColumn Header="Placed" Binding="{Binding PlacedCount}" Width="70" />
-                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
+                        <DataGridTextColumn Header="Sprinkler" Binding="{Binding SelectedSprinkler}" Width="1.4*" />
+                        <DataGridTextColumn Header="Mapping" Binding="{Binding MappingStatus}" Width="120" />
+                        <DataGridCheckBoxColumn Header="Ready" Binding="{Binding CanPlace}" Width="70" />
                         <DataGridTextColumn Header="Details" Binding="{Binding Message}" Width="2*" />
                     </DataGrid.Columns>
                 </DataGrid>

@@ -4,6 +4,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
+using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Shell;
@@ -85,8 +86,25 @@ public sealed class SprinkSnapShellContext
             ProjectState.SessionProgress.ModelAnalysisComplete = true;
         }
 
+        ApplyFamilyMapping(refreshHazardViewModel: false);
         ResetHazardViewModel();
         RequestWorkflowRefresh();
+    }
+
+    public void ApplyFamilyMapping(bool refreshHazardViewModel = true)
+    {
+        SprinklerFamilyMappingService.ApplyOverrides(
+            SprinklerFamilies,
+            ProjectState.FamilyMappingOverrides);
+        SprinklerFamilyMappingService.UpdateRoomMappingStatuses(ProjectState.Rooms, SprinklerFamilies);
+        ProjectState.PlacementPreflight = SprinklerFamilyMappingService.ValidatePlacementReadiness(
+            ProjectState.Rooms,
+            SprinklerFamilies);
+
+        if (refreshHazardViewModel && hazardViewModel != null)
+        {
+            hazardViewModel.RefreshFamilyMappingStatuses();
+        }
     }
 
     public HazardClassificationViewModel GetOrCreateHazardViewModel()

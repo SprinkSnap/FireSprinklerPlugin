@@ -9,6 +9,7 @@ using System.Windows.Input;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
+using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
@@ -529,17 +530,25 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
 public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
-    private string statusMessage = "Resolve clashes, then place approved sprinkler layouts in Revit.";
+    private string statusMessage = "Run pre-flight validation, then place approved sprinkler layouts in Revit.";
+    private bool allowUnmappedPlacement;
+    private bool hasValidatedPreflight;
 
     public PlaceSprinklersModuleViewModel(SprinkSnapShellContext context)
     {
         this.context = context;
         RoomResults = new ObservableCollection<SprinklerPlacementRoomResult>();
+        PreflightRooms = new ObservableCollection<PlacementPreflightRoomResult>();
+        ValidateCommand = new ModuleRelayCommand(_ => RunPreflightValidation());
         PlaceInRevitCommand = new ModuleRelayCommand(_ => PlaceInRevit());
         SyncFromState();
     }
 
     public ObservableCollection<SprinklerPlacementRoomResult> RoomResults { get; }
+
+    public ObservableCollection<PlacementPreflightRoomResult> PreflightRooms { get; }
+
+    public ICommand ValidateCommand { get; }
 
     public ICommand PlaceInRevitCommand { get; }
 
@@ -550,10 +559,25 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
 
     public int SkippedRoomCount => context.ProjectState.PlacementSummary?.SkippedRoomCount ?? 0;
 
-    public int ReadyRoomCount => context.ProjectState.Rooms.Count(room =>
-        room.ProposedSprinklers.Count > 0
-        && room.DesignerApproved
-        && !room.RequiresExceptionReview);
+    public int ReadyRoomCount => context.ProjectState.PlacementPreflight?.ReadyRoomCount ?? 0;
+
+    public int MappedRoomCount => context.ProjectState.PlacementPreflight?.MappedRoomCount ?? 0;
+
+    public int UnmappedRoomCount => context.ProjectState.PlacementPreflight?.UnmappedRoomCount ?? 0;
+
+    public int ExceptionRoomCount => context.ProjectState.PlacementPreflight?.ExceptionRoomCount ?? 0;
+
+    public bool CanPlaceAll => context.ProjectState.PlacementPreflight?.CanPlaceAll ?? false;
+
+    public bool AllowUnmappedPlacement
+    {
+        get => allowUnmappedPlacement;
+        set
+        {
+            allowUnmappedPlacement = value;
+            OnPropertyChanged();
+        }
+    }
 
     public string StatusMessage
     {
@@ -565,11 +589,34 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
         }
     }
 
+    private void RunPreflightValidation()
+    {
+        ApplyPreflight(context.ProjectState.PlacementPreflight
+            ?? SprinklerFamilyMappingService.ValidatePlacementReadiness(
+                context.ProjectState.Rooms,
+                context.SprinklerFamilies));
+        hasValidatedPreflight = true;
+        StatusMessage = context.ProjectState.PlacementPreflight.Messages.Count > 0
+            ? string.Join(" ", context.ProjectState.PlacementPreflight.Messages)
+            : "Pre-flight validation complete.";
+    }
+
     private void PlaceInRevit()
     {
+        if (!hasValidatedPreflight)
+        {
+            RunPreflightValidation();
+        }
+
         if (ReadyRoomCount == 0)
         {
-            StatusMessage = "No rooms are ready for placement. Complete hazard approval, layout, and clash resolution first.";
+            StatusMessage = "No rooms are ready for placement. Complete hazard approval, layout, family mapping, and clash resolution first.";
+            return;
+        }
+
+        if (!CanPlaceAll && !AllowUnmappedPlacement)
+        {
+            StatusMessage = "Pre-flight blocked placement: map all sprinkler families in Settings or enable the override after reviewing unmapped rooms.";
             return;
         }
 
@@ -585,6 +632,7 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
             return;
         }
 
+        context.ApplyFamilyMapping();
         StatusMessage = "Placing sprinklers in Revit...";
         context.RequestPlaceSprinklers(summary =>
         {
@@ -611,11 +659,36 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(TotalCandidates));
         OnPropertyChanged(nameof(PlacedCount));
         OnPropertyChanged(nameof(SkippedRoomCount));
+    }
+
+    private void ApplyPreflight(PlacementPreflightSummary summary)
+    {
+        context.ProjectState.PlacementPreflight = summary;
+        PreflightRooms.Clear();
+        foreach (PlacementPreflightRoomResult roomResult in summary.Rooms)
+        {
+            PreflightRooms.Add(roomResult);
+        }
+
         OnPropertyChanged(nameof(ReadyRoomCount));
+        OnPropertyChanged(nameof(MappedRoomCount));
+        OnPropertyChanged(nameof(UnmappedRoomCount));
+        OnPropertyChanged(nameof(ExceptionRoomCount));
+        OnPropertyChanged(nameof(CanPlaceAll));
     }
 
     private void SyncFromState()
     {
+        if (context.ProjectState.PlacementPreflight?.Rooms.Count > 0)
+        {
+            ApplyPreflight(context.ProjectState.PlacementPreflight);
+            hasValidatedPreflight = true;
+        }
+        else if (context.ProjectState.Rooms.Count > 0)
+        {
+            RunPreflightValidation();
+        }
+
         if (context.ProjectState.PlacementSummary != null
             && context.ProjectState.PlacementSummary.RoomResults.Count > 0)
         {
@@ -628,22 +701,152 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
     }
 }
 
+public sealed class FamilyMappingRowViewModel : ModuleViewModelBase
+{
+    private readonly IList<LoadedRevitSymbolOption> loadedRevitSymbols;
+    private LoadedRevitSymbolOption selectedRevitSymbol;
+
+    public FamilyMappingRowViewModel(
+        FamilyMappingRow row,
+        IList<LoadedRevitSymbolOption> loadedRevitSymbols)
+    {
+        this.loadedRevitSymbols = loadedRevitSymbols ?? new List<LoadedRevitSymbolOption>();
+        CatalogFamilyKey = row.CatalogFamilyKey;
+        Manufacturer = row.Manufacturer;
+        Model = row.Model;
+        Sin = row.Sin;
+        DisplayName = row.DisplayName;
+        MappingStatus = row.MappingStatus;
+        IsLoadedInProject = row.IsLoadedInProject;
+        RevitFamilySymbolId = row.RevitFamilySymbolId;
+        RevitFamilyName = row.RevitFamilyName;
+        RevitTypeName = row.RevitTypeName;
+        selectedRevitSymbol = ResolveSelectedSymbol(row.RevitFamilySymbolId);
+    }
+
+    public string CatalogFamilyKey { get; }
+
+    public string Manufacturer { get; }
+
+    public string Model { get; }
+
+    public string Sin { get; }
+
+    public string DisplayName { get; }
+
+    public string MappingStatus
+    {
+        get => mappingStatus;
+        private set
+        {
+            mappingStatus = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string mappingStatus;
+
+    public bool IsLoadedInProject { get; }
+
+    public string RevitFamilySymbolId
+    {
+        get => revitFamilySymbolId;
+        private set
+        {
+            revitFamilySymbolId = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string revitFamilySymbolId;
+
+    public string RevitFamilyName
+    {
+        get => revitFamilyName;
+        private set
+        {
+            revitFamilyName = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string revitFamilyName;
+
+    public string RevitTypeName
+    {
+        get => revitTypeName;
+        private set
+        {
+            revitTypeName = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string revitTypeName;
+
+    public IEnumerable<LoadedRevitSymbolOption> LoadedRevitSymbols => loadedRevitSymbols;
+
+    public LoadedRevitSymbolOption SelectedRevitSymbol
+    {
+        get => selectedRevitSymbol;
+        set
+        {
+            if (ReferenceEquals(selectedRevitSymbol, value))
+            {
+                return;
+            }
+
+            selectedRevitSymbol = value ?? LoadedRevitSymbolOption.Empty;
+            RevitFamilySymbolId = selectedRevitSymbol.RevitFamilySymbolId;
+            RevitFamilyName = selectedRevitSymbol.RevitFamilyName;
+            RevitTypeName = selectedRevitSymbol.RevitTypeName;
+            MappingStatus = string.IsNullOrWhiteSpace(RevitFamilySymbolId) ? "Needs Mapping" : "Mapped";
+            OnPropertyChanged();
+        }
+    }
+
+    private LoadedRevitSymbolOption ResolveSelectedSymbol(string symbolId)
+    {
+        if (string.IsNullOrWhiteSpace(symbolId))
+        {
+            return LoadedRevitSymbolOption.Empty;
+        }
+
+        return loadedRevitSymbols.FirstOrDefault(option =>
+                   string.Equals(option.RevitFamilySymbolId, symbolId, StringComparison.OrdinalIgnoreCase))
+               ?? new LoadedRevitSymbolOption
+               {
+                   RevitFamilySymbolId = symbolId,
+                   RevitFamilyName = RevitFamilyName,
+                   RevitTypeName = RevitTypeName,
+                   DisplayName = RevitFamilyName + " : " + RevitTypeName
+               };
+    }
+}
+
 public sealed class SettingsModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private string defaultManufacturer = "Viking";
     private bool allowAlternateManufacturers = true;
     private string aiServiceEndpoint = string.Empty;
-    private string statusMessage = "Configure project standards and AI service settings.";
+    private string statusMessage = "Configure project standards, map catalog families to loaded Revit types, and save.";
 
     public SettingsModuleViewModel(SprinkSnapShellContext context)
     {
         this.context = context;
+        FamilyMappingRows = new ObservableCollection<FamilyMappingRowViewModel>();
+        LoadedRevitSymbols = new ObservableCollection<LoadedRevitSymbolOption>();
         SaveCommand = new ModuleRelayCommand(_ => Save());
         defaultManufacturer = context.SprinklerFamilies.FirstOrDefault()?.Manufacturer ?? "Viking";
+        RefreshFamilyMappingGrid();
     }
 
     public ICommand SaveCommand { get; }
+
+    public ObservableCollection<FamilyMappingRowViewModel> FamilyMappingRows { get; }
+
+    public ObservableCollection<LoadedRevitSymbolOption> LoadedRevitSymbols { get; }
 
     public ObservableCollection<string> ManufacturerOptions { get; } =
         new ObservableCollection<string> { "Viking", "Tyco", "Reliable", "Victaulic" };
@@ -688,15 +891,57 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         }
     }
 
+    private void RefreshFamilyMappingGrid()
+    {
+        LoadedRevitSymbols.Clear();
+        foreach (LoadedRevitSymbolOption option in SprinklerFamilyMappingService.GetLoadedRevitSymbolOptions(context.SprinklerFamilies))
+        {
+            LoadedRevitSymbols.Add(option);
+        }
+
+        IList<LoadedRevitSymbolOption> symbolOptions = LoadedRevitSymbols.ToList();
+        FamilyMappingRows.Clear();
+        foreach (FamilyMappingRow row in SprinklerFamilyMappingService.BuildMappingRows(
+                     context.SprinklerFamilies,
+                     context.ProjectState.FamilyMappingOverrides))
+        {
+            FamilyMappingRows.Add(new FamilyMappingRowViewModel(row, symbolOptions));
+        }
+    }
+
     private void Save()
     {
         HazardClassificationViewModel hazardViewModel = context.GetOrCreateHazardViewModel();
         hazardViewModel.SelectedManufacturer = DefaultManufacturer;
         hazardViewModel.AllowAlternateManufacturers = AllowAlternateManufacturers;
+
+        context.ProjectState.FamilyMappingOverrides.Clear();
+        foreach (FamilyMappingRowViewModel row in FamilyMappingRows)
+        {
+            if (string.IsNullOrWhiteSpace(row.RevitFamilySymbolId))
+            {
+                continue;
+            }
+
+            context.ProjectState.FamilyMappingOverrides.Add(new SprinklerFamilyMappingOverride
+            {
+                CatalogFamilyKey = row.CatalogFamilyKey,
+                RevitFamilySymbolId = row.RevitFamilySymbolId,
+                RevitFamilyName = row.RevitFamilyName,
+                RevitTypeName = row.RevitTypeName
+            });
+        }
+
+        context.ApplyFamilyMapping();
+        RefreshFamilyMappingGrid();
         context.ProjectState.SessionProgress.SprinklerReviewComplete =
             SprinkSnapWorkflowGate.IsSprinklerReviewComplete(context.ProjectState);
         context.RequestWorkflowRefresh();
-        StatusMessage = "Project settings saved for this SprinkSnap session.";
+
+        int mappedCount = FamilyMappingRows.Count(row => row.MappingStatus.StartsWith("Mapped", StringComparison.OrdinalIgnoreCase));
+        StatusMessage = "Settings saved. "
+            + mappedCount
+            + " catalog family mapping(s) active for this session.";
     }
 }
 

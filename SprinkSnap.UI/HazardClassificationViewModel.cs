@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Windows.Data;
 using System.Windows.Input;
 using FireSprinklerPlugin.SprinkSnap.Core;
+using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 
@@ -493,6 +494,14 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             ApplySprinklerSelection(room, selection);
         }
 
+        SprinklerFamilyMappingService.UpdateRoomMappingStatuses(
+            Rooms.Select(item => item.Room),
+            allSprinklerFamilies);
+        foreach (RoomHazardReviewItem room in Rooms)
+        {
+            room.RefreshMappingStatus();
+        }
+
         RoomsView?.Refresh();
         NotifyWorkflowProgressChanged();
     }
@@ -907,8 +916,20 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             item.RefreshAssistantState();
         }
 
+        RefreshFamilyMappingStatuses();
         NotifyWorkflowProgressChanged();
         OnPropertyChanged(nameof(AutoSolvedRoomCount));
+    }
+
+    public void RefreshFamilyMappingStatuses()
+    {
+        SprinklerFamilyMappingService.UpdateRoomMappingStatuses(
+            Rooms.Select(item => item.Room),
+            allSprinklerFamilies);
+        foreach (RoomHazardReviewItem item in Rooms)
+        {
+            item.RefreshMappingStatus();
+        }
     }
 
     private void NotifyWorkflowProgressChanged()
@@ -1091,6 +1112,13 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
     {
         get => Room.AutoSelectedSprinklerName;
         set => Room.AutoSelectedSprinklerName = value;
+    }
+
+    public string RevitFamilyMappingStatus => Room.RevitFamilyMappingStatus;
+
+    public void RefreshMappingStatus()
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RevitFamilyMappingStatus)));
     }
 
     public SprinklerFamilyInfo SelectedRoomSprinklerFamily
