@@ -66,19 +66,18 @@ public static class HydraulicGraphBuilder
     public static IList<LayoutSprinklerPoint> SelectOperatingSprinklers(
         IEnumerable<LayoutSprinklerPoint> sprinklerPoints,
         Point3D sourcePoint,
-        int operatingSprinklerCount)
+        int operatingSprinklerCount,
+        double remoteAreaSquareFeet = 0,
+        double maxCoverageSquareFeet = 0,
+        SchematicPipeRoutingSummary schematicPipeRouting = null)
     {
-        List<LayoutSprinklerPoint> points = sprinklerPoints?.ToList() ?? new List<LayoutSprinklerPoint>();
-        if (points.Count == 0)
-        {
-            return points;
-        }
-
-        int count = Math.Min(Math.Max(operatingSprinklerCount, 1), points.Count);
-        return points
-            .OrderByDescending(point => HydraulicGeometry.DistanceFeet(point.Location, sourcePoint))
-            .Take(count)
-            .ToList();
+        return RemoteAreaSprinklerSelector.SelectOperatingSprinklers(
+            sprinklerPoints,
+            sourcePoint,
+            operatingSprinklerCount,
+            remoteAreaSquareFeet,
+            maxCoverageSquareFeet,
+            schematicPipeRouting);
     }
 
     public static LayoutLinkedHydraulicPath BuildPath(
@@ -114,9 +113,10 @@ public static class HydraulicGraphBuilder
         }
 
         path.UsesLayoutGeometry = true;
-        path.MostRemoteSprinkler = path.OperatingSprinklers
-            .OrderByDescending(point => HydraulicGeometry.DistanceFeet(point.Location, sourcePoint))
-            .First();
+        path.MostRemoteSprinkler = RemoteAreaSprinklerSelector.ResolveMostRemoteSprinkler(
+            path.OperatingSprinklers,
+            sourcePoint,
+            schematicPipeRouting);
 
         int remoteRoomId = path.MostRemoteSprinkler.Room?.RevitElementId ?? 0;
         HydraulicPipeLengthSource pipeLengths = PlacedPipeHydraulicResolver.Resolve(

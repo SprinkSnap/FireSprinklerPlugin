@@ -156,11 +156,14 @@ public sealed class HydraulicEngine : IHydraulicEngine
             MainDiameterInches,
             schematicPipeRouting,
             pipePlacementSummary,
-            supplyAnchor);
+            supplyAnchor,
+            controllingCriteria.RemoteAreaSquareFeet,
+            result.MaxCoverageSquareFeet);
 
         result.UsesLayoutLinkedHydraulics = layoutPath.UsesLayoutGeometry;
         result.UsesSegmentGraphHydraulics = layoutPath.UsesSegmentGraphHydraulics;
         result.UsesProjectTrunk = layoutPath.UsesProjectTrunk;
+        result.UsesRemoteAreaSelection = layoutPath.UsesRemoteAreaSelection;
         result.UsesUserSupplyAnchor = layoutPath.UsesUserSupplyAnchor;
         result.UserSupplyAnchorLabel = layoutPath.UserSupplyAnchorLabel ?? string.Empty;
         result.CriticalPathSegmentCount = layoutPath.CriticalPathSegmentCount;

@@ -89,6 +89,8 @@ public sealed class LayoutLinkedHydraulicPath
 
     public double CriticalPathDemandPsi { get; set; }
 
+    public bool UsesRemoteAreaSelection { get; set; }
+
     public double CalculatedSprinklerFlowGpm { get; set; }
 
     public bool UsesSegmentGraphHydraulics { get; set; }
