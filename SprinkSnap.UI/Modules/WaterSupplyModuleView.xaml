@@ -37,6 +37,15 @@
             <TextBlock Text="Hydrant test date" Margin="0,0,0,4" />
             <TextBox Text="{Binding HydrantTestDate, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,16" />
 
+            <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="Hydraulic supply anchor" Foreground="#6B7280" />
+                    <TextBlock Text="{Binding SupplyAnchorSummary}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,0" />
+                    <TextBlock Text="Pick or clear the supply anchor in the Hydraulics module. Validation and hydraulics both use this anchor when set."
+                               TextWrapping="Wrap" Foreground="#6B7280" Margin="0,8,0,0" />
+                </StackPanel>
+            </Border>
+
             <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16">
                 <TextBlock Text="{Binding ValidationSummary}" TextWrapping="Wrap" Foreground="#1E3A8A" />
             </Border>
