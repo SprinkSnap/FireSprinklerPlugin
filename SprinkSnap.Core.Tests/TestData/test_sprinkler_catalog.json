@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "libraryName": "Unit Test Catalog",
+  "categories": ["Standard Spray Quick Response"],
+  "sprinklers": [
+    {
+      "listedFamilyId": "Test:VK999:Pendent:K5.6",
+      "manufacturer": "Test",
+      "category": "Standard Spray Quick Response",
+      "series": "Unit",
+      "model": "VK999",
+      "sin": "VK999",
+      "sprinklerType": "Standard Spray",
+      "familyName": "QR Pendent K5.6",
+      "responseType": "Quick Response",
+      "orientation": "Pendent",
+      "kFactor": 5.6,
+      "coverageType": "Standard Coverage",
+      "storageUse": "Non-storage",
+      "allowedHazards": ["Light Hazard"],
+      "allowedCeilingTypes": ["Flat"],
+      "maxSpacingFeet": 15.0,
+      "maxCoverageAreaSquareFeet": 225.0,
+      "maxDistanceFromWallFeet": 7.5,
+      "temperatureRatings": ["155F"],
+      "finishOptions": ["Brass"],
+      "revitFamilyPath": "Libraries/Test/VK999.rfa",
+      "revitTypeName": "VK999 QR Pendent K5.6",
+      "technicalDataSheetUrl": "https://example.com",
+      "listingNotes": "Unit test catalog entry."
+    }
+  ]
+}
