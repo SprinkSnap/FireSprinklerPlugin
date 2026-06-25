@@ -198,15 +198,15 @@ public sealed class MaterialTakeoffEngine : Engines.IMaterialTakeoffEngine
             PipeSegment first = group.First();
             double schematicLength = group.Sum(segment => segment.LengthFeet);
             placedRooms.TryGetValue(first.RoomRevitElementId, out PipePlacementRoomResult placedRoom);
-            bool usesPlaced = placedRoom?.PlacedSegmentCount > 0;
-            double roomSchematicTotal = segments
-                .Where(segment => segment.RoomRevitElementId == first.RoomRevitElementId)
-                .Sum(segment => segment.LengthFeet);
-            double quantity = schematicLength;
-            if (usesPlaced && roomSchematicTotal > 0 && placedRoom.PlacedLengthFeet > 0)
-            {
-                quantity = placedRoom.PlacedLengthFeet * (schematicLength / roomSchematicTotal);
-            }
+            bool usesPlaced = PlacedPipeTakeoffCalculator.UsesPlacedLengthForGroup(
+                first.SegmentType,
+                first.DiameterInches,
+                placedRoom);
+            double quantity = PlacedPipeTakeoffCalculator.ResolvePipeLengthFeet(
+                first.SegmentType,
+                first.DiameterInches,
+                schematicLength,
+                placedRoom);
 
             detailRows.Add(new MaterialTakeoffItem
             {

@@ -176,9 +176,18 @@ public static class RevitPipePlacementService
                 XYZ end = ToXyz(segment.End);
                 Pipe pipe = Pipe.Create(document, systemType.Id, pipeType.Id, level.Id, start, end);
                 TagPipeInstance(pipe, segment, room);
+                double placedLengthFeet = GetPipeLengthFeet(pipe, segment.LengthFeet);
                 result.PlacedElementIds.Add(pipe.Id.IntegerValue);
+                result.PlacedSegments.Add(new PipePlacementSegmentResult
+                {
+                    SegmentType = segment.SegmentType,
+                    DiameterInches = segment.DiameterInches,
+                    LengthFeet = placedLengthFeet,
+                    PlacedElementId = pipe.Id.IntegerValue,
+                    Description = segment.Description
+                });
                 result.PlacedSegmentCount++;
-                result.PlacedLengthFeet += segment.LengthFeet;
+                result.PlacedLengthFeet += placedLengthFeet;
             }
             catch (Exception ex)
             {
@@ -266,6 +275,20 @@ public static class RevitPipePlacementService
     private static XYZ ToXyz(Point3D point)
     {
         return new XYZ(point.X, point.Y, point.Z);
+    }
+
+    private static double GetPipeLengthFeet(Pipe pipe, double fallbackLengthFeet)
+    {
+        if (pipe?.Location is LocationCurve locationCurve && locationCurve.Curve != null)
+        {
+            double lengthFeet = locationCurve.Curve.Length;
+            if (lengthFeet > 0)
+            {
+                return lengthFeet;
+            }
+        }
+
+        return fallbackLengthFeet;
     }
 
     private static string AppendMessage(string existing, string addition)

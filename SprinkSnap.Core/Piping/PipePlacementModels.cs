@@ -41,6 +41,8 @@ public sealed class PipePlacementRoomResult
 
     public IList<int> PlacedElementIds { get; set; } = new List<int>();
 
+    public IList<PipePlacementSegmentResult> PlacedSegments { get; set; } = new List<PipePlacementSegmentResult>();
+
     public int PlacedFittingCount { get; set; }
 
     public int SkippedFittingCount { get; set; }
@@ -50,4 +52,17 @@ public sealed class PipePlacementRoomResult
     public string Status { get; set; } = string.Empty;
 
     public string Message { get; set; } = string.Empty;
+}
+
+public sealed class PipePlacementSegmentResult
+{
+    public string SegmentType { get; set; } = string.Empty;
+
+    public double DiameterInches { get; set; }
+
+    public double LengthFeet { get; set; }
+
+    public int PlacedElementId { get; set; }
+
+    public string Description { get; set; } = string.Empty;
 }
