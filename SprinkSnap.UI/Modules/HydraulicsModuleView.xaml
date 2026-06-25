@@ -8,7 +8,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="4" MaxWidth="820">
             <TextBlock Text="Hydraulics" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
-            <TextBlock Text="Calculate NFPA 13 remote-area sprinkler demand with hose stream allowance and simplified Hazen-Williams friction."
+            <TextBlock Text="Calculate NFPA 13 remote-area demand using layout-linked pipe lengths, per-head Q = K√P, and Hazen-Williams friction."
                        TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,8" />
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,16" />
 
@@ -79,6 +79,28 @@
                         </TextBlock>
                     </StackPanel>
                 </Border>
+                <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="Branch length" Foreground="#6B7280" />
+                        <TextBlock FontSize="22" FontWeight="SemiBold">
+                            <Run Text="{Binding BranchLengthFeet, StringFormat=N0}" /><Run Text=" ft" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+                <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="Main length" Foreground="#6B7280" />
+                        <TextBlock FontSize="22" FontWeight="SemiBold">
+                            <Run Text="{Binding MainLengthFeet, StringFormat=N0}" /><Run Text=" ft" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+                <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="Remote head" Foreground="#6B7280" />
+                        <TextBlock Text="{Binding RemoteSprinklerLabel}" FontSize="22" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
             </UniformGrid>
 
             <controls:WaterSupplyCurveChart SupplyCurve="{Binding SupplyCurve}"
@@ -101,6 +123,24 @@
                     </StackPanel>
                 </Border>
             </UniformGrid>
+
+            <TextBlock Text="Critical path" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <DataGrid ItemsSource="{Binding CriticalPath}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      IsReadOnly="True"
+                      MinHeight="140"
+                      Margin="0,0,0,16"
+                      HeadersVisibility="Column">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Node" Binding="{Binding NodeId}" Width="2*" />
+                    <DataGridTextColumn Header="Type" Binding="{Binding SegmentType}" Width="90" />
+                    <DataGridTextColumn Header="Length (ft)" Binding="{Binding LengthFeet, StringFormat=N0}" Width="90" />
+                    <DataGridTextColumn Header="Diameter (in)" Binding="{Binding DiameterInches, StringFormat=N2}" Width="100" />
+                    <DataGridTextColumn Header="Pressure (PSI)" Binding="{Binding PressurePsi, StringFormat=N1}" Width="110" />
+                    <DataGridTextColumn Header="Flow (GPM)" Binding="{Binding FlowGpm, StringFormat=N1}" Width="100" />
+                </DataGrid.Columns>
+            </DataGrid>
 
             <TextBlock Text="Warnings" FontWeight="SemiBold" Margin="0,0,0,8" />
             <TextBlock Text="{Binding WarningSummary}" TextWrapping="Wrap" Foreground="#4B5563" />

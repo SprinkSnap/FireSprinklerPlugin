@@ -96,9 +96,7 @@ public sealed class HydraulicEngine : IHydraulicEngine
 {
     private const double DefaultKFactor = 5.6;
     private const double BranchDiameterInches = 1.25;
-    private const double BranchLengthFeet = 60.0;
     private const double MainDiameterInches = 4.0;
-    private const double MainLengthFeet = 120.0;
 
     public HydraulicCalculationResult Calculate(
         IEnumerable<RoomInfo> rooms,
@@ -144,43 +142,35 @@ public sealed class HydraulicEngine : IHydraulicEngine
         double equivalentKFactor = ResolveEquivalentKFactor(controllingRooms, controllingCriteria.HazardClassification);
         result.EquivalentKFactor = equivalentKFactor;
 
-        double remoteSprinklerPressurePsi = Math.Pow(
-            result.FlowPerOperatingSprinklerGpm / Math.Max(equivalentKFactor, 0.1),
-            2.0);
-        double branchFrictionPsi = HazenWilliamsCalculator.FrictionLossPsi(
-            result.TotalFlowGpm,
+        LayoutLinkedHydraulicPath layoutPath = LayoutLinkedHydraulicCalculator.Calculate(
+            controllingRooms,
+            result.OperatingSprinklerCount,
+            result.FlowPerOperatingSprinklerGpm,
+            controllingCriteria.HoseStreamAllowanceGpm,
+            equivalentKFactor,
             BranchDiameterInches,
-            BranchLengthFeet);
-        double mainFrictionPsi = HazenWilliamsCalculator.FrictionLossPsi(
-            result.TotalFlowGpm,
-            MainDiameterInches,
-            MainLengthFeet);
+            MainDiameterInches);
 
-        result.SystemDemandPsi = remoteSprinklerPressurePsi + branchFrictionPsi + mainFrictionPsi;
+        result.UsesLayoutLinkedHydraulics = layoutPath.UsesLayoutGeometry;
+        result.BranchLengthFeet = layoutPath.BranchLengthFeet;
+        result.MainLengthFeet = layoutPath.MainLengthFeet;
+        result.TotalPipeLengthFeet = layoutPath.TotalPipeLengthFeet;
+        result.RemoteSprinklerLabel = layoutPath.MostRemoteSprinkler?.Label ?? string.Empty;
+        result.SystemDemandPsi = layoutPath.JunctionPressurePsi + layoutPath.MainFrictionPsi;
+        result.FlowPerOperatingSprinklerGpm = layoutPath.OperatingSprinklers.Count > 0
+            ? layoutPath.CalculatedSprinklerFlowGpm / layoutPath.OperatingSprinklers.Count
+            : result.FlowPerOperatingSprinklerGpm;
+        result.CriticalPath = layoutPath.CriticalPath?.ToList() ?? new List<HydraulicNode>();
         result.DemandFlowGpm = result.TotalFlowGpm;
         result.DemandPressurePsi = result.SystemDemandPsi;
         result.SupplyCurve = WaterSupplyCurveCalculator.BuildCurve(waterSupply);
         result.AvailablePressurePsi = WaterSupplyCurveCalculator.GetPressureAtFlow(waterSupply, result.TotalFlowGpm);
         result.SafetyMarginPsi = result.AvailablePressurePsi - result.SystemDemandPsi;
 
-        result.CriticalPath.Add(new HydraulicNode
+        foreach (string warning in layoutPath.Warnings)
         {
-            NodeId = "Remote Sprinkler",
-            PressurePsi = remoteSprinklerPressurePsi,
-            FlowGpm = result.SprinklerDemandFlowGpm
-        });
-        result.CriticalPath.Add(new HydraulicNode
-        {
-            NodeId = "Branch Segment",
-            PressurePsi = remoteSprinklerPressurePsi + branchFrictionPsi,
-            FlowGpm = result.TotalFlowGpm
-        });
-        result.CriticalPath.Add(new HydraulicNode
-        {
-            NodeId = "Riser / Source",
-            PressurePsi = result.SystemDemandPsi,
-            FlowGpm = result.TotalFlowGpm
-        });
+            result.Warnings.Add(warning);
+        }
 
         if (!waterSupply.ResidualPressurePsi.HasValue)
         {
@@ -199,6 +189,17 @@ public sealed class HydraulicEngine : IHydraulicEngine
         if (placementSummary != null && placementSummary.PlacedCount > 0)
         {
             result.Warnings.Add("Hydraulic demand uses " + result.OperatingSprinklerCount + " operating sprinkler(s) with placed Revit heads considered.");
+        }
+        else if (layoutPath.UsesLayoutGeometry)
+        {
+            result.Warnings.Add(
+                "Critical path uses most remote layout head "
+                + (string.IsNullOrWhiteSpace(result.RemoteSprinklerLabel) ? string.Empty : result.RemoteSprinklerLabel + " ")
+                + "with "
+                + result.BranchLengthFeet.ToString("N0")
+                + " ft branch and "
+                + result.MainLengthFeet.ToString("N0")
+                + " ft main.");
         }
         else if (designRooms.Sum(room => room.ProposedSprinklers.Count) == 0)
         {

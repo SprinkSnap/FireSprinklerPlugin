@@ -194,6 +194,13 @@ public static class SprinkSnapPdfReportExporter
                         AddRow(table, "Hose stream allowance", hydraulicResult.HoseStreamAllowanceGpm.ToString("N0") + " GPM");
                         AddRow(table, "Total calculated flow", hydraulicResult.TotalFlowGpm.ToString("N1") + " GPM");
                         AddRow(table, "Equivalent K-factor", hydraulicResult.EquivalentKFactor.ToString("N1"));
+                        AddRow(table, "Layout-linked hydraulics", hydraulicResult.UsesLayoutLinkedHydraulics ? "Yes" : "Estimated");
+                        AddRow(table, "Remote sprinkler", string.IsNullOrWhiteSpace(hydraulicResult.RemoteSprinklerLabel)
+                            ? "Not available"
+                            : hydraulicResult.RemoteSprinklerLabel);
+                        AddRow(table, "Branch length", hydraulicResult.BranchLengthFeet.ToString("N0") + " ft");
+                        AddRow(table, "Main length", hydraulicResult.MainLengthFeet.ToString("N0") + " ft");
+                        AddRow(table, "Total pipe length", hydraulicResult.TotalPipeLengthFeet.ToString("N0") + " ft");
                         AddRow(table, "System demand pressure", hydraulicResult.SystemDemandPsi.ToString("N1") + " PSI");
                         AddRow(table, "Demand flow (chart)", hydraulicResult.DemandFlowGpm.ToString("N1") + " GPM");
                         AddRow(table, "Available pressure at demand flow", hydraulicResult.AvailablePressurePsi.ToString("N1") + " PSI");
@@ -228,12 +235,15 @@ public static class SprinkSnapPdfReportExporter
                 page.Header().Element(header => ComposeHeader(header, "Hydraulic Node Diagram"));
                 page.Content().Column(column =>
                 {
-                    column.Item().Text("Simplified critical path from remote sprinkler to source.").Italic();
+                    column.Item().Text("Layout-linked critical path from remote sprinkler to source.").Italic();
                     column.Item().PaddingTop(8).Table(table =>
                     {
                         table.ColumnsDefinition(columns =>
                         {
-                            columns.RelativeColumn(1.4f);
+                            columns.RelativeColumn(1.6f);
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
                             columns.RelativeColumn();
                             columns.RelativeColumn();
                         });
@@ -241,6 +251,9 @@ public static class SprinkSnapPdfReportExporter
                         table.Header(header =>
                         {
                             header.Cell().Element(CellStyle).Text("Node");
+                            header.Cell().Element(CellStyle).Text("Type");
+                            header.Cell().Element(CellStyle).Text("Length (ft)");
+                            header.Cell().Element(CellStyle).Text("Diameter (in)");
                             header.Cell().Element(CellStyle).Text("Pressure (PSI)");
                             header.Cell().Element(CellStyle).Text("Flow (GPM)");
                         });
@@ -248,6 +261,9 @@ public static class SprinkSnapPdfReportExporter
                         foreach (HydraulicNode node in hydraulicResult.CriticalPath ?? new List<HydraulicNode>())
                         {
                             table.Cell().Element(CellStyle).Text(node.NodeId);
+                            table.Cell().Element(CellStyle).Text(node.SegmentType);
+                            table.Cell().Element(CellStyle).Text(node.LengthFeet > 0 ? node.LengthFeet.ToString("N0") : "—");
+                            table.Cell().Element(CellStyle).Text(node.DiameterInches > 0 ? node.DiameterInches.ToString("N2") : "—");
                             table.Cell().Element(CellStyle).Text(node.PressurePsi.ToString("N1"));
                             table.Cell().Element(CellStyle).Text(node.FlowGpm.ToString("N1"));
                         }

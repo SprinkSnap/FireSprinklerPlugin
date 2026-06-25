@@ -416,6 +416,18 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public bool ShowSupplyChart => result.SupplyCurve?.Count > 1;
 
+    public bool UsesLayoutLinkedHydraulics => result.UsesLayoutLinkedHydraulics;
+
+    public double BranchLengthFeet => result.BranchLengthFeet;
+
+    public double MainLengthFeet => result.MainLengthFeet;
+
+    public double TotalPipeLengthFeet => result.TotalPipeLengthFeet;
+
+    public string RemoteSprinklerLabel => result.RemoteSprinklerLabel;
+
+    public IList<HydraulicNode> CriticalPath => result.CriticalPath ?? new List<HydraulicNode>();
+
     public string NfpaReference => result.NfpaReference;
 
     public string StatusMessage
@@ -471,6 +483,12 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(DemandFlowGpm));
         OnPropertyChanged(nameof(DemandPressurePsi));
         OnPropertyChanged(nameof(ShowSupplyChart));
+        OnPropertyChanged(nameof(UsesLayoutLinkedHydraulics));
+        OnPropertyChanged(nameof(BranchLengthFeet));
+        OnPropertyChanged(nameof(MainLengthFeet));
+        OnPropertyChanged(nameof(TotalPipeLengthFeet));
+        OnPropertyChanged(nameof(RemoteSprinklerLabel));
+        OnPropertyChanged(nameof(CriticalPath));
         OnPropertyChanged(nameof(NfpaReference));
         OnPropertyChanged(nameof(WarningSummary));
     }

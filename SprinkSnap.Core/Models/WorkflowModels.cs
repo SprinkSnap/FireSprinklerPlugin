@@ -179,6 +179,14 @@ public sealed class HydraulicNode
     public double FlowGpm { get; set; }
 
     public double PressurePsi { get; set; }
+
+    public double LengthFeet { get; set; }
+
+    public double DiameterInches { get; set; }
+
+    public double FrictionLossPsi { get; set; }
+
+    public string SegmentType { get; set; } = string.Empty;
 }
 
 public sealed class HydraulicCalculationResult
@@ -214,6 +222,16 @@ public sealed class HydraulicCalculationResult
     public double DemandPressurePsi { get; set; }
 
     public IList<WaterSupplyCurvePoint> SupplyCurve { get; set; } = new List<WaterSupplyCurvePoint>();
+
+    public bool UsesLayoutLinkedHydraulics { get; set; }
+
+    public double BranchLengthFeet { get; set; }
+
+    public double MainLengthFeet { get; set; }
+
+    public double TotalPipeLengthFeet { get; set; }
+
+    public string RemoteSprinklerLabel { get; set; } = string.Empty;
 
     public string NfpaReference { get; set; } = string.Empty;
 
