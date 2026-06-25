@@ -203,6 +203,12 @@ public sealed class HydraulicNode
 
     public double FrictionLossPsi { get; set; }
 
+    public double VelocityFeetPerSecond { get; set; }
+
+    public double VelocityLimitFeetPerSecond { get; set; }
+
+    public bool ExceedsVelocityLimit { get; set; }
+
     public string SegmentType { get; set; } = string.Empty;
 }
 
@@ -265,6 +271,10 @@ public sealed class HydraulicCalculationResult
     public double FittingFrictionPsi { get; set; }
 
     public int CriticalPathFittingCount { get; set; }
+
+    public int CriticalPathVelocityViolationCount { get; set; }
+
+    public double MaxCriticalPathVelocityFeetPerSecond { get; set; }
 
     public bool UsesUserSupplyAnchor { get; set; }
 

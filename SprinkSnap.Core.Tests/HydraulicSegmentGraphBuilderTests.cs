@@ -118,6 +118,9 @@ public sealed class HydraulicSegmentGraphBuilderTests
         Assert.True(path.FittingFrictionPsi > 0);
         Assert.True(path.CriticalPathDemandPsi > path.JunctionPressurePsi + path.MainFrictionPsi);
         Assert.Contains(path.CriticalPath, node => string.Equals(node.SegmentType, PipeJointTypes.Valve, System.StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(0, path.CriticalPathVelocityViolationCount);
+        Assert.True(path.MaxCriticalPathVelocityFeetPerSecond > 0);
+        Assert.Contains(path.CriticalPath, node => node.VelocityFeetPerSecond > 0 && node.DiameterInches > 0);
     }
 
     private static LayoutLinkedHydraulicPath CreatePathForRemoteHead(RoomInfo room, int sprinklerIndex)

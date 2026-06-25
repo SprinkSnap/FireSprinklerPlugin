@@ -114,6 +114,20 @@
                 </Border>
                 <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                     <StackPanel>
+                        <TextBlock Text="Max velocity" Foreground="#6B7280" />
+                        <TextBlock FontSize="22" FontWeight="SemiBold">
+                            <Run Text="{Binding MaxCriticalPathVelocityFeetPerSecond, StringFormat=N1}" /><Run Text=" ft/s" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+                <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="Velocity violations" Foreground="#6B7280" />
+                        <TextBlock Text="{Binding CriticalPathVelocityViolationCount}" FontSize="22" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+                <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                    <StackPanel>
                         <TextBlock Text="Remote head" Foreground="#6B7280" />
                         <TextBlock Text="{Binding RemoteSprinklerLabel}" FontSize="22" FontWeight="SemiBold" />
                     </StackPanel>
@@ -156,6 +170,8 @@
                     <DataGridTextColumn Header="Diameter (in)" Binding="{Binding DiameterInches, StringFormat=N2}" Width="100" />
                     <DataGridTextColumn Header="Pressure (PSI)" Binding="{Binding PressurePsi, StringFormat=N1}" Width="110" />
                     <DataGridTextColumn Header="Flow (GPM)" Binding="{Binding FlowGpm, StringFormat=N1}" Width="100" />
+                    <DataGridTextColumn Header="Velocity (ft/s)" Binding="{Binding VelocityFeetPerSecond, StringFormat=N1}" Width="100" />
+                    <DataGridTextColumn Header="Friction (PSI)" Binding="{Binding FrictionLossPsi, StringFormat=N1}" Width="100" />
                 </DataGrid.Columns>
             </DataGrid>
 
