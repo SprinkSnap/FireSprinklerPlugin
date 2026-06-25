@@ -77,17 +77,35 @@ public static class RevitPipePlacementService
                 summary.SkippedFittingCount += roomResult.SkippedFittingCount;
                 summary.ConnectedJointCount += roomResult.ConnectedJointCount;
                 summary.ConnectedFittingCount += roomResult.ConnectedFittingCount;
+                summary.SkippedConnectionCount += roomResult.SkippedConnectionCount;
+                summary.TrunkSplitCount += roomResult.TrunkSplitCount;
             }
 
             transaction.Commit();
         }
 
+        bool remeasuredAfterRouting = false;
+        if (ShouldRemeasureAfterConnectorRouting(summary))
+        {
+            PipePlacementSummary routingSummary = CloneRoutingSummary(summary);
+            PipePlacementSummary measuredSummary = RevitPipeMeasurementService.Measure(
+                document,
+                rooms,
+                schematicRouting);
+            RevitPipePlacementSummaryMerger.ApplyRoutingMetadata(measuredSummary, routingSummary);
+            measuredSummary.Messages.Add(
+                "Re-measured pipe lengths from Revit geometry after connector routing"
+                + (routingSummary.TrunkSplitCount > 0 ? " and cross-main trunk split(s)." : "."));
+            summary = measuredSummary;
+            remeasuredAfterRouting = true;
+        }
+
         summary.FailedSegmentCount = summary.TotalSegments - summary.PlacedSegmentCount - summary.SkippedSegmentCount;
-        if (summary.PlacedSegmentCount == 0)
+        if (!remeasuredAfterRouting && summary.PlacedSegmentCount == 0)
         {
             summary.Messages.Add("No schematic pipes were placed. Verify routing, loaded pipe types, and room levels in Revit.");
         }
-        else
+        else if (!remeasuredAfterRouting)
         {
             summary.Messages.Add(
                 "Placed "
@@ -99,7 +117,7 @@ public static class RevitPipePlacementService
                 + " room(s).");
         }
 
-        if (placeFittings)
+        if (placeFittings && !remeasuredAfterRouting)
         {
             if (summary.PlacedFittingCount == 0 && summary.TotalFittingCount > 0)
             {
@@ -115,7 +133,7 @@ public static class RevitPipePlacementService
             }
         }
 
-        if (summary.ConnectedJointCount > 0)
+        if (!remeasuredAfterRouting && summary.ConnectedJointCount > 0)
         {
             summary.Messages.Add(
                 "Connected "
@@ -125,7 +143,63 @@ public static class RevitPipePlacementService
                 + " Revit connector fitting(s).");
         }
 
+        if (!remeasuredAfterRouting && summary.SkippedConnectionCount > 0)
+        {
+            summary.Messages.Add(
+                summary.SkippedConnectionCount
+                + " routing connection(s) were skipped. Review connector warnings and load matching pipe fitting families in Revit.");
+        }
+
         return summary;
+    }
+
+    private static bool ShouldRemeasureAfterConnectorRouting(PipePlacementSummary summary)
+    {
+        return summary.ConnectedJointCount > 0
+            || summary.TrunkSplitCount > 0
+            || summary.SkippedConnectionCount > 0;
+    }
+
+    private static PipePlacementSummary CloneRoutingSummary(PipePlacementSummary summary)
+    {
+        PipePlacementSummary clone = new PipePlacementSummary
+        {
+            TotalSegments = summary.TotalSegments,
+            PlacedSegmentCount = summary.PlacedSegmentCount,
+            SkippedSegmentCount = summary.SkippedSegmentCount,
+            FailedSegmentCount = summary.FailedSegmentCount,
+            PlacedLengthFeet = summary.PlacedLengthFeet,
+            TotalFittingCount = summary.TotalFittingCount,
+            PlacedFittingCount = summary.PlacedFittingCount,
+            SkippedFittingCount = summary.SkippedFittingCount,
+            ConnectedJointCount = summary.ConnectedJointCount,
+            ConnectedFittingCount = summary.ConnectedFittingCount,
+            SkippedConnectionCount = summary.SkippedConnectionCount,
+            TrunkSplitCount = summary.TrunkSplitCount
+        };
+
+        foreach (string message in summary.Messages)
+        {
+            clone.Messages.Add(message);
+        }
+
+        foreach (PipePlacementRoomResult roomResult in summary.RoomResults)
+        {
+            clone.RoomResults.Add(new PipePlacementRoomResult
+            {
+                RoomRevitElementId = roomResult.RoomRevitElementId,
+                RoomNumber = roomResult.RoomNumber,
+                RoomName = roomResult.RoomName,
+                ConnectedJointCount = roomResult.ConnectedJointCount,
+                ConnectedFittingCount = roomResult.ConnectedFittingCount,
+                SkippedConnectionCount = roomResult.SkippedConnectionCount,
+                TrunkSplitCount = roomResult.TrunkSplitCount,
+                Message = roomResult.Message,
+                Status = roomResult.Status
+            });
+        }
+
+        return clone;
     }
 
     private static PipePlacementRoomResult PlaceRoomSegments(
@@ -241,6 +315,7 @@ public static class RevitPipePlacementService
             result.ConnectedJointCount = connectionResult.ConnectedJointCount;
             result.SkippedConnectionCount = connectionResult.SkippedConnectionCount;
             result.ConnectedFittingCount = connectionResult.CreatedFittingCount;
+            result.TrunkSplitCount = connectionResult.TrunkSplitCount;
             if (connectionResult.Messages.Count > 0)
             {
                 result.Message = AppendMessage(result.Message, string.Join("; ", connectionResult.Messages));

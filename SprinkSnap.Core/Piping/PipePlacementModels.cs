@@ -24,6 +24,10 @@ public sealed class PipePlacementSummary
 
     public int ConnectedFittingCount { get; set; }
 
+    public int SkippedConnectionCount { get; set; }
+
+    public int TrunkSplitCount { get; set; }
+
     public IList<PipePlacementRoomResult> RoomResults { get; set; } = new List<PipePlacementRoomResult>();
 
     public IList<string> Messages { get; set; } = new List<string>();
@@ -58,6 +62,8 @@ public sealed class PipePlacementRoomResult
     public int SkippedConnectionCount { get; set; }
 
     public int ConnectedFittingCount { get; set; }
+
+    public int TrunkSplitCount { get; set; }
 
     public IList<int> PlacedFittingElementIds { get; set; } = new List<int>();
 

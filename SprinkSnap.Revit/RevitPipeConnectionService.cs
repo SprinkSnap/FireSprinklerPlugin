@@ -16,6 +16,10 @@ public sealed class RevitPipeConnectionResult
 
     public int CreatedFittingCount { get; set; }
 
+    public int TrunkSplitCount { get; set; }
+
+    public IList<string> SkippedConnectionDetails { get; set; } = new List<string>();
+
     public IList<string> Messages { get; set; } = new List<string>();
 }
 
@@ -61,7 +65,11 @@ public static class RevitPipeConnectionService
                 if (currentTrunk == null
                     || !pipesBySegmentIndex.TryGetValue(intent.SegmentIndexB, out PlacedPipeRecord branchRecord))
                 {
-                    result.SkippedConnectionCount++;
+                    RecordSkippedConnection(
+                        result,
+                        intent,
+                        roomNumber,
+                        currentTrunk == null ? "cross main pipe was not found" : "branch pipe was not found");
                     continue;
                 }
 
@@ -84,7 +92,11 @@ public static class RevitPipeConnectionService
                 }
                 else
                 {
-                    result.SkippedConnectionCount++;
+                    RecordSkippedConnection(
+                        result,
+                        intent,
+                        roomNumber,
+                        "could not create takeoff or tee at branch tie-in");
                 }
             }
         }
@@ -97,6 +109,13 @@ public static class RevitPipeConnectionService
                 + " routing joint(s) with "
                 + result.CreatedFittingCount
                 + " Revit fitting(s).");
+        }
+
+        foreach (string skipMessage in PipeConnectionDiagnostics.BuildSkipSummaryMessages(
+                     result.SkippedConnectionCount,
+                     result.SkippedConnectionDetails))
+        {
+            result.Messages.Add(skipMessage);
         }
 
         return result;
@@ -113,7 +132,11 @@ public static class RevitPipeConnectionService
         if (!pipesBySegmentIndex.TryGetValue(intent.SegmentIndexA, out PlacedPipeRecord pipeA)
             || !pipesBySegmentIndex.TryGetValue(intent.SegmentIndexB, out PlacedPipeRecord pipeB))
         {
-            result.SkippedConnectionCount++;
+            RecordSkippedConnection(
+                result,
+                intent,
+                roomNumber,
+                "one or both pipe segments were not placed");
             return;
         }
 
@@ -124,15 +147,37 @@ public static class RevitPipeConnectionService
             switch (intent.Kind)
             {
                 case PipeConnectionKind.Direct:
-                    connected = TryConnectDirect(pipeA.Pipe, pipeB.Pipe, location);
+                    connected = TryConnectDirect(pipeA.Pipe, pipeB.Pipe, location, out string directReason);
+                    if (!connected)
+                    {
+                        RecordSkippedConnection(result, intent, roomNumber, directReason);
+                        return;
+                    }
+
                     break;
                 case PipeConnectionKind.Elbow:
-                    connected = TryCreateElbow(document, pipeA.Pipe, pipeB.Pipe, location, roomNumber, placementResult, result);
+                    connected = TryCreateElbow(document, pipeA.Pipe, pipeB.Pipe, location, roomNumber, placementResult, result, out string elbowReason);
+                    if (!connected)
+                    {
+                        RecordSkippedConnection(result, intent, roomNumber, elbowReason);
+                        return;
+                    }
+
                     break;
                 case PipeConnectionKind.Tee:
                     if (pipesBySegmentIndex.TryGetValue(intent.SegmentIndexC, out PlacedPipeRecord pipeC))
                     {
-                        connected = TryCreateTee(document, pipeA.Pipe, pipeB.Pipe, pipeC.Pipe, location, roomNumber, placementResult, result);
+                        connected = TryCreateTee(document, pipeA.Pipe, pipeB.Pipe, pipeC.Pipe, location, roomNumber, placementResult, result, out string teeReason);
+                        if (!connected)
+                        {
+                            RecordSkippedConnection(result, intent, roomNumber, teeReason);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        RecordSkippedConnection(result, intent, roomNumber, "branch pipe segment was not placed");
+                        return;
                     }
 
                     break;
@@ -142,16 +187,22 @@ public static class RevitPipeConnectionService
             {
                 result.ConnectedJointCount++;
             }
-            else
-            {
-                result.SkippedConnectionCount++;
-            }
         }
         catch (Exception ex)
         {
-            result.SkippedConnectionCount++;
-            result.Messages.Add(ex.Message);
+            RecordSkippedConnection(result, intent, roomNumber, ex.Message);
         }
+    }
+
+    private static void RecordSkippedConnection(
+        RevitPipeConnectionResult result,
+        PipeConnectionIntent intent,
+        string roomNumber,
+        string reason)
+    {
+        result.SkippedConnectionCount++;
+        result.SkippedConnectionDetails.Add(
+            PipeConnectionDiagnostics.FormatSkippedIntent(roomNumber, intent.Kind, intent.Location, reason));
     }
 
     private static int ConnectionPriority(PipeConnectionKind kind)
@@ -169,12 +220,14 @@ public static class RevitPipeConnectionService
         }
     }
 
-    private static bool TryConnectDirect(Pipe firstPipe, Pipe secondPipe, XYZ location)
+    private static bool TryConnectDirect(Pipe firstPipe, Pipe secondPipe, XYZ location, out string failureReason)
     {
+        failureReason = string.Empty;
         Connector firstConnector = FindOpenConnectorNear(firstPipe, location);
         Connector secondConnector = FindOpenConnectorNear(secondPipe, location);
         if (firstConnector == null || secondConnector == null)
         {
+            failureReason = "open pipe connector not found near joint";
             return false;
         }
 
@@ -189,12 +242,15 @@ public static class RevitPipeConnectionService
         XYZ location,
         string roomNumber,
         PipePlacementRoomResult placementResult,
-        RevitPipeConnectionResult result)
+        RevitPipeConnectionResult result,
+        out string failureReason)
     {
+        failureReason = string.Empty;
         Connector firstConnector = FindOpenConnectorNear(firstPipe, location);
         Connector secondConnector = FindOpenConnectorNear(secondPipe, location);
         if (firstConnector == null || secondConnector == null)
         {
+            failureReason = "open pipe connector not found near elbow";
             return false;
         }
 
@@ -221,13 +277,16 @@ public static class RevitPipeConnectionService
         XYZ location,
         string roomNumber,
         PipePlacementRoomResult placementResult,
-        RevitPipeConnectionResult result)
+        RevitPipeConnectionResult result,
+        out string failureReason)
     {
+        failureReason = string.Empty;
         Connector firstConnector = FindOpenConnectorNear(firstPipe, location);
         Connector secondConnector = FindOpenConnectorNear(secondPipe, location);
         Connector branchConnector = FindOpenConnectorNear(branchPipe, location);
         if (firstConnector == null || secondConnector == null || branchConnector == null)
         {
+            failureReason = "open pipe connector not found near tee";
             return false;
         }
 
@@ -235,6 +294,7 @@ public static class RevitPipeConnectionService
         FamilyInstance tee = document.Create.NewTeeFitting(firstConnector, secondConnector, branchConnector);
         if (tee == null)
         {
+            failureReason = "Revit could not create tee fitting";
             return false;
         }
 
@@ -257,6 +317,7 @@ public static class RevitPipeConnectionService
         double diameterInches = ResolveTeeDiameterInches(branchPipe, trunkPipe);
         if (TrySplitTrunkAtLocation(document, trunkPipe, location, out Pipe upstreamPipe, out Pipe downstreamPipe))
         {
+            result.TrunkSplitCount++;
             trunkPipe = downstreamPipe ?? trunkPipe;
             Connector upstreamConnector = FindOpenConnectorNear(upstreamPipe, location);
             Connector downstreamConnector = FindOpenConnectorNear(downstreamPipe, location);

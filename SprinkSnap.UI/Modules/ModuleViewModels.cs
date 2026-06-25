@@ -1128,6 +1128,16 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
 
     public int ConnectedJointCount => context.ProjectState.PipePlacementSummary?.ConnectedJointCount ?? 0;
 
+    public int SkippedConnectionCount => context.ProjectState.PipePlacementSummary?.SkippedConnectionCount ?? 0;
+
+    public int TrunkSplitCount => context.ProjectState.PipePlacementSummary?.TrunkSplitCount ?? 0;
+
+    public bool HasConnectionWarnings => SkippedConnectionCount > 0;
+
+    public string ConnectionWarningMessage => HasConnectionWarnings
+        ? SkippedConnectionCount + " routing connection(s) were skipped in Revit. Load matching pipe fitting families and review placement messages."
+        : string.Empty;
+
     public int SchematicFittingCount => context.ProjectState.SchematicPipeRouting?.TotalSegmentCount > 0
         ? SchematicPipeJointBuilder.BuildFromRouting(context.ProjectState.SchematicPipeRouting).Count
         : 0;
@@ -1354,6 +1364,10 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(PlacedFittingCount));
         OnPropertyChanged(nameof(ConnectedFittingCount));
         OnPropertyChanged(nameof(ConnectedJointCount));
+        OnPropertyChanged(nameof(SkippedConnectionCount));
+        OnPropertyChanged(nameof(TrunkSplitCount));
+        OnPropertyChanged(nameof(HasConnectionWarnings));
+        OnPropertyChanged(nameof(ConnectionWarningMessage));
         OnPropertyChanged(nameof(SchematicPipeSegmentCount));
         OnPropertyChanged(nameof(SchematicFittingCount));
     }
