@@ -1154,7 +1154,9 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
                 context.ProjectState.WaterSupply,
                 context.ProjectState.PlacementSummary,
                 context.ProjectState.SchematicPipeRouting,
-                context.ProjectState.PipePlacementSummary);
+                context.ProjectState.PipePlacementSummary,
+                context.ProjectState.HydraulicSupplyAnchor,
+                context.ProjectState.Preferences);
         context.ProjectState.HydraulicResult = hydraulicResult;
 
         IReadOnlyList<MaterialTakeoffItem> materialTakeoff = takeoffEngine.Generate(
@@ -1906,6 +1908,8 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
     private readonly SprinkSnapShellContext context;
     private string defaultManufacturer = "Viking";
     private bool allowAlternateManufacturers = true;
+    private string defaultBranchDiameterInches = "1.25";
+    private string defaultMainDiameterInches = "4.0";
     private string aiServiceEndpoint = string.Empty;
     private string catalogPath = string.Empty;
     private string catalogSourceKind = string.Empty;
@@ -2008,6 +2012,26 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         }
     }
 
+    public string DefaultBranchDiameterInches
+    {
+        get => defaultBranchDiameterInches;
+        set
+        {
+            defaultBranchDiameterInches = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string DefaultMainDiameterInches
+    {
+        get => defaultMainDiameterInches;
+        set
+        {
+            defaultMainDiameterInches = value;
+            OnPropertyChanged();
+        }
+    }
+
     public string AiServiceEndpoint
     {
         get => aiServiceEndpoint;
@@ -2046,6 +2070,12 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
             : preferences.PreferredManufacturer;
         allowAlternateManufacturers = preferences.AllowAlternateManufacturers;
         catalogPath = preferences.CatalogPath ?? string.Empty;
+        defaultBranchDiameterInches = PipeDiameterDefaults
+            .ResolveBranchDiameterInches(preferences)
+            .ToString("0.##", CultureInfo.CurrentCulture);
+        defaultMainDiameterInches = PipeDiameterDefaults
+            .ResolveMainDiameterInches(preferences)
+            .ToString("0.##", CultureInfo.CurrentCulture);
     }
 
     private void RefreshManufacturerOptions()
@@ -2163,9 +2193,23 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
             context.ProjectState.Preferences = new SprinkSnapProjectPreferences();
         }
 
+        double? branchDiameterInches = TryParsePositiveDiameter(DefaultBranchDiameterInches);
+        double? mainDiameterInches = TryParsePositiveDiameter(DefaultMainDiameterInches);
+        if (!branchDiameterInches.HasValue || !mainDiameterInches.HasValue)
+        {
+            StatusMessage = "Enter positive branch and main pipe diameters in inches before saving settings.";
+            return;
+        }
+
+        SprinkSnapProjectPreferences preferences = context.ProjectState.Preferences;
+        bool pipeDiametersChanged = Math.Abs(preferences.DefaultBranchDiameterInches - branchDiameterInches.Value) > 0.01
+            || Math.Abs(preferences.DefaultMainDiameterInches - mainDiameterInches.Value) > 0.01;
+
         context.ProjectState.Preferences.PreferredManufacturer = DefaultManufacturer;
         context.ProjectState.Preferences.AllowAlternateManufacturers = AllowAlternateManufacturers;
         context.ProjectState.Preferences.CatalogPath = CatalogPath ?? string.Empty;
+        context.ProjectState.Preferences.DefaultBranchDiameterInches = branchDiameterInches.Value;
+        context.ProjectState.Preferences.DefaultMainDiameterInches = mainDiameterInches.Value;
 
         HazardClassificationViewModel hazardViewModel = context.GetOrCreateHazardViewModel();
         hazardViewModel.SelectedManufacturer = DefaultManufacturer;
@@ -2200,6 +2244,16 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         RefreshLinkedModelOptions();
         context.ProjectState.SessionProgress.SprinklerReviewComplete =
             SprinkSnapWorkflowGate.IsSprinklerReviewComplete(context.ProjectState);
+
+        if (pipeDiametersChanged
+            && context.ProjectState.Rooms.Any(room => room.ProposedSprinklers.Count > 0))
+        {
+            SchematicPipeRoutingService.RefreshProjectRouting(context.ProjectState);
+            DownstreamDesignInvalidationService.InvalidateHydraulicResults(
+                context.ProjectState,
+                clearWaterSupplyValidation: false);
+        }
+
         context.RequestPersistToRevit();
         context.RequestWorkflowRefresh();
 
@@ -2210,6 +2264,17 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
             + " catalog family mapping(s) and "
             + linkedScanCount
             + " linked model(s) enabled for clash detection.";
+        if (pipeDiametersChanged)
+        {
+            StatusMessage += " Pipe diameter defaults changed — schematic routing refreshed. Re-run hydraulics and refresh material takeoff.";
+        }
+    }
+
+    private static double? TryParsePositiveDiameter(string value)
+    {
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out double parsed) && parsed > 0
+            ? parsed
+            : null;
     }
 }
 

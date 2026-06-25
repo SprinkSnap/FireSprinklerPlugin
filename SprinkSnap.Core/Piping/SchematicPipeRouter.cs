@@ -1,22 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
 public static class SchematicPipeRouter
 {
-    private const double BranchDiameterInches = 1.25;
-
-    private const double MainDiameterInches = 4.0;
-
-    public static SchematicPipeRoutingSummary RouteProject(IEnumerable<RoomInfo> rooms)
+    public static SchematicPipeRoutingSummary RouteProject(
+        IEnumerable<RoomInfo> rooms,
+        SprinkSnapProjectPreferences preferences = null)
     {
+        double branchDiameterInches = PipeDiameterDefaults.ResolveBranchDiameterInches(preferences);
+        double mainDiameterInches = PipeDiameterDefaults.ResolveMainDiameterInches(preferences);
         SchematicPipeRoutingSummary summary = new SchematicPipeRoutingSummary();
         foreach (RoomInfo room in rooms ?? Enumerable.Empty<RoomInfo>())
         {
-            IList<PipeSegment> roomSegments = RouteRoom(room);
+            IList<PipeSegment> roomSegments = RouteRoom(room, branchDiameterInches, mainDiameterInches);
             foreach (PipeSegment segment in roomSegments)
             {
                 summary.Segments.Add(segment);
@@ -39,14 +40,25 @@ public static class SchematicPipeRouter
             summary.Messages.Add("No sprinkler layout coordinates were available for schematic pipe routing.");
         }
 
-        ProjectTrunkRouter.AppendProjectTrunk(summary, rooms);
+        ProjectTrunkRouter.AppendProjectTrunk(summary, rooms, null, mainDiameterInches);
         summary.TotalSegmentCount = summary.Segments.Count;
         summary.TotalLengthFeet = summary.Segments.Sum(segment => segment.LengthFeet);
 
         return summary;
     }
 
-    public static IList<PipeSegment> RouteRoom(RoomInfo room)
+    public static IList<PipeSegment> RouteRoom(RoomInfo room, SprinkSnapProjectPreferences preferences = null)
+    {
+        return RouteRoom(
+            room,
+            PipeDiameterDefaults.ResolveBranchDiameterInches(preferences),
+            PipeDiameterDefaults.ResolveMainDiameterInches(preferences));
+    }
+
+    public static IList<PipeSegment> RouteRoom(
+        RoomInfo room,
+        double branchDiameterInches,
+        double mainDiameterInches)
     {
         List<PipeSegment> segments = new List<PipeSegment>();
         IList<SprinklerPlacementCandidate> heads = room?.ProposedSprinklers;
@@ -77,20 +89,20 @@ public static class SchematicPipeRouter
         segments.Add(CreateSegment(
             room,
             PipeSegmentTypes.Riser,
-            MainDiameterInches,
+            mainDiameterInches,
             riserBase,
             riserTop,
-            MainDiameterInches.ToString("0.##") + "\" riser"));
+            PipeDiameterDefaults.FormatDiameterLabel(mainDiameterInches) + " riser"));
 
         if (HorizontalDistance(crossMainStart, crossMainEnd) > 0.5)
         {
             segments.Add(CreateSegment(
                 room,
                 PipeSegmentTypes.CrossMain,
-                MainDiameterInches,
+                mainDiameterInches,
                 crossMainStart,
                 crossMainEnd,
-                MainDiameterInches.ToString("0.##") + "\" cross main"));
+                PipeDiameterDefaults.FormatDiameterLabel(mainDiameterInches) + " cross main"));
         }
 
         for (int index = 0; index < headLocations.Count; index++)
@@ -102,10 +114,10 @@ public static class SchematicPipeRouter
                 segments.Add(CreateSegment(
                     room,
                     PipeSegmentTypes.Branch,
-                    BranchDiameterInches,
+                    branchDiameterInches,
                     head,
                     branchDropEnd,
-                    BranchDiameterInches.ToString("0.##") + "\" branch drop #" + (index + 1)));
+                    PipeDiameterDefaults.FormatDiameterLabel(branchDiameterInches) + " branch drop #" + (index + 1)));
             }
 
             Point3D tieInPoint = new Point3D(head.X, crossMainY, branchElevationFeet);
@@ -114,10 +126,10 @@ public static class SchematicPipeRouter
                 segments.Add(CreateSegment(
                     room,
                     PipeSegmentTypes.Branch,
-                    BranchDiameterInches,
+                    branchDiameterInches,
                     branchDropEnd,
                     tieInPoint,
-                    BranchDiameterInches.ToString("0.##") + "\" branch tie-in #" + (index + 1)));
+                    PipeDiameterDefaults.FormatDiameterLabel(branchDiameterInches) + " branch tie-in #" + (index + 1)));
             }
         }
 

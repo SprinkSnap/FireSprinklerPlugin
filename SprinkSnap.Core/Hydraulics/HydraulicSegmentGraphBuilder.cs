@@ -242,20 +242,21 @@ public static class HydraulicSegmentGraphBuilder
             {
                 segments.Add(ConvertProjectSegment(projectMain));
             }
-            else
-            {
-                segments.Add(new HydraulicGraphSegment
+                else
                 {
-                    SegmentId = "Project trunk to supply",
-                    SegmentType = PipeSegmentTypes.Main,
-                    Start = roomTap.HeaderPoint,
-                    End = supplyHeader,
-                    LengthFeet = OrthogonalLengthFeet(roomTap.HeaderPoint, supplyHeader),
-                    DiameterInches = 4.0,
-                    Description = "Project trunk to supply",
-                    DataSource = "Schematic"
-                });
-            }
+                    double mainDiameterInches = ResolveMainDiameterFromRouting(schematicPipeRouting);
+                    segments.Add(new HydraulicGraphSegment
+                    {
+                        SegmentId = "Project trunk to supply",
+                        SegmentType = PipeSegmentTypes.Main,
+                        Start = roomTap.HeaderPoint,
+                        End = supplyHeader,
+                        LengthFeet = OrthogonalLengthFeet(roomTap.HeaderPoint, supplyHeader),
+                        DiameterInches = mainDiameterInches,
+                        Description = "Project trunk to supply",
+                        DataSource = "Schematic"
+                    });
+                }
         }
 
         PipeSegment buildingRiser = schematicPipeRouting.Segments?
@@ -330,6 +331,7 @@ public static class HydraulicSegmentGraphBuilder
             double partialLength = HorizontalDistanceFeet(tieInPoint, riserTop);
             if (partialLength > 0.01)
             {
+                double mainDiameterInches = ResolveMainDiameterFromRoomSegments(roomSegments);
                 segments.Add(new HydraulicGraphSegment
                 {
                     SegmentId = "Cross main to riser",
@@ -337,7 +339,7 @@ public static class HydraulicSegmentGraphBuilder
                     Start = tieInPoint,
                     End = riserTop,
                     LengthFeet = partialLength,
-                    DiameterInches = 4.0,
+                    DiameterInches = mainDiameterInches,
                     Description = "Cross main run to riser",
                     DataSource = "Schematic"
                 });
@@ -587,6 +589,30 @@ public static class HydraulicSegmentGraphBuilder
         return dominant != null && dominant.DiameterInches > 0
             ? dominant.DiameterInches
             : fallbackDiameterInches;
+    }
+
+    private static double ResolveMainDiameterFromRouting(SchematicPipeRoutingSummary schematicPipeRouting)
+    {
+        double fromSegments = schematicPipeRouting?.Segments?
+            .Where(segment => segment.DiameterInches > 0
+                && !IsBranchSegment(segment.SegmentType))
+            .Select(segment => segment.DiameterInches)
+            .DefaultIfEmpty(0)
+            .Max() ?? 0;
+
+        return fromSegments > 0 ? fromSegments : PipeDiameterDefaults.DefaultMainDiameterInches;
+    }
+
+    private static double ResolveMainDiameterFromRoomSegments(IList<HydraulicGraphSegment> roomSegments)
+    {
+        double fromSegments = roomSegments?
+            .Where(segment => segment.DiameterInches > 0
+                && !IsBranchSegment(segment.SegmentType))
+            .Select(segment => segment.DiameterInches)
+            .DefaultIfEmpty(0)
+            .Max() ?? 0;
+
+        return fromSegments > 0 ? fromSegments : PipeDiameterDefaults.DefaultMainDiameterInches;
     }
 
     private sealed class TrunkContributionPoint

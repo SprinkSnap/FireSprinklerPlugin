@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
@@ -45,7 +46,8 @@ public interface IHydraulicEngine
         SprinklerPlacementSummary placementSummary = null,
         SchematicPipeRoutingSummary schematicPipeRouting = null,
         PipePlacementSummary pipePlacementSummary = null,
-        HydraulicSupplyAnchor supplyAnchor = null);
+        HydraulicSupplyAnchor supplyAnchor = null,
+        SprinkSnapProjectPreferences preferences = null);
 }
 
 public interface IMaterialTakeoffEngine

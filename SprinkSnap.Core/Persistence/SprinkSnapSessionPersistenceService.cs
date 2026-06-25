@@ -341,6 +341,8 @@ public static class SprinkSnapSessionPersistenceService
             DefaultCategory = preferences.DefaultCategory,
             DefaultOrientation = preferences.DefaultOrientation,
             DefaultKFactor = preferences.DefaultKFactor,
+            DefaultBranchDiameterInches = preferences.DefaultBranchDiameterInches,
+            DefaultMainDiameterInches = preferences.DefaultMainDiameterInches,
             AllowAlternateManufacturers = preferences.AllowAlternateManufacturers,
             CatalogPath = preferences.CatalogPath
         };

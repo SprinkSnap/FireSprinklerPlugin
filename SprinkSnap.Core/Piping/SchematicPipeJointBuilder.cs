@@ -7,10 +7,6 @@ namespace FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
 public static class SchematicPipeJointBuilder
 {
-    private const double DefaultBranchDiameterInches = 1.25;
-
-    private const double DefaultMainDiameterInches = 4.0;
-
     private const double LocationToleranceFeet = 0.15;
 
     public static IList<PipeJoint> BuildFromRouting(SchematicPipeRoutingSummary routing)
@@ -72,7 +68,7 @@ public static class SchematicPipeJointBuilder
                 continue;
             }
 
-            double branchDiameterInches = ResolveSegmentDiameterInches(segment, DefaultBranchDiameterInches);
+            double branchDiameterInches = ResolveSegmentDiameterInches(segment, PipeDiameterDefaults.DefaultBranchDiameterInches);
             string description = segment.Description ?? string.Empty;
             if (description.IndexOf("branch tie-in", StringComparison.OrdinalIgnoreCase) >= 0)
             {
@@ -111,7 +107,7 @@ public static class SchematicPipeJointBuilder
                          string.Equals(segment.SegmentType, PipeSegmentTypes.Branch, StringComparison.OrdinalIgnoreCase)
                          && (segment.Description ?? string.Empty).IndexOf("branch drop", StringComparison.OrdinalIgnoreCase) >= 0))
             {
-                double branchDiameterInches = ResolveSegmentDiameterInches(segment, DefaultBranchDiameterInches);
+                double branchDiameterInches = ResolveSegmentDiameterInches(segment, PipeDiameterDefaults.DefaultBranchDiameterInches);
                 AddJoint(
                     joints,
                     first,
@@ -131,7 +127,7 @@ public static class SchematicPipeJointBuilder
             .Where(segment => !IsBranchSegment(segment.SegmentType))
             .Select(segment => segment.DiameterInches)
             .Where(diameterInches => diameterInches > 0)
-            .DefaultIfEmpty(DefaultMainDiameterInches)
+            .DefaultIfEmpty(PipeDiameterDefaults.DefaultMainDiameterInches)
             .Max();
     }
 
