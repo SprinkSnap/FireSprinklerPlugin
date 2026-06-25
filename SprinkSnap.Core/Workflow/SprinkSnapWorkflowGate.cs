@@ -23,6 +23,12 @@ public static class SprinkSnapWorkflowGate
     public const string StaleModelBlockReason =
         "Revit model changed since the last SprinkSnap save. Re-run Analyze Model and review hazard, layout, and clash results before continuing.";
 
+    public static bool RequiresSessionBackedProgress(SprinkSnapProjectState state)
+    {
+        return IsModelStale(state)
+            || state?.SessionProgress?.ReconciliationRequired == true;
+    }
+
     public static bool IsModelStale(SprinkSnapProjectState state)
     {
         return state?.ModelChangeAssessment?.IsStale == true;
@@ -155,6 +161,17 @@ public static class SprinkSnapWorkflowGate
                     return CreateAccess(step, false, placementComplete, StaleModelBlockReason);
                 }
 
+                if (state.SessionProgress.ReconciliationRequired)
+                {
+                    return CreateAccess(
+                        step,
+                        false,
+                        placementComplete,
+                        "Complete model reconciliation before placing sprinklers in Revit.",
+                        WorkflowStepStatus.Blocked,
+                        "Reconcile");
+                }
+
                 return CreateAccess(step, true, placementComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.Hydraulics:
@@ -279,12 +296,22 @@ public static class SprinkSnapWorkflowGate
 
     public static bool IsDesignGenerated(SprinkSnapProjectState state)
     {
+        if (RequiresSessionBackedProgress(state))
+        {
+            return state.SessionProgress.DesignGenerated;
+        }
+
         return state.SessionProgress.DesignGenerated
             || state.Rooms.Any(room => room.ProposedSprinklers.Count > 0);
     }
 
     public static bool IsClashDetectionComplete(SprinkSnapProjectState state)
     {
+        if (RequiresSessionBackedProgress(state))
+        {
+            return state.SessionProgress.ClashDetectionComplete;
+        }
+
         return state.SessionProgress.ClashDetectionComplete
             || (state.ClashSummary != null && state.ClashSummary.TotalClashes == 0 && IsDesignGenerated(state))
             || (state.ClashSummary != null
@@ -294,6 +321,11 @@ public static class SprinkSnapWorkflowGate
 
     public static bool IsSprinklersPlacedInRevit(SprinkSnapProjectState state)
     {
+        if (RequiresSessionBackedProgress(state))
+        {
+            return state.SessionProgress.SprinklersPlacedInRevit;
+        }
+
         return state.SessionProgress.SprinklersPlacedInRevit
             || (state.PlacementSummary != null && state.PlacementSummary.PlacedCount > 0);
     }

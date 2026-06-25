@@ -9,6 +9,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
+using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
@@ -143,8 +144,7 @@ public sealed class SprinkSnapShellContext
                 }
             }
 
-            ProjectState.SessionProgress.ClashDetectionComplete = false;
-            ProjectState.SessionProgress.SprinklersPlacedInRevit = false;
+            DownstreamDesignInvalidationService.InvalidateDownstreamDesign(ProjectState);
         }
 
         if (markAnalysisComplete && ProjectState.Rooms.Count > 0)
@@ -228,11 +228,10 @@ public sealed class SprinkSnapShellContext
         List<int> changedRoomIds = ProjectState.ModelChangeAssessment?.ChangedRoomRevitElementIds?.ToList()
             ?? new List<int>();
 
-        ProjectState.SessionProgress.ClashDetectionComplete = false;
-        ProjectState.SessionProgress.SprinklersPlacedInRevit = false;
-        ProjectState.SessionProgress.DesignGenerated = false;
-        ProjectState.SessionProgress.HydraulicsComplete = false;
-        ProjectState.SessionProgress.MaterialsComplete = false;
+        DownstreamDesignInvalidationService.InvalidateDownstreamDesign(
+            ProjectState,
+            changedRoomIds,
+            clearHazardApprovalsForChangedRooms: true);
         ProjectState.SessionProgress.ReconciliationRequired = true;
 
         ProjectState.ModelChangeAssessment = new ModelChangeAssessment
@@ -251,6 +250,7 @@ public sealed class SprinkSnapShellContext
         };
 
         ApplyModelChangeAssessmentToHazardViewModel();
+        ResetHazardViewModel();
     }
 
     private void ApplyModelChangeAssessmentToHazardViewModel()
