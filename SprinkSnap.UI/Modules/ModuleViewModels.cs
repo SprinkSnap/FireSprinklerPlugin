@@ -543,6 +543,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public double MaxCriticalPathVelocityFeetPerSecond => result.MaxCriticalPathVelocityFeetPerSecond;
 
+    public int CriticalPathDiameterSuggestionCount => result.CriticalPathDiameterSuggestionCount;
+
     public IList<HydraulicNode> CriticalPath => result.CriticalPath ?? new List<HydraulicNode>();
 
     public string NfpaReference => result.NfpaReference;
@@ -649,6 +651,7 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(RemoteSprinklerLabel));
         OnPropertyChanged(nameof(CriticalPathVelocityViolationCount));
         OnPropertyChanged(nameof(MaxCriticalPathVelocityFeetPerSecond));
+        OnPropertyChanged(nameof(CriticalPathDiameterSuggestionCount));
         OnPropertyChanged(nameof(CriticalPath));
         OnPropertyChanged(nameof(NfpaReference));
         OnPropertyChanged(nameof(WarningSummary));

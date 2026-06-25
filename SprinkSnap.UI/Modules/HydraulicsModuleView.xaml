@@ -128,6 +128,12 @@
                 </Border>
                 <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                     <StackPanel>
+                        <TextBlock Text="Diameter suggestions" Foreground="#6B7280" />
+                        <TextBlock Text="{Binding CriticalPathDiameterSuggestionCount}" FontSize="22" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+                <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                    <StackPanel>
                         <TextBlock Text="Remote head" Foreground="#6B7280" />
                         <TextBlock Text="{Binding RemoteSprinklerLabel}" FontSize="22" FontWeight="SemiBold" />
                     </StackPanel>
@@ -168,6 +174,7 @@
                     <DataGridTextColumn Header="Type" Binding="{Binding SegmentType}" Width="90" />
                     <DataGridTextColumn Header="Length (ft)" Binding="{Binding LengthFeet, StringFormat=N0}" Width="90" />
                     <DataGridTextColumn Header="Diameter (in)" Binding="{Binding DiameterInches, StringFormat=N2}" Width="100" />
+                    <DataGridTextColumn Header="Suggested (in)" Binding="{Binding SuggestedDiameterInches, StringFormat=N2}" Width="100" />
                     <DataGridTextColumn Header="Pressure (PSI)" Binding="{Binding PressurePsi, StringFormat=N1}" Width="110" />
                     <DataGridTextColumn Header="Flow (GPM)" Binding="{Binding FlowGpm, StringFormat=N1}" Width="100" />
                     <DataGridTextColumn Header="Velocity (ft/s)" Binding="{Binding VelocityFeetPerSecond, StringFormat=N1}" Width="100" />

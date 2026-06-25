@@ -209,6 +209,8 @@ public sealed class HydraulicNode
 
     public bool ExceedsVelocityLimit { get; set; }
 
+    public double SuggestedDiameterInches { get; set; }
+
     public string SegmentType { get; set; } = string.Empty;
 }
 
@@ -275,6 +277,8 @@ public sealed class HydraulicCalculationResult
     public int CriticalPathVelocityViolationCount { get; set; }
 
     public double MaxCriticalPathVelocityFeetPerSecond { get; set; }
+
+    public int CriticalPathDiameterSuggestionCount { get; set; }
 
     public bool UsesUserSupplyAnchor { get; set; }
 

@@ -36,6 +36,8 @@ public sealed class HydraulicGraphSegment
     public double VelocityLimitFeetPerSecond { get; set; }
 
     public bool ExceedsVelocityLimit { get; set; }
+
+    public double SuggestedDiameterInches { get; set; }
 }
 
 public sealed class LayoutSprinklerPoint
@@ -116,6 +118,8 @@ public sealed class LayoutLinkedHydraulicPath
     public int CriticalPathVelocityViolationCount { get; set; }
 
     public double MaxCriticalPathVelocityFeetPerSecond { get; set; }
+
+    public int CriticalPathDiameterSuggestionCount { get; set; }
 
     public IList<HydraulicNode> CriticalPath { get; set; } = new List<HydraulicNode>();
 
