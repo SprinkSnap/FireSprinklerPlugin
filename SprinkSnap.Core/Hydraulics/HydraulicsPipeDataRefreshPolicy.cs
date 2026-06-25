@@ -34,4 +34,9 @@ public static class HydraulicsPipeDataRefreshPolicy
         return hydraulicResult?.UsesSchematicPipeSizingWriteback == true
             && (pipePlacementSummary?.PlacedSegmentCount ?? 0) > 0;
     }
+
+    public static bool ShouldReSolveAfterDiameterSync(bool diameterSyncWasAttempted, bool isPreviewMode)
+    {
+        return !isPreviewMode && diameterSyncWasAttempted;
+    }
 }

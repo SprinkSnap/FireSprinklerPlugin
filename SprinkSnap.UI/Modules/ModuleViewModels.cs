@@ -557,6 +557,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public int RevitPipeDiameterSyncCount => result.RevitPipeDiameterSyncCount;
 
+    public bool UsesPostSyncHydraulicReSolve => result.UsesPostSyncHydraulicReSolve;
+
     public IList<HydraulicNode> CriticalPath => result.CriticalPath ?? new List<HydraulicNode>();
 
     public string NfpaReference => result.NfpaReference;
@@ -604,7 +606,11 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         RunHydraulicCalculation(null);
     }
 
-    private void RunHydraulicCalculation(IList<string> remeasureMessages)
+    private void RunHydraulicCalculation(
+        IList<string> remeasureMessages,
+        bool skipDiameterSync = false,
+        IList<string> priorSyncMessages = null,
+        PipePlacementSummary syncSummaryForFlags = null)
     {
         result = hydraulicEngine.Calculate(
             context.ProjectState.Rooms,
@@ -613,12 +619,21 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
             context.ProjectState.SchematicPipeRouting,
             context.ProjectState.PipePlacementSummary,
             context.ProjectState.HydraulicSupplyAnchor);
+
+        if (syncSummaryForFlags != null)
+        {
+            result.UsesRevitPipeDiameterSync = syncSummaryForFlags.UsesRevitPipeDiameterSync;
+            result.RevitPipeDiameterSyncCount = syncSummaryForFlags.RevitPipeDiameterSyncCount;
+            result.UsesPostSyncHydraulicReSolve = true;
+        }
+
         context.ProjectState.HydraulicResult = result;
         context.ProjectState.SessionProgress.HydraulicsComplete = result.TotalFlowGpm > 0;
         context.RequestPersistToRevit();
         context.RequestWorkflowRefresh();
 
-        if (HydraulicsPipeDataRefreshPolicy.ShouldSyncPlacedPipeDiametersAfterCalculation(
+        if (!skipDiameterSync
+            && HydraulicsPipeDataRefreshPolicy.ShouldSyncPlacedPipeDiametersAfterCalculation(
                 result,
                 context.ProjectState.PipePlacementSummary,
                 context.IsPreviewMode,
@@ -630,6 +645,20 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
                 Application.Current?.Dispatcher.Invoke(() =>
                 {
                     context.ProjectState.PipePlacementSummary = summary;
+
+                    if (HydraulicsPipeDataRefreshPolicy.ShouldReSolveAfterDiameterSync(
+                            diameterSyncWasAttempted: true,
+                            context.IsPreviewMode))
+                    {
+                        StatusMessage = "Re-running hydraulics with synced Revit pipe diameters...";
+                        RunHydraulicCalculation(
+                            remeasureMessages,
+                            skipDiameterSync: true,
+                            priorSyncMessages: summary.Messages,
+                            syncSummaryForFlags: summary);
+                        return;
+                    }
+
                     if (context.ProjectState.HydraulicResult != null)
                     {
                         result = context.ProjectState.HydraulicResult;
@@ -641,7 +670,7 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
             return;
         }
 
-        CompleteHydraulicCalculationStatus(remeasureMessages, null);
+        CompleteHydraulicCalculationStatus(remeasureMessages, priorSyncMessages);
     }
 
     private void CompleteHydraulicCalculationStatus(IList<string> remeasureMessages, IList<string> syncMessages)
@@ -660,6 +689,14 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
             StatusMessage = string.IsNullOrWhiteSpace(StatusMessage)
                 ? string.Join(" ", syncMessages)
                 : StatusMessage + " " + string.Join(" ", syncMessages);
+        }
+
+        if (result.UsesPostSyncHydraulicReSolve)
+        {
+            string reSolveMessage = "Hydraulics re-calculated using synced Revit pipe diameters.";
+            StatusMessage = string.IsNullOrWhiteSpace(StatusMessage)
+                ? reSolveMessage
+                : StatusMessage + " " + reSolveMessage;
         }
 
         string completionMessage = result.SafetyMarginPsi >= 0
@@ -705,6 +742,7 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(SchematicWritebackSegmentCount));
         OnPropertyChanged(nameof(UsesRevitPipeDiameterSync));
         OnPropertyChanged(nameof(RevitPipeDiameterSyncCount));
+        OnPropertyChanged(nameof(UsesPostSyncHydraulicReSolve));
         OnPropertyChanged(nameof(CriticalPath));
         OnPropertyChanged(nameof(NfpaReference));
         OnPropertyChanged(nameof(WarningSummary));
