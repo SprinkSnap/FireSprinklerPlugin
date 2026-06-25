@@ -15,6 +15,7 @@ public sealed class SprinkSnapApplication : IExternalApplication
         SprinkSnapDockablePaneRegistration.Register(application);
         ExternalEvents.SprinklerPlacementExternalEventHandler.Register();
         ExternalEvents.PipePlacementExternalEventHandler.Register();
+        ExternalEvents.PipeMeasurementExternalEventHandler.Register();
         ExternalEvents.ClashDetectionExternalEventHandler.Register();
         ExternalEvents.ModelReanalysisExternalEventHandler.Register();
         ExternalEvents.LoadedSprinklerSymbolScanExternalEventHandler.Register();

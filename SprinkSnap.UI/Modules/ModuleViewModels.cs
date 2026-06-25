@@ -557,7 +557,7 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
         this.context = context;
         Items = new ObservableCollection<MaterialTakeoffItem>();
         Refresh();
-        RefreshCommand = new ModuleRelayCommand(_ => Refresh());
+        RefreshCommand = new ModuleRelayCommand(_ => Refresh(remeasureFromRevit: true));
         ExportExcelCommand = new ModuleRelayCommand(_ => ExportExcel());
     }
 
@@ -577,7 +577,26 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
         }
     }
 
-    private void Refresh()
+    private void Refresh(bool remeasureFromRevit = false)
+    {
+        if (remeasureFromRevit && !context.IsPreviewMode && context.RequestRemeasurePlacedPipes != null)
+        {
+            StatusMessage = "Re-measuring placed pipes from Revit geometry...";
+            context.RequestRemeasurePlacedPipes(summary =>
+            {
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    context.ProjectState.PipePlacementSummary = summary;
+                    GenerateTakeoff(summary.Messages);
+                });
+            });
+            return;
+        }
+
+        GenerateTakeoff(null);
+    }
+
+    private void GenerateTakeoff(IList<string> remeasureMessages)
     {
         Items.Clear();
         foreach (MaterialTakeoffItem item in takeoffEngine.Generate(
@@ -592,19 +611,42 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
         int detailCount = Items.Count(item => !item.IsSummaryRow);
         int sprinklerRows = Items.Count(item => !item.IsSummaryRow && string.Equals(item.ItemType, "Sprinkler", StringComparison.OrdinalIgnoreCase));
         int pipeRows = Items.Count(item => !item.IsSummaryRow && string.Equals(item.ItemType, "Pipe", StringComparison.OrdinalIgnoreCase));
+        int placedPipeRows = Items.Count(item => !item.IsSummaryRow
+            && string.Equals(item.ItemType, "Pipe", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(item.Source, "Placed", StringComparison.OrdinalIgnoreCase));
         int fittingRows = Items.Count(item => !item.IsSummaryRow && (
             string.Equals(item.ItemType, "Fitting", StringComparison.OrdinalIgnoreCase)
             || string.Equals(item.ItemType, "Valve", StringComparison.OrdinalIgnoreCase)
             || string.Equals(item.ItemType, "Riser Assembly", StringComparison.OrdinalIgnoreCase)));
-        StatusMessage = detailCount == 0
-            ? "No material quantities found. Generate layout, schematic routing, or place elements in Revit first."
-            : "Takeoff includes "
-              + sprinklerRows
-              + " sprinkler row(s), "
-              + pipeRows
-              + " pipe row(s), and "
-              + fittingRows
-              + " fitting/valve row(s). Summary rows are included for Excel export.";
+
+        if (remeasureMessages != null && remeasureMessages.Count > 0)
+        {
+            StatusMessage = string.Join(" ", remeasureMessages);
+            if (detailCount > 0)
+            {
+                StatusMessage += " Takeoff includes "
+                    + sprinklerRows
+                    + " sprinkler row(s), "
+                    + pipeRows
+                    + " pipe row(s) ("
+                    + placedPipeRows
+                    + " from placed geometry), and "
+                    + fittingRows
+                    + " fitting/valve row(s).";
+            }
+        }
+        else
+        {
+            StatusMessage = detailCount == 0
+                ? "No material quantities found. Generate layout, schematic routing, or place elements in Revit first."
+                : "Takeoff includes "
+                  + sprinklerRows
+                  + " sprinkler row(s), "
+                  + pipeRows
+                  + " pipe row(s), and "
+                  + fittingRows
+                  + " fitting/valve row(s). Summary rows are included for Excel export.";
+        }
 
         context.ProjectState.SessionProgress.MaterialsComplete = detailCount > 0;
         context.RequestWorkflowRefresh();
@@ -1006,6 +1048,7 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
         ValidateCommand = new ModuleRelayCommand(_ => RunPreflightValidation());
         PlaceInRevitCommand = new ModuleRelayCommand(_ => PlaceInRevit());
         PlacePipesInRevitCommand = new ModuleRelayCommand(_ => PlacePipesInRevit());
+        RemeasurePlacedPipesCommand = new ModuleRelayCommand(_ => RemeasurePlacedPipes());
         SyncFromState();
     }
 
@@ -1018,6 +1061,8 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
     public ICommand PlaceInRevitCommand { get; }
 
     public ICommand PlacePipesInRevitCommand { get; }
+
+    public ICommand RemeasurePlacedPipesCommand { get; }
 
     public int TotalCandidates => context.ProjectState.PlacementSummary?.TotalCandidates
         ?? context.ProjectState.Rooms.Sum(room => room.ProposedSprinklers.Count);
@@ -1203,6 +1248,34 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
                 StatusMessage = summary.Messages.Count > 0
                     ? string.Join(" ", summary.Messages)
                     : "Schematic pipe placement complete.";
+                context.RequestWorkflowRefresh();
+            });
+        });
+    }
+
+    private void RemeasurePlacedPipes()
+    {
+        if (context.IsPreviewMode)
+        {
+            StatusMessage = "WpfPreview cannot read Revit geometry. Open SprinkSnap in Revit to re-measure placed pipes.";
+            return;
+        }
+
+        if (context.RequestRemeasurePlacedPipes == null)
+        {
+            StatusMessage = "Revit pipe measurement is not connected for this session.";
+            return;
+        }
+
+        StatusMessage = "Re-measuring SprinkSnap pipe lengths from current Revit geometry...";
+        context.RequestRemeasurePlacedPipes(summary =>
+        {
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                ApplyPipeSummary(summary);
+                StatusMessage = summary.Messages.Count > 0
+                    ? string.Join(" ", summary.Messages)
+                    : "Pipe length re-measurement complete.";
                 context.RequestWorkflowRefresh();
             });
         });

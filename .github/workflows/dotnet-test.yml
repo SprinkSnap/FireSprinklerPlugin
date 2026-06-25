@@ -1,0 +1,28 @@
+name: dotnet test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore SprinkSnap.Core.Tests/SprinkSnap.Core.Tests.csproj
+
+      - name: Test
+        run: dotnet test SprinkSnap.Core.Tests/SprinkSnap.Core.Tests.csproj --configuration Release --no-restore --verbosity normal

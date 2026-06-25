@@ -24,6 +24,7 @@ public sealed class SprinkSnapRevitSession
         Context.PersistToRevitRequested = PersistApprovedHazardsToRevit;
         Context.RequestPlaceSprinklers = RequestPlaceSprinklersInRevit;
         Context.RequestPlacePipes = RequestPlacePipesInRevit;
+        Context.RequestRemeasurePlacedPipes = RequestRemeasurePlacedPipesInRevit;
         Context.RequestClashDetection = RequestClashDetectionInRevit;
         Context.RequestReanalyze = RequestReanalyzeInRevit;
         Context.RequestRefreshLoadedSprinklerSymbols = RequestRefreshLoadedSprinklerSymbolsInRevit;
@@ -120,6 +121,11 @@ public sealed class SprinkSnapRevitSession
     private void RequestPlacePipesInRevit(Action<PipePlacementSummary> callback)
     {
         PipePlacementExternalEventHandler.Instance.RequestPlacement(Document, Context, callback);
+    }
+
+    private void RequestRemeasurePlacedPipesInRevit(Action<PipePlacementSummary> callback)
+    {
+        PipeMeasurementExternalEventHandler.Instance.RequestMeasurement(Document, Context, callback);
     }
 
     private void RequestClashDetectionInRevit(Action<ClashDetectionSummary> callback)

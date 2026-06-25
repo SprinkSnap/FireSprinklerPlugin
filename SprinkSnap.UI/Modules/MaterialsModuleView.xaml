@@ -20,7 +20,8 @@
             <Button Content="Refresh Takeoff"
                     Command="{Binding RefreshCommand}"
                     Padding="14,8"
-                    Margin="0,0,8,0" />
+                    Margin="0,0,8,0"
+                    ToolTip="In Revit, re-measures placed SprinkSnap pipe geometry before generating the BOM." />
             <Button Content="Export Excel"
                     Command="{Binding ExportExcelCommand}"
                     Padding="14,8" />
