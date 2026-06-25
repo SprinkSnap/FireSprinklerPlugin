@@ -130,6 +130,24 @@ public static class PlacedPipeHydraulicResolver
         return segments;
     }
 
+    public static PipePlacementSegmentResult FindPlacedMatch(
+        PipePlacementSummary pipePlacementSummary,
+        PipeSegment schematicSegment)
+    {
+        if (schematicSegment == null || pipePlacementSummary?.RoomResults == null)
+        {
+            return null;
+        }
+
+        PipePlacementRoomResult placedRoom = pipePlacementSummary.RoomResults
+            .Where(result => result.RoomRevitElementId == schematicSegment.RoomRevitElementId && schematicSegment.RoomRevitElementId > 0)
+            .GroupBy(result => result.RoomRevitElementId)
+            .Select(group => group.Last())
+            .FirstOrDefault();
+
+        return FindPlacedMatch(placedRoom, schematicSegment);
+    }
+
     private static PipePlacementSegmentResult FindPlacedMatch(
         PipePlacementRoomResult placedRoom,
         PipeSegment schematicSegment)
