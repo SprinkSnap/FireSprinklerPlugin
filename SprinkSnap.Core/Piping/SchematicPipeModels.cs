@@ -46,4 +46,10 @@ public sealed class SchematicPipeRoutingSummary
     public double TotalLengthFeet { get; set; }
 
     public IList<string> Messages { get; set; } = new List<string>();
+
+    public bool UsesProjectTrunk { get; set; }
+
+    public Point3D SupplyPoint { get; set; } = new Point3D();
+
+    public IList<int> ProjectTrunkRoomRevitElementIds { get; set; } = new List<int>();
 }

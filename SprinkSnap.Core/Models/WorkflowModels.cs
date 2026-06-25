@@ -251,6 +251,8 @@ public sealed class HydraulicCalculationResult
 
     public bool UsesSegmentGraphHydraulics { get; set; }
 
+    public bool UsesProjectTrunk { get; set; }
+
     public int CriticalPathSegmentCount { get; set; }
 
     public string RemoteSprinklerLabel { get; set; } = string.Empty;

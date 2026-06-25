@@ -12,8 +12,15 @@ public static class HydraulicGraphBuilder
 
     private const double MinimumMainLengthFeet = 20.0;
 
-    public static Point3D ResolveSourcePoint(IEnumerable<RoomInfo> controllingRooms)
+    public static Point3D ResolveSourcePoint(
+        IEnumerable<RoomInfo> controllingRooms,
+        SchematicPipeRoutingSummary schematicPipeRouting = null)
     {
+        if (schematicPipeRouting?.UsesProjectTrunk == true)
+        {
+            return schematicPipeRouting.SupplyPoint;
+        }
+
         List<RoomInfo> rooms = controllingRooms?.ToList() ?? new List<RoomInfo>();
         if (rooms.Count == 0)
         {
@@ -171,9 +178,22 @@ public static class HydraulicGraphBuilder
             path.Warnings.Add("Calculated main length is short. Verify riser location and room geometry in Revit.");
         }
 
-        HydraulicSegmentGraphBuilder.BuildSegmentChain(path, schematicPipeRouting, pipePlacementSummary);
+        HydraulicSegmentGraphBuilder.BuildSegmentChain(
+            path,
+            schematicPipeRouting,
+            pipePlacementSummary,
+            controllingRooms);
         if (path.UsesSegmentGraphHydraulics)
         {
+            if (path.UsesProjectTrunk)
+            {
+                path.SourcePoint = schematicPipeRouting?.SupplyPoint ?? path.SourcePoint;
+                path.Warnings.Add(
+                    "Project trunk connects "
+                    + (schematicPipeRouting?.ProjectTrunkRoomRevitElementIds?.Count ?? 0)
+                    + " room(s) to a shared building riser at the hydraulic source.");
+            }
+
             if (path.UsesPlacedPipeLengths)
             {
                 path.Warnings.Add(
@@ -195,7 +215,7 @@ public static class HydraulicGraphBuilder
         }
 
         int operatingRoomCount = path.OperatingSprinklers.Select(point => point.Room.RevitElementId).Distinct().Count();
-        if (operatingRoomCount > 1)
+        if (operatingRoomCount > 1 && !path.UsesProjectTrunk)
         {
             path.Warnings.Add(
                 "Operating sprinklers span "

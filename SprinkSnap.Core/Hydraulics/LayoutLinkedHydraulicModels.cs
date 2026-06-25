@@ -87,6 +87,8 @@ public sealed class LayoutLinkedHydraulicPath
 
     public bool UsesSegmentGraphHydraulics { get; set; }
 
+    public bool UsesProjectTrunk { get; set; }
+
     public IList<HydraulicGraphSegment> SegmentChain { get; set; } = new List<HydraulicGraphSegment>();
 
     public int CriticalPathSegmentCount { get; set; }

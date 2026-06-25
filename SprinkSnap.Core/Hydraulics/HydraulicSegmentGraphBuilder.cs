@@ -17,12 +17,17 @@ public static class HydraulicSegmentGraphBuilder
     public static void BuildSegmentChain(
         LayoutLinkedHydraulicPath path,
         SchematicPipeRoutingSummary schematicPipeRouting,
-        PipePlacementSummary pipePlacementSummary)
+        PipePlacementSummary pipePlacementSummary,
+        IEnumerable<RoomInfo> controllingRooms = null)
     {
         if (path.OperatingSprinklers.Count == 0 || path.MostRemoteSprinkler == null)
         {
             return;
         }
+
+        ProjectTrunkRouter.EnsureProjectTrunk(
+            schematicPipeRouting,
+            controllingRooms ?? path.OperatingSprinklers.Select(point => point.Room));
 
         LayoutSprinklerPoint remote = path.MostRemoteSprinkler;
         int remoteRoomId = remote.Room?.RevitElementId ?? 0;
@@ -36,7 +41,11 @@ public static class HydraulicSegmentGraphBuilder
         IList<HydraulicGraphSegment> chain;
         if (roomSegments.Count > 0)
         {
-            chain = BuildChainFromRoomSegments(remote, roomSegments, path.SourcePoint);
+            chain = BuildChainFromRoomSegments(
+                remote,
+                roomSegments,
+                path.SourcePoint,
+                schematicPipeRouting);
             path.PipeLengthDataSource = roomSegments[0].DataSource;
             path.UsesPlacedPipeLengths = string.Equals(
                 roomSegments[0].DataSource,
@@ -56,6 +65,7 @@ public static class HydraulicSegmentGraphBuilder
 
         path.SegmentChain = chain;
         path.UsesSegmentGraphHydraulics = true;
+        path.UsesProjectTrunk = schematicPipeRouting?.UsesProjectTrunk == true;
         path.CriticalPathSegmentCount = chain.Count;
         path.BranchLengthFeet = chain
             .Where(segment => IsBranchSegment(segment.SegmentType))
@@ -76,7 +86,8 @@ public static class HydraulicSegmentGraphBuilder
         LayoutLinkedHydraulicPath path,
         IDictionary<LayoutSprinklerPoint, double> headFlows,
         double totalSprinklerFlowGpm,
-        double hoseStreamAllowanceGpm)
+        double hoseStreamAllowanceGpm,
+        SchematicPipeRoutingSummary schematicPipeRouting = null)
     {
         if (path.SegmentChain == null || path.SegmentChain.Count == 0)
         {
@@ -89,13 +100,12 @@ public static class HydraulicSegmentGraphBuilder
             ? remoteFlow
             : totalSprinklerFlowGpm / Math.Max(path.OperatingSprinklers.Count, 1);
 
-        IList<LayoutSprinklerPoint> roomHeads = path.OperatingSprinklers
-            .Where(point => (point.Room?.RevitElementId ?? 0) == remoteRoomId)
-            .ToList();
-        IList<TrunkContributionPoint> trunkPoints = BuildTrunkContributionPoints(
-            roomHeads,
-            headFlows,
-            path.SegmentChain);
+        IList<TrunkContributionPoint> trunkPoints = path.UsesProjectTrunk
+            ? BuildProjectTrunkContributionPoints(path.OperatingSprinklers, headFlows, schematicPipeRouting)
+            : BuildTrunkContributionPoints(
+                path.OperatingSprinklers.Where(point => (point.Room?.RevitElementId ?? 0) == remoteRoomId).ToList(),
+                headFlows,
+                path.SegmentChain);
 
         foreach (HydraulicGraphSegment segment in path.SegmentChain)
         {
@@ -111,14 +121,23 @@ public static class HydraulicSegmentGraphBuilder
                 continue;
             }
 
-            segment.FlowGpm = ResolveTrunkFlowForSegment(segment, trunkPoints, totalSprinklerFlowGpm);
+            Point3D supplyHeader = path.UsesProjectTrunk
+                ? ProjectTrunkRouter.ResolveSupplyHeader(schematicPipeRouting)
+                : new Point3D();
+            segment.FlowGpm = ResolveTrunkFlowForSegment(
+                segment,
+                trunkPoints,
+                totalSprinklerFlowGpm,
+                path.UsesProjectTrunk,
+                supplyHeader);
         }
     }
 
     private static IList<HydraulicGraphSegment> BuildChainFromRoomSegments(
         LayoutSprinklerPoint remoteSprinkler,
         IList<HydraulicGraphSegment> roomSegments,
-        Point3D sourcePoint)
+        Point3D sourcePoint,
+        SchematicPipeRoutingSummary schematicPipeRouting)
     {
         List<HydraulicGraphSegment> chain = new List<HydraulicGraphSegment>();
         HydraulicGraphSegment branchDrop = FindBranchDropSegment(remoteSprinkler, roomSegments);
@@ -136,20 +155,127 @@ public static class HydraulicSegmentGraphBuilder
         Point3D tieInPoint = branchTieIn?.End ?? branchDrop?.End ?? remoteSprinkler.Location;
         HydraulicGraphSegment riser = roomSegments
             .FirstOrDefault(segment => string.Equals(segment.SegmentType, PipeSegmentTypes.Riser, StringComparison.OrdinalIgnoreCase));
-        Point3D riserTop = riser?.End ?? riser?.Start ?? sourcePoint;
+        Point3D roomTap = riser?.End ?? riser?.Start ?? sourcePoint;
 
         IList<HydraulicGraphSegment> crossMainSegments = BuildCrossMainSegments(
             tieInPoint,
-            riserTop,
+            roomTap,
             roomSegments);
         chain.AddRange(crossMainSegments);
 
-        if (riser != null)
+        if (schematicPipeRouting?.UsesProjectTrunk == true)
+        {
+            chain.AddRange(BuildProjectTrunkSegments(remoteSprinkler.Room?.RevitElementId ?? 0, schematicPipeRouting));
+        }
+        else if (riser != null)
         {
             chain.Add(CloneSegment(riser));
         }
 
         return chain.Where(segment => segment.LengthFeet > 0.01).ToList();
+    }
+
+    private static IList<HydraulicGraphSegment> BuildProjectTrunkSegments(
+        int remoteRoomRevitElementId,
+        SchematicPipeRoutingSummary schematicPipeRouting)
+    {
+        List<HydraulicGraphSegment> segments = new List<HydraulicGraphSegment>();
+        RoomTrunkTap roomTap = ProjectTrunkRouter.FindRoomTap(schematicPipeRouting, remoteRoomRevitElementId);
+        Point3D supplyHeader = ProjectTrunkRouter.ResolveSupplyHeader(schematicPipeRouting);
+        if (roomTap != null && !PointsMatch(roomTap.HeaderPoint, supplyHeader))
+        {
+            PipeSegment projectMain = schematicPipeRouting.Segments?
+                .FirstOrDefault(segment =>
+                    segment.RoomRevitElementId == ProjectTrunkRouter.ProjectScopeRoomRevitElementId
+                    && string.Equals(segment.SegmentType, PipeSegmentTypes.Main, StringComparison.OrdinalIgnoreCase)
+                    && PointsMatch(segment.Start, roomTap.HeaderPoint));
+            if (projectMain == null)
+            {
+                projectMain = schematicPipeRouting.Segments?
+                    .FirstOrDefault(segment =>
+                        segment.RoomRevitElementId == ProjectTrunkRouter.ProjectScopeRoomRevitElementId
+                        && string.Equals(segment.SegmentType, PipeSegmentTypes.Main, StringComparison.OrdinalIgnoreCase)
+                        && (segment.Description ?? string.Empty).IndexOf("project trunk", StringComparison.OrdinalIgnoreCase) >= 0
+                        && (PointsMatch(segment.Start, roomTap.HeaderPoint) || segment.Start.X == roomTap.HeaderPoint.X));
+            }
+
+            if (projectMain != null)
+            {
+                segments.Add(ConvertProjectSegment(projectMain));
+            }
+            else
+            {
+                segments.Add(new HydraulicGraphSegment
+                {
+                    SegmentId = "Project trunk to supply",
+                    SegmentType = PipeSegmentTypes.Main,
+                    Start = roomTap.HeaderPoint,
+                    End = supplyHeader,
+                    LengthFeet = OrthogonalLengthFeet(roomTap.HeaderPoint, supplyHeader),
+                    DiameterInches = 4.0,
+                    Description = "Project trunk to supply",
+                    DataSource = "Schematic"
+                });
+            }
+        }
+
+        PipeSegment buildingRiser = schematicPipeRouting.Segments?
+            .FirstOrDefault(segment =>
+                segment.RoomRevitElementId == ProjectTrunkRouter.ProjectScopeRoomRevitElementId
+                && string.Equals(segment.SegmentType, PipeSegmentTypes.Riser, StringComparison.OrdinalIgnoreCase));
+        if (buildingRiser != null)
+        {
+            segments.Add(ConvertProjectSegment(buildingRiser));
+        }
+
+        return segments;
+    }
+
+    private static HydraulicGraphSegment ConvertProjectSegment(PipeSegment segment)
+    {
+        return new HydraulicGraphSegment
+        {
+            SegmentId = segment.Description,
+            Start = segment.Start,
+            End = segment.End,
+            LengthFeet = segment.LengthFeet,
+            DiameterInches = segment.DiameterInches,
+            SegmentType = segment.SegmentType,
+            RoomRevitElementId = segment.RoomRevitElementId,
+            Description = segment.Description,
+            DataSource = "Schematic"
+        };
+    }
+
+    private static IList<TrunkContributionPoint> BuildProjectTrunkContributionPoints(
+        IEnumerable<LayoutSprinklerPoint> operatingSprinklers,
+        IDictionary<LayoutSprinklerPoint, double> headFlows,
+        SchematicPipeRoutingSummary schematicPipeRouting)
+    {
+        List<TrunkContributionPoint> points = new List<TrunkContributionPoint>();
+        foreach (LayoutSprinklerPoint head in operatingSprinklers ?? Enumerable.Empty<LayoutSprinklerPoint>())
+        {
+            double flow = headFlows.TryGetValue(head, out double headFlow) ? headFlow : 0.0;
+            int roomId = head.Room?.RevitElementId ?? 0;
+            points.Add(new TrunkContributionPoint
+            {
+                Location = head.Location,
+                DistanceFromRiserFeet = ProjectTrunkRouter.ComputePathDistanceFromSupplyFeet(
+                    schematicPipeRouting,
+                    roomId,
+                    head.Location),
+                FlowGpm = flow
+            });
+        }
+
+        return points
+            .OrderByDescending(point => point.DistanceFromRiserFeet)
+            .ToList();
+    }
+
+    private static double OrthogonalLengthFeet(Point3D start, Point3D end)
+    {
+        return Math.Abs(end.X - start.X) + Math.Abs(end.Y - start.Y) + Math.Abs(end.Z - start.Z);
     }
 
     private static IList<HydraulicGraphSegment> BuildCrossMainSegments(
@@ -338,30 +464,44 @@ public static class HydraulicSegmentGraphBuilder
     private static double ResolveTrunkFlowForSegment(
         HydraulicGraphSegment segment,
         IList<TrunkContributionPoint> trunkPoints,
-        double totalSprinklerFlowGpm)
+        double totalSprinklerFlowGpm,
+        bool usesProjectTrunk,
+        Point3D supplyHeader)
     {
         if (trunkPoints.Count == 0)
         {
             return totalSprinklerFlowGpm;
         }
 
-        double segmentDistance = Math.Max(
-            trunkPoints.Max(point => point.DistanceFromRiserFeet),
-            HorizontalDistanceFeet(segment.Start, trunkPoints[0].Location));
+        if (usesProjectTrunk)
+        {
+            double upstreamDistanceFromSupply = OrthogonalLengthFeet(supplyHeader, segment.End);
+            double cumulativeFlow = 0.0;
+            foreach (TrunkContributionPoint point in trunkPoints)
+            {
+                if (point.DistanceFromRiserFeet + LocationToleranceFeet >= upstreamDistanceFromSupply)
+                {
+                    cumulativeFlow += point.FlowGpm;
+                }
+            }
+
+            return cumulativeFlow > 0.01 ? cumulativeFlow : totalSprinklerFlowGpm;
+        }
+
         double downstreamDistance = Math.Max(
             HorizontalDistanceFeet(segment.Start, segment.End),
             HorizontalDistanceFeet(segment.End, trunkPoints.Last().Location));
 
-        double cumulativeFlow = 0.0;
+        double roomCumulativeFlow = 0.0;
         foreach (TrunkContributionPoint point in trunkPoints)
         {
             if (point.DistanceFromRiserFeet + LocationToleranceFeet >= downstreamDistance)
             {
-                cumulativeFlow += point.FlowGpm;
+                roomCumulativeFlow += point.FlowGpm;
             }
         }
 
-        return cumulativeFlow > 0.01 ? cumulativeFlow : totalSprinklerFlowGpm;
+        return roomCumulativeFlow > 0.01 ? roomCumulativeFlow : totalSprinklerFlowGpm;
     }
 
     private static HydraulicGraphSegment CloneSegment(HydraulicGraphSegment segment)

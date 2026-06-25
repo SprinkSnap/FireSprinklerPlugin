@@ -24,7 +24,7 @@ public static class LayoutLinkedHydraulicCalculator
         SchematicPipeRoutingSummary schematicPipeRouting = null,
         PipePlacementSummary pipePlacementSummary = null)
     {
-        Point3D sourcePoint = HydraulicGraphBuilder.ResolveSourcePoint(controllingRooms);
+        Point3D sourcePoint = HydraulicGraphBuilder.ResolveSourcePoint(controllingRooms, schematicPipeRouting);
         IList<LayoutSprinklerPoint> sprinklerPoints = HydraulicGraphBuilder.CollectSprinklerPoints(
             controllingRooms,
             defaultKFactor);
@@ -94,7 +94,13 @@ public static class LayoutLinkedHydraulicCalculator
 
         if (path.UsesSegmentGraphHydraulics && path.SegmentChain.Count > 0)
         {
-            SolveSegmentGraphHydraulics(path, headFlows, totalSprinklerFlow, hoseStreamAllowanceGpm, remotePressurePsi);
+            SolveSegmentGraphHydraulics(
+                path,
+                headFlows,
+                totalSprinklerFlow,
+                hoseStreamAllowanceGpm,
+                remotePressurePsi,
+                schematicPipeRouting);
         }
         else
         {
@@ -154,13 +160,15 @@ public static class LayoutLinkedHydraulicCalculator
         IDictionary<LayoutSprinklerPoint, double> headFlows,
         double totalSprinklerFlowGpm,
         double hoseStreamAllowanceGpm,
-        double remotePressurePsi)
+        double remotePressurePsi,
+        SchematicPipeRoutingSummary schematicPipeRouting)
     {
         HydraulicSegmentGraphBuilder.AssignSegmentFlows(
             path,
             headFlows,
             totalSprinklerFlowGpm,
-            hoseStreamAllowanceGpm);
+            hoseStreamAllowanceGpm,
+            schematicPipeRouting);
 
         double downstreamPressurePsi = remotePressurePsi;
         double branchFrictionPsi = 0.0;

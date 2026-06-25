@@ -39,6 +39,10 @@ public static class SchematicPipeRouter
             summary.Messages.Add("No sprinkler layout coordinates were available for schematic pipe routing.");
         }
 
+        ProjectTrunkRouter.AppendProjectTrunk(summary, rooms);
+        summary.TotalSegmentCount = summary.Segments.Count;
+        summary.TotalLengthFeet = summary.Segments.Sum(segment => segment.LengthFeet);
+
         return summary;
     }
 
