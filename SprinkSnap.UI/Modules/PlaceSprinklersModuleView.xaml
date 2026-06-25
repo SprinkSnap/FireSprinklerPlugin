@@ -36,7 +36,7 @@
             </DockPanel>
         </Border>
 
-        <UniformGrid Grid.Row="1" Columns="6" Margin="0,0,0,12">
+        <UniformGrid Grid.Row="1" Columns="7" Margin="0,0,0,12">
             <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="Candidates" Foreground="#6B7280" />
@@ -73,11 +73,19 @@
                     <TextBlock Text="{Binding SchematicPipeSegmentCount}" FontSize="26" FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
-            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12">
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="Pipes placed" Foreground="#6B7280" />
                     <TextBlock FontSize="26" FontWeight="SemiBold">
                         <Run Text="{Binding PlacedPipeSegmentCount}" /><Run Text=" / " /><Run Text="{Binding PlacedPipeLengthFeet, StringFormat=N0}" /><Run Text=" ft" />
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12">
+                <StackPanel>
+                    <TextBlock Text="Fittings placed" Foreground="#6B7280" />
+                    <TextBlock FontSize="26" FontWeight="SemiBold">
+                        <Run Text="{Binding PlacedFittingCount}" /><Run Text=" / " /><Run Text="{Binding SchematicFittingCount}" />
                     </TextBlock>
                 </StackPanel>
             </Border>
@@ -90,7 +98,10 @@
                           IsChecked="{Binding AllowUnmappedPlacement}"
                           Margin="0,0,0,8" />
                 <CheckBox Content="Place schematic pipes after sprinklers"
-                          IsChecked="{Binding PlaceSchematicPipesWithSprinklers}" />
+                          IsChecked="{Binding PlaceSchematicPipesWithSprinklers}"
+                          Margin="0,0,0,8" />
+                <CheckBox Content="Place fittings and valves at routing joints when placing pipes"
+                          IsChecked="{Binding PlaceSchematicFittingsWithPipes}" />
             </StackPanel>
         </Border>
 

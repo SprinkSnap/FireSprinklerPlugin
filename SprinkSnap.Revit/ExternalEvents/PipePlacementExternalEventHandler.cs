@@ -49,7 +49,8 @@ public sealed class PipePlacementExternalEventHandler : IExternalEventHandler
                 summary = RevitPipePlacementService.Place(
                     pendingDocument,
                     pendingContext.ProjectState.Rooms,
-                    pendingContext.ProjectState.SchematicPipeRouting);
+                    pendingContext.ProjectState.SchematicPipeRouting,
+                    pendingContext.ProjectState.PlaceSchematicFittingsWithPipes);
 
                 pendingContext.ProjectState.PipePlacementSummary = summary;
                 RevitSessionPersistence.Save(pendingDocument, pendingContext.ProjectState);

@@ -50,15 +50,13 @@ public static class FittingTakeoffCalculator
         {
             List<PipeSegment> roomSegments = roomGroup.ToList();
             PipeSegment first = roomSegments.First();
-            int branchDropCount = CountBranchSegments(roomSegments, "branch drop");
-            int branchTieInCount = CountBranchSegments(roomSegments, "branch tie-in");
+            IList<PipeJoint> joints = SchematicPipeJointBuilder.BuildRoomJoints(roomSegments);
             bool hasRiser = roomSegments.Any(segment =>
                 string.Equals(segment.SegmentType, PipeSegmentTypes.Riser, StringComparison.OrdinalIgnoreCase));
-            bool hasCrossMain = roomSegments.Any(segment =>
-                string.Equals(segment.SegmentType, PipeSegmentTypes.CrossMain, StringComparison.OrdinalIgnoreCase));
 
             placedRooms.TryGetValue(roomGroup.Key, out PipePlacementRoomResult placedRoom);
-            bool usesPlaced = placedRoom?.PlacedSegmentCount > 0;
+            bool usesPlaced = (placedRoom?.PlacedSegmentCount ?? 0) > 0
+                || (placedRoom?.PlacedFittingCount ?? 0) > 0;
 
             RoomFittingTakeoff takeoff = new RoomFittingTakeoff
             {
@@ -66,11 +64,18 @@ public static class FittingTakeoffCalculator
                 RoomNumber = first.RoomNumber,
                 RoomName = first.RoomName,
                 LevelName = first.LevelName,
-                Tee125Count = branchTieInCount,
-                Elbow125Count = branchDropCount + branchTieInCount,
-                Elbow4InchCount = hasRiser && hasCrossMain ? 1 : 0,
+                Tee125Count = joints.Count(joint =>
+                    string.Equals(joint.JointType, PipeJointTypes.Tee, StringComparison.OrdinalIgnoreCase)
+                    && Math.Abs(joint.DiameterInches - 1.25) < 0.01),
+                Elbow125Count = joints.Count(joint =>
+                    string.Equals(joint.JointType, PipeJointTypes.Elbow, StringComparison.OrdinalIgnoreCase)
+                    && Math.Abs(joint.DiameterInches - 1.25) < 0.01),
+                Elbow4InchCount = joints.Count(joint =>
+                    string.Equals(joint.JointType, PipeJointTypes.Elbow, StringComparison.OrdinalIgnoreCase)
+                    && Math.Abs(joint.DiameterInches - 4.0) < 0.01),
                 RiserAssemblyCount = hasRiser ? 1 : 0,
-                ValveCount = hasRiser ? 1 : 0,
+                ValveCount = joints.Count(joint =>
+                    string.Equals(joint.JointType, PipeJointTypes.Valve, StringComparison.OrdinalIgnoreCase)),
                 UsesPlacedPipes = usesPlaced
             };
 
@@ -85,12 +90,5 @@ public static class FittingTakeoffCalculator
         }
 
         return takeoffs.OrderBy(takeoff => takeoff.LevelName).ThenBy(takeoff => takeoff.RoomNumber).ToList();
-    }
-
-    private static int CountBranchSegments(IEnumerable<PipeSegment> segments, string descriptionToken)
-    {
-        return segments.Count(segment =>
-            string.Equals(segment.SegmentType, PipeSegmentTypes.Branch, StringComparison.OrdinalIgnoreCase)
-            && (segment.Description ?? string.Empty).IndexOf(descriptionToken, StringComparison.OrdinalIgnoreCase) >= 0);
     }
 }

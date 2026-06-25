@@ -101,6 +101,8 @@ public sealed class SprinkSnapProjectState
     public SchematicPipeRoutingSummary SchematicPipeRouting { get; set; } = new SchematicPipeRoutingSummary();
 
     public PipePlacementSummary PipePlacementSummary { get; set; } = new PipePlacementSummary();
+
+    public bool PlaceSchematicFittingsWithPipes { get; set; } = true;
 }
 
 public sealed class ComplianceWarning

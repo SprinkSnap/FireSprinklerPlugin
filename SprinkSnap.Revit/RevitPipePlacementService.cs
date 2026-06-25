@@ -16,7 +16,8 @@ public static class RevitPipePlacementService
     public static PipePlacementSummary Place(
         Document document,
         IEnumerable<RoomInfo> rooms,
-        SchematicPipeRoutingSummary schematicRouting)
+        SchematicPipeRoutingSummary schematicRouting,
+        bool placeFittings = true)
     {
         PipePlacementSummary summary = new PipePlacementSummary();
         if (document == null)
@@ -33,6 +34,11 @@ public static class RevitPipePlacementService
             return summary;
         }
 
+        IList<PipeJoint> allJoints = placeFittings
+            ? SchematicPipeJointBuilder.BuildFromRouting(schematicRouting)
+            : new List<PipeJoint>();
+        summary.TotalFittingCount = allJoints.Count;
+
         PipingSystemType systemType = RevitPipeTypeResolver.ResolveSystemType(document);
         if (systemType == null)
         {
@@ -45,6 +51,10 @@ public static class RevitPipePlacementService
             .GroupBy(room => room.RevitElementId)
             .ToDictionary(group => group.Key, group => group.First());
 
+        Dictionary<int, List<PipeJoint>> jointsByRoom = allJoints
+            .GroupBy(joint => joint.RoomRevitElementId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
         using (Transaction transaction = new Transaction(document, "SprinkSnap Place Schematic Pipes"))
         {
             transaction.Start();
@@ -52,15 +62,19 @@ public static class RevitPipePlacementService
             foreach (IGrouping<int, PipeSegment> roomGroup in segments.GroupBy(segment => segment.RoomRevitElementId))
             {
                 roomsById.TryGetValue(roomGroup.Key, out RoomInfo room);
+                jointsByRoom.TryGetValue(roomGroup.Key, out List<PipeJoint> roomJoints);
                 PipePlacementRoomResult roomResult = PlaceRoomSegments(
                     document,
                     room,
                     roomGroup.ToList(),
-                    systemType);
+                    systemType,
+                    placeFittings ? roomJoints ?? new List<PipeJoint>() : new List<PipeJoint>());
                 summary.RoomResults.Add(roomResult);
                 summary.PlacedSegmentCount += roomResult.PlacedSegmentCount;
                 summary.SkippedSegmentCount += roomResult.SkippedSegmentCount;
                 summary.PlacedLengthFeet += roomResult.PlacedLengthFeet;
+                summary.PlacedFittingCount += roomResult.PlacedFittingCount;
+                summary.SkippedFittingCount += roomResult.SkippedFittingCount;
             }
 
             transaction.Commit();
@@ -83,6 +97,22 @@ public static class RevitPipePlacementService
                 + " room(s).");
         }
 
+        if (placeFittings)
+        {
+            if (summary.PlacedFittingCount == 0 && summary.TotalFittingCount > 0)
+            {
+                summary.Messages.Add(
+                    "No schematic fittings were placed. Load pipe fitting and accessory families (elbows, tees, OS&Y valves) in Revit.");
+            }
+            else if (summary.PlacedFittingCount > 0)
+            {
+                summary.Messages.Add(
+                    "Placed "
+                    + summary.PlacedFittingCount
+                    + " schematic fitting(s) and valve(s) at routing joints.");
+            }
+        }
+
         return summary;
     }
 
@@ -90,7 +120,8 @@ public static class RevitPipePlacementService
         Document document,
         RoomInfo room,
         IList<PipeSegment> segments,
-        PipingSystemType systemType)
+        PipingSystemType systemType,
+        IList<PipeJoint> roomJoints)
     {
         PipeSegment first = segments.First();
         PipePlacementRoomResult result = new PipePlacementRoomResult
@@ -160,6 +191,17 @@ public static class RevitPipePlacementService
         if (string.IsNullOrWhiteSpace(result.Message) && result.PlacedSegmentCount > 0)
         {
             result.Message = "Placed " + result.PlacedSegmentCount + " schematic pipe segment(s).";
+        }
+
+        if (roomJoints != null && roomJoints.Count > 0 && result.PlacedSegmentCount > 0)
+        {
+            RevitFittingPlacementService.PlaceRoomJoints(document, room, roomJoints, level, result);
+            if (result.PlacedFittingCount > 0)
+            {
+                result.Message = AppendMessage(
+                    result.Message,
+                    "Placed " + result.PlacedFittingCount + " fitting(s) and valve(s).");
+            }
         }
 
         return result;

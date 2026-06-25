@@ -946,6 +946,7 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
     private string statusMessage = "Run pre-flight validation, then place approved sprinkler layouts and schematic pipes in Revit.";
     private bool allowUnmappedPlacement;
     private bool placeSchematicPipesWithSprinklers = true;
+    private bool placeSchematicFittingsWithPipes = true;
     private bool hasValidatedPreflight;
 
     public PlaceSprinklersModuleViewModel(SprinkSnapShellContext context)
@@ -980,6 +981,12 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
 
     public double PlacedPipeLengthFeet => context.ProjectState.PipePlacementSummary?.PlacedLengthFeet ?? 0.0;
 
+    public int PlacedFittingCount => context.ProjectState.PipePlacementSummary?.PlacedFittingCount ?? 0;
+
+    public int SchematicFittingCount => context.ProjectState.SchematicPipeRouting?.TotalSegmentCount > 0
+        ? SchematicPipeJointBuilder.BuildFromRouting(context.ProjectState.SchematicPipeRouting).Count
+        : 0;
+
     public int SkippedRoomCount => context.ProjectState.PlacementSummary?.SkippedRoomCount ?? 0;
 
     public int ReadyRoomCount => context.ProjectState.PlacementPreflight?.ReadyRoomCount ?? 0;
@@ -1008,6 +1015,17 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
         set
         {
             placeSchematicPipesWithSprinklers = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool PlaceSchematicFittingsWithPipes
+    {
+        get => placeSchematicFittingsWithPipes;
+        set
+        {
+            placeSchematicFittingsWithPipes = value;
+            context.ProjectState.PlaceSchematicFittingsWithPipes = value;
             OnPropertyChanged();
         }
     }
@@ -1124,7 +1142,10 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
             return;
         }
 
-        StatusMessage = "Placing schematic pipes in Revit...";
+        context.ProjectState.PlaceSchematicFittingsWithPipes = placeSchematicFittingsWithPipes;
+        StatusMessage = placeSchematicFittingsWithPipes
+            ? "Placing schematic pipes and fittings in Revit..."
+            : "Placing schematic pipes in Revit...";
         context.RequestPlacePipes(summary =>
         {
             Application.Current?.Dispatcher.Invoke(() =>
@@ -1157,7 +1178,9 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
         context.ProjectState.PipePlacementSummary = summary;
         OnPropertyChanged(nameof(PlacedPipeSegmentCount));
         OnPropertyChanged(nameof(PlacedPipeLengthFeet));
+        OnPropertyChanged(nameof(PlacedFittingCount));
         OnPropertyChanged(nameof(SchematicPipeSegmentCount));
+        OnPropertyChanged(nameof(SchematicFittingCount));
     }
 
     private void ApplyPreflight(PlacementPreflightSummary summary)
@@ -1204,7 +1227,11 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
             ApplyPipeSummary(context.ProjectState.PipePlacementSummary);
         }
 
+        placeSchematicFittingsWithPipes = context.ProjectState.PlaceSchematicFittingsWithPipes;
+        OnPropertyChanged(nameof(PlaceSchematicFittingsWithPipes));
+
         OnPropertyChanged(nameof(SchematicPipeSegmentCount));
+        OnPropertyChanged(nameof(SchematicFittingCount));
     }
 }
 

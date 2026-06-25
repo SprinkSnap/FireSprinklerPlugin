@@ -119,6 +119,7 @@ public static class SprinkSnapPdfReportExporter
                     column.Item().Text("Schematic pipe segments: " + (projectState.SchematicPipeRouting?.TotalSegmentCount ?? 0));
                     column.Item().Text("Schematic pipe length: " + (projectState.SchematicPipeRouting?.TotalLengthFeet ?? 0).ToString("N0") + " ft");
                     column.Item().Text("Schematic pipes placed in Revit: " + (projectState.PipePlacementSummary?.PlacedSegmentCount ?? 0));
+                    column.Item().Text("Schematic fittings placed in Revit: " + (projectState.PipePlacementSummary?.PlacedFittingCount ?? 0));
 
                     column.Item().PaddingTop(8).Text("Room design table").FontSize(14).SemiBold();
                     column.Item().Table(table =>
