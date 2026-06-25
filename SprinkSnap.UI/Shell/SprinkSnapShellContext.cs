@@ -57,6 +57,8 @@ public sealed class SprinkSnapShellContext
 
     public Action<int> RequestShowRoomInRevit { get; set; }
 
+    public Action<SprinkSnapWorkflowStep> RequestNavigateToWorkflowStep { get; set; }
+
     public static SprinkSnapShellContext CreateEmpty()
     {
         return new SprinkSnapShellContext(new SprinkSnapProjectState());
@@ -70,6 +72,11 @@ public sealed class SprinkSnapShellContext
     public void RequestPersistToRevit()
     {
         PersistToRevitRequested?.Invoke();
+    }
+
+    public void NavigateToWorkflowStep(SprinkSnapWorkflowStep step)
+    {
+        RequestNavigateToWorkflowStep?.Invoke(step);
     }
 
     public void ApplyRevitLoad(RevitProjectLoadResult loadResult, bool markAnalysisComplete)
@@ -127,6 +134,7 @@ public sealed class SprinkSnapShellContext
 
         if (ProjectState.ModelChangeAssessment.IsStale)
         {
+            ProjectState.SessionProgress.ReconciliationRequired = true;
             foreach (string message in ProjectState.ModelChangeAssessment.Messages)
             {
                 if (!ProjectState.ModelAnalysis.Warnings.Contains(message))
@@ -217,20 +225,39 @@ public sealed class SprinkSnapShellContext
 
     public void ApplyPostReanalysisInvalidation()
     {
+        List<int> changedRoomIds = ProjectState.ModelChangeAssessment?.ChangedRoomRevitElementIds?.ToList()
+            ?? new List<int>();
+
         ProjectState.SessionProgress.ClashDetectionComplete = false;
         ProjectState.SessionProgress.SprinklersPlacedInRevit = false;
         ProjectState.SessionProgress.DesignGenerated = false;
         ProjectState.SessionProgress.HydraulicsComplete = false;
         ProjectState.SessionProgress.MaterialsComplete = false;
+        ProjectState.SessionProgress.ReconciliationRequired = true;
 
-        if (ProjectState.ModelChangeAssessment?.IsStale != true)
+        ProjectState.ModelChangeAssessment = new ModelChangeAssessment
         {
-            ProjectState.ModelChangeAssessment = new ModelChangeAssessment
+            HasBaseline = true,
+            IsStale = false,
+            ChangedRoomCount = changedRoomIds.Count,
+            ChangedRoomRevitElementIds = changedRoomIds,
+            Messages =
             {
-                HasBaseline = true,
-                IsStale = false,
-                Messages = { "Revit model re-analyzed and refreshed in the current SprinkSnap session." }
-            };
+                "Revit model re-analyzed. Downstream design, clash, hydraulics, and materials results were cleared.",
+                changedRoomIds.Count > 0
+                    ? changedRoomIds.Count + " changed room(s) still require hazard review."
+                    : "Work through the reconciliation checklist before exporting or placing."
+            }
+        };
+
+        ApplyModelChangeAssessmentToHazardViewModel();
+    }
+
+    private void ApplyModelChangeAssessmentToHazardViewModel()
+    {
+        if (hazardViewModel != null)
+        {
+            hazardViewModel.ApplyModelChangeAssessment(ProjectState.ModelChangeAssessment);
         }
     }
 

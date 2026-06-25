@@ -291,7 +291,8 @@ public static class SprinkSnapSessionPersistenceService
             SprinklersPlacedInRevit = progress.SprinklersPlacedInRevit,
             HydraulicsComplete = progress.HydraulicsComplete,
             MaterialsComplete = progress.MaterialsComplete,
-            ReportsExported = progress.ReportsExported
+            ReportsExported = progress.ReportsExported,
+            ReconciliationRequired = progress.ReconciliationRequired
         };
     }
 

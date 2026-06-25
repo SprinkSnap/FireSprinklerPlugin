@@ -14,8 +14,33 @@
                     CornerRadius="8"
                     Padding="12"
                     Margin="0,0,0,16"
-                    Visibility="{Binding IsModelStale, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <TextBlock Text="{Binding ModelChangeSummary}" TextWrapping="Wrap" Foreground="#92400E" />
+                    Visibility="{Binding IsReconciliationActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding ReconciliationBannerTitle}" FontWeight="SemiBold" Foreground="#92400E" />
+                    <TextBlock Text="{Binding ReconciliationBannerMessage}" TextWrapping="Wrap" Foreground="#92400E" Margin="0,6,0,12" />
+                    <ItemsControl ItemsSource="{Binding ReconciliationSteps}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,0,0,6">
+                                    <Button DockPanel.Dock="Right"
+                                            Content="Open"
+                                            Command="{Binding DataContext.OpenReconciliationStepCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Padding="8,4"
+                                            Margin="8,0,0,0" />
+                                    <StackPanel>
+                                        <TextBlock Foreground="#92400E" FontWeight="SemiBold">
+                                            <Run Text="{Binding Title, Mode=OneWay}" />
+                                            <Run Text=" — " />
+                                            <Run Text="{Binding StatusText, Mode=OneWay}" />
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding Description, Mode=OneWay}" TextWrapping="Wrap" Foreground="#B45309" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </Border>
 
             <UniformGrid Columns="3" Margin="0,0,0,16">

@@ -63,6 +63,8 @@ public sealed class SprinkSnapSessionProgress
     public bool MaterialsComplete { get; set; }
 
     public bool ReportsExported { get; set; }
+
+    public bool ReconciliationRequired { get; set; }
 }
 
 public sealed class SprinkSnapProjectState

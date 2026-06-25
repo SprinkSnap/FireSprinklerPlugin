@@ -171,23 +171,55 @@ public static class SprinkSnapWorkflowGate
                 {
                     return CreateAccess(
                         step,
-                        true,
+                        false,
                         hydraulicsComplete,
-                        StaleModelBlockReason,
-                        WorkflowStepStatus.Warning,
-                        "Review first");
+                        StaleModelBlockReason);
+                }
+
+                if (state.SessionProgress.ReconciliationRequired)
+                {
+                    return CreateAccess(
+                        step,
+                        false,
+                        hydraulicsComplete,
+                        "Complete model reconciliation before running hydraulics.",
+                        WorkflowStepStatus.Blocked,
+                        "Reconcile");
                 }
 
                 return CreateAccess(step, true, hydraulicsComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.Materials:
-                return CreateAccess(
-                    step,
-                    isUnlocked: designComplete || placementComplete,
-                    isComplete: materialsComplete,
-                    blockReason: (designComplete || placementComplete)
-                        ? string.Empty
-                        : "Generate sprinkler design or place sprinklers before opening material takeoff.");
+                if (!(designComplete || placementComplete))
+                {
+                    return CreateAccess(
+                        step,
+                        false,
+                        materialsComplete,
+                        "Generate sprinkler design or place sprinklers before opening material takeoff.");
+                }
+
+                if (modelStale)
+                {
+                    return CreateAccess(
+                        step,
+                        false,
+                        materialsComplete,
+                        StaleModelBlockReason);
+                }
+
+                if (state.SessionProgress.ReconciliationRequired)
+                {
+                    return CreateAccess(
+                        step,
+                        false,
+                        materialsComplete,
+                        "Complete model reconciliation before refreshing material takeoff.",
+                        WorkflowStepStatus.Blocked,
+                        "Reconcile");
+                }
+
+                return CreateAccess(step, true, materialsComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.Reports:
                 bool reportsUnlocked = hydraulicsComplete || materialsComplete;

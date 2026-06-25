@@ -46,10 +46,22 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
     {
         this.context = context;
         Rooms = new ObservableCollection<RoomInfo>(context.ProjectState.Rooms);
+        ReconciliationSteps = new ObservableCollection<StaleModelReconciliationStep>();
         RunAnalysisCommand = new ModuleRelayCommand(_ => RunAnalysis());
         ExportJsonCommand = new ModuleRelayCommand(_ => ExportJson(), _ => context.ProjectState.Rooms.Count > 0);
+        OpenReconciliationStepCommand = new ModuleRelayCommand(step =>
+        {
+            if (step is StaleModelReconciliationStep reconciliationStep)
+            {
+                context.NavigateToWorkflowStep(reconciliationStep.WorkflowStep);
+            }
+        });
         RefreshSummary();
     }
+
+    public ObservableCollection<StaleModelReconciliationStep> ReconciliationSteps { get; }
+
+    public ICommand OpenReconciliationStepCommand { get; }
 
     public ObservableCollection<RoomInfo> Rooms { get; }
 
@@ -70,6 +82,12 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
     public int LinkedModelCount => context.ProjectState.ModelAnalysis.LinkedModelCount;
 
     public bool IsModelStale => context.ProjectState.ModelChangeAssessment?.IsStale ?? false;
+
+    public bool IsReconciliationActive => StaleModelReconciliationService.IsReconciliationActive(context.ProjectState);
+
+    public string ReconciliationBannerTitle => StaleModelReconciliationService.GetBannerTitle(context.ProjectState);
+
+    public string ReconciliationBannerMessage => StaleModelReconciliationService.GetBannerMessage(context.ProjectState);
 
     public string ModelChangeSummary => context.ProjectState.ModelChangeAssessment?.Messages.Count > 0
         ? string.Join(" ", context.ProjectState.ModelChangeAssessment.Messages)
@@ -161,6 +179,20 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
         RefreshSummary();
     }
 
+    private void RefreshReconciliationSteps()
+    {
+        ReconciliationSteps.Clear();
+        if (!IsReconciliationActive)
+        {
+            return;
+        }
+
+        foreach (StaleModelReconciliationStep step in StaleModelReconciliationService.BuildSteps(context.ProjectState))
+        {
+            ReconciliationSteps.Add(step);
+        }
+    }
+
     private void ExportJson()
     {
         string json = analysisEngine.ExportJson(context.ProjectState.ModelAnalysis);
@@ -180,7 +212,11 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(ExistingSprinklerCount));
         OnPropertyChanged(nameof(LinkedModelCount));
         OnPropertyChanged(nameof(IsModelStale));
+        OnPropertyChanged(nameof(IsReconciliationActive));
+        OnPropertyChanged(nameof(ReconciliationBannerTitle));
+        OnPropertyChanged(nameof(ReconciliationBannerMessage));
         OnPropertyChanged(nameof(ModelChangeSummary));
+        RefreshReconciliationSteps();
     }
 }
 

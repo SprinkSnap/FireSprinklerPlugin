@@ -25,7 +25,8 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     public SprinkSnapShellViewModel(SprinkSnapShellContext context = null)
     {
         this.context = context ?? SprinkSnapShellContext.CreateEmpty();
-        context.WorkflowChanged += OnContextWorkflowChanged;
+        this.context.WorkflowChanged += OnContextWorkflowChanged;
+        this.context.RequestNavigateToWorkflowStep = OpenWorkflowStep;
 
         WorkflowSteps = new ObservableCollection<WorkflowStepState>();
         ModulePanels = new ObservableCollection<SprinkSnapModulePanel>
@@ -51,6 +52,8 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         ModuleCapabilities = new ObservableCollection<string>();
         OpenModuleCommand = new ShellRelayCommand(OpenModule, CanOpenModule);
         ShowDashboardCommand = new ShellRelayCommand(_ => ShowDashboard());
+        OpenReconciliationStepCommand = new ShellRelayCommand(OpenReconciliationStep);
+        ReconciliationSteps = new ObservableCollection<StaleModelReconciliationStep>();
         RefreshWorkflowGates();
         UpdateModuleCapabilities();
     }
@@ -78,6 +81,16 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     public ICommand OpenModuleCommand { get; }
 
     public ICommand ShowDashboardCommand { get; }
+
+    public ICommand OpenReconciliationStepCommand { get; }
+
+    public ObservableCollection<StaleModelReconciliationStep> ReconciliationSteps { get; }
+
+    public bool IsReconciliationActive => StaleModelReconciliationService.IsReconciliationActive(context.ProjectState);
+
+    public string ReconciliationBannerTitle => StaleModelReconciliationService.GetBannerTitle(context.ProjectState);
+
+    public string ReconciliationBannerMessage => StaleModelReconciliationService.GetBannerMessage(context.ProjectState);
 
     public FrameworkElement ActiveModuleContent
     {
@@ -150,6 +163,11 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     {
         get
         {
+            if (StaleModelReconciliationService.IsReconciliationActive(context.ProjectState))
+            {
+                return ReconciliationBannerTitle;
+            }
+
             if (!SprinkSnapWorkflowGate.IsAnalyzeComplete(context.ProjectState))
             {
                 return "Workflow not started. Begin with Analyze Model.";
@@ -212,6 +230,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
         context = newContext;
         context.WorkflowChanged += OnContextWorkflowChanged;
+        context.RequestNavigateToWorkflowStep = OpenWorkflowStep;
 
         AiAssistant = new AiAssistantViewModel(context);
         OnPropertyChanged(nameof(AiAssistant));
@@ -223,9 +242,9 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
         ShowModuleDashboard = true;
         ActiveModuleContent = null;
-        if (context.ProjectState.ModelChangeAssessment?.IsStale == true)
+        if (StaleModelReconciliationService.IsReconciliationActive(context.ProjectState))
         {
-            actionFeedback = string.Join(" ", context.ProjectState.ModelChangeAssessment.Messages);
+            actionFeedback = StaleModelReconciliationService.GetBannerMessage(context.ProjectState);
         }
         else
         {
@@ -258,6 +277,8 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
     public void RefreshWorkflowGates()
     {
+        StaleModelReconciliationService.UpdateReconciliationState(context.ProjectState);
+
         SprinkSnapSessionProgress progress = context.ProjectState.SessionProgress;
         progress.HazardReviewComplete = SprinkSnapWorkflowGate.IsHazardReviewComplete(context.ProjectState);
         progress.SprinklerReviewComplete = SprinkSnapWorkflowGate.IsSprinklerReviewComplete(context.ProjectState);
@@ -283,6 +304,53 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(WarningSummary));
         OnPropertyChanged(nameof(ProgressSummary));
         OnPropertyChanged(nameof(SelectedModulePanel));
+        OnPropertyChanged(nameof(IsReconciliationActive));
+        OnPropertyChanged(nameof(ReconciliationBannerTitle));
+        OnPropertyChanged(nameof(ReconciliationBannerMessage));
+        RefreshReconciliationSteps();
+    }
+
+    public void OpenWorkflowStep(SprinkSnapWorkflowStep step)
+    {
+        SprinkSnapModulePanel panel = ModulePanels.FirstOrDefault(candidate => candidate.Step == step);
+        if (panel == null)
+        {
+            return;
+        }
+
+        if (!panel.IsUnlocked)
+        {
+            actionFeedback = string.IsNullOrWhiteSpace(panel.BlockReason)
+                ? ReconciliationBannerMessage
+                : panel.BlockReason;
+            OnPropertyChanged(nameof(ActionFeedback));
+            return;
+        }
+
+        selectedModulePanel = panel;
+        LoadModuleWorkspace(panel);
+    }
+
+    private void OpenReconciliationStep(object parameter)
+    {
+        if (parameter is StaleModelReconciliationStep step)
+        {
+            OpenWorkflowStep(step.WorkflowStep);
+        }
+    }
+
+    private void RefreshReconciliationSteps()
+    {
+        ReconciliationSteps.Clear();
+        if (!IsReconciliationActive)
+        {
+            return;
+        }
+
+        foreach (StaleModelReconciliationStep step in StaleModelReconciliationService.BuildSteps(context.ProjectState))
+        {
+            ReconciliationSteps.Add(step);
+        }
     }
 
     private static SprinkSnapModulePanel CreatePanel(

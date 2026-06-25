@@ -138,6 +138,10 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         }
     }
 
+    public int ChangedRoomCount => EmbeddedProjectState?.ModelChangeAssessment?.ChangedRoomCount ?? 0;
+
+    public bool ShowChangedRoomBanner => StaleModelReconciliationService.IsReconciliationActive(EmbeddedProjectState);
+
     public int ExceptionRoomCount
     {
         get => Rooms.Count(room => room.RequiresExceptionReview);
@@ -995,6 +999,9 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         {
             item.RefreshModelChangeState(changedRoomIds);
         }
+
+        OnPropertyChanged(nameof(ChangedRoomCount));
+        OnPropertyChanged(nameof(ShowChangedRoomBanner));
     }
 
     public void RefreshFamilyMappingStatuses()
@@ -1033,6 +1040,8 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
     private void NotifyDashboardState()
     {
         OnPropertyChanged(nameof(TotalRoomCount));
+        OnPropertyChanged(nameof(ChangedRoomCount));
+        OnPropertyChanged(nameof(ShowChangedRoomBanner));
         OnPropertyChanged(nameof(ExceptionRoomCount));
         OnPropertyChanged(nameof(AutoSolvedRoomCount));
         OnPropertyChanged(nameof(AverageConfidenceText));

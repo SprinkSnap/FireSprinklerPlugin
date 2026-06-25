@@ -10,6 +10,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -29,7 +30,27 @@
             </DockPanel>
         </Border>
 
-        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,12">
+        <Border Grid.Row="1"
+                Background="#FEF3C7"
+                BorderBrush="#F59E0B"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="14"
+                Margin="0,0,0,12"
+                Visibility="{Binding ShowChangedRoomBanner, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel>
+                <TextBlock Text="Changed rooms need hazard review"
+                           FontWeight="SemiBold"
+                           Foreground="#92400E"
+                           FontSize="16" />
+                <TextBlock TextWrapping="Wrap" Foreground="#92400E" Margin="0,6,0,0">
+                    <Run Text="{Binding ChangedRoomCount, Mode=OneWay}" />
+                    <Run Text=" room(s) changed since the last SprinkSnap save. Rows marked below require re-approval before regenerating design." />
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <UniformGrid Grid.Row="2" Columns="4" Margin="0,0,0,12">
             <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
                     <TextBlock Text="Rooms" Foreground="#6B7280" FontSize="12" />
@@ -56,7 +77,7 @@
             </Border>
         </UniformGrid>
 
-        <Border Grid.Row="2" Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="10" Padding="0">
+        <Border Grid.Row="3" Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="10" Padding="0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -135,7 +156,7 @@
             </Grid>
         </Border>
 
-        <TextBlock Grid.Row="3"
+        <TextBlock Grid.Row="4"
                    Text="{Binding ValidationMessage}"
                    Foreground="#B45309"
                    TextWrapping="Wrap"
