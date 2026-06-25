@@ -100,9 +100,30 @@ public sealed class HydraulicPipeSizingServiceTests
             remoteAreaSquareFeet: 260.0,
             maxCoverageSquareFeet: 130.0);
 
-        Assert.True(path.CriticalPathVelocityViolationCount > 0);
-        Assert.True(path.CriticalPathDiameterSuggestionCount > 0);
-        Assert.Contains(path.SegmentChain, segment => segment.SuggestedDiameterInches > segment.DiameterInches);
-        Assert.Contains(path.CriticalPath, node => node.SuggestedDiameterInches > node.DiameterInches);
+        Assert.True(path.UsesAppliedPipeSizing);
+        Assert.Equal(0, path.CriticalPathVelocityViolationCount);
+        Assert.Equal(0, path.CriticalPathDiameterSuggestionCount);
+        Assert.Contains(path.SegmentChain, segment => segment.DiameterInches >= 1.5);
+        Assert.Contains(path.Warnings, warning => warning.IndexOf("Applied in-memory velocity-driven pipe upsizing", System.StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    [Fact]
+    public void ApplyVelocityDrivenUpsizing_UpdatesSegmentDiameter_WhenViolationExists()
+    {
+        List<HydraulicGraphSegment> segments = new List<HydraulicGraphSegment>
+        {
+            new HydraulicGraphSegment
+            {
+                SegmentType = PipeSegmentTypes.Branch,
+                DiameterInches = 1.25,
+                FlowGpm = 60.0
+            }
+        };
+
+        int applied = HydraulicPipeSizingService.ApplyVelocityDrivenUpsizing(segments);
+
+        Assert.Equal(1, applied);
+        Assert.Equal(1.5, segments[0].DiameterInches);
+        Assert.False(HydraulicPipeSizingService.SegmentChainHasVelocityViolations(segments));
     }
 }

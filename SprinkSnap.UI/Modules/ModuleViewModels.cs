@@ -545,6 +545,10 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public int CriticalPathDiameterSuggestionCount => result.CriticalPathDiameterSuggestionCount;
 
+    public bool UsesAppliedPipeSizing => result.UsesAppliedPipeSizing;
+
+    public int AppliedPipeSizingSegmentCount => result.AppliedPipeSizingSegmentCount;
+
     public IList<HydraulicNode> CriticalPath => result.CriticalPath ?? new List<HydraulicNode>();
 
     public string NfpaReference => result.NfpaReference;
@@ -652,6 +656,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(CriticalPathVelocityViolationCount));
         OnPropertyChanged(nameof(MaxCriticalPathVelocityFeetPerSecond));
         OnPropertyChanged(nameof(CriticalPathDiameterSuggestionCount));
+        OnPropertyChanged(nameof(UsesAppliedPipeSizing));
+        OnPropertyChanged(nameof(AppliedPipeSizingSegmentCount));
         OnPropertyChanged(nameof(CriticalPath));
         OnPropertyChanged(nameof(NfpaReference));
         OnPropertyChanged(nameof(WarningSummary));

@@ -99,6 +99,10 @@ public sealed class LayoutLinkedHydraulicPath
 
     public bool UsesRemoteAreaSelection { get; set; }
 
+    public bool UsesAppliedPipeSizing { get; set; }
+
+    public int AppliedPipeSizingSegmentCount { get; set; }
+
     public double CalculatedSprinklerFlowGpm { get; set; }
 
     public bool UsesSegmentGraphHydraulics { get; set; }

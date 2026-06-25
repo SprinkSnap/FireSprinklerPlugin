@@ -280,6 +280,10 @@ public sealed class HydraulicCalculationResult
 
     public int CriticalPathDiameterSuggestionCount { get; set; }
 
+    public bool UsesAppliedPipeSizing { get; set; }
+
+    public int AppliedPipeSizingSegmentCount { get; set; }
+
     public bool UsesUserSupplyAnchor { get; set; }
 
     public string UserSupplyAnchorLabel { get; set; } = string.Empty;
