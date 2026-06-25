@@ -10,14 +10,13 @@ public static class ProjectTrunkRouter
 {
     public const int ProjectScopeRoomRevitElementId = 0;
 
-    private const double MainDiameterInches = 4.0;
-
     private const double LocationToleranceFeet = 0.15;
 
     public static void EnsureProjectTrunk(
         SchematicPipeRoutingSummary summary,
         IEnumerable<RoomInfo> rooms,
-        HydraulicSupplyAnchor supplyAnchor = null)
+        HydraulicSupplyAnchor supplyAnchor = null,
+        double mainDiameterInches = PipeDiameterDefaults.DefaultMainDiameterInches)
     {
         if (summary == null)
         {
@@ -28,7 +27,7 @@ public static class ProjectTrunkRouter
         {
             RemoveProjectTrunkSegments(summary);
             summary.UsesProjectTrunk = false;
-            AppendProjectTrunk(summary, rooms, supplyAnchor);
+            AppendProjectTrunk(summary, rooms, supplyAnchor, mainDiameterInches);
             return;
         }
 
@@ -37,18 +36,21 @@ public static class ProjectTrunkRouter
             return;
         }
 
-        AppendProjectTrunk(summary, rooms, null);
+        AppendProjectTrunk(summary, rooms, null, mainDiameterInches);
     }
 
     public static void AppendProjectTrunk(
         SchematicPipeRoutingSummary summary,
         IEnumerable<RoomInfo> rooms,
-        HydraulicSupplyAnchor supplyAnchor = null)
+        HydraulicSupplyAnchor supplyAnchor = null,
+        double mainDiameterInches = PipeDiameterDefaults.DefaultMainDiameterInches)
     {
         if (summary == null)
         {
             return;
         }
+
+        mainDiameterInches = ResolveMainDiameterInches(summary, mainDiameterInches);
 
         IList<RoomTrunkTap> taps = CollectRoomTrunkTaps(summary, rooms);
         if (taps.Count < 2)
@@ -74,7 +76,7 @@ public static class ProjectTrunkRouter
 
         foreach (IGrouping<string, RoomTrunkTap> levelGroup in levelGroups)
         {
-            AppendLevelTrunk(summary, levelGroup.ToList(), supplyAnchor);
+            AppendLevelTrunk(summary, levelGroup.ToList(), supplyAnchor, mainDiameterInches);
         }
     }
 
@@ -166,7 +168,8 @@ public static class ProjectTrunkRouter
     private static void AppendLevelTrunk(
         SchematicPipeRoutingSummary summary,
         IList<RoomTrunkTap> taps,
-        HydraulicSupplyAnchor supplyAnchor)
+        HydraulicSupplyAnchor supplyAnchor,
+        double mainDiameterInches)
     {
         RoomTrunkTap supplyTap = taps
             .OrderBy(tap => tap.FloorPoint.X + tap.FloorPoint.Y)
@@ -180,11 +183,13 @@ public static class ProjectTrunkRouter
             ? ClonePoint(supplyAnchor.HeaderPoint)
             : new Point3D(supplyFloor.X, supplyFloor.Y, branchElevationFeet);
 
+        string mainLabel = PipeDiameterDefaults.FormatDiameterLabel(mainDiameterInches);
         summary.Segments.Add(CreateProjectSegment(
             PipeSegmentTypes.Riser,
             supplyFloor,
             supplyHeader,
-            "4\" building riser"));
+            mainDiameterInches,
+            mainLabel + " building riser"));
         summary.SupplyPoint = supplyFloor;
         if (supplyAnchor?.IsSet == true)
         {
@@ -203,7 +208,8 @@ public static class ProjectTrunkRouter
                 PipeSegmentTypes.Main,
                 tap.HeaderPoint,
                 supplyHeader,
-                "4\" project trunk to supply"));
+                mainDiameterInches,
+                mainLabel + " project trunk to supply"));
         }
 
         summary.UsesProjectTrunk = true;
@@ -273,13 +279,14 @@ public static class ProjectTrunkRouter
         string segmentType,
         Point3D start,
         Point3D end,
+        double mainDiameterInches,
         string description)
     {
         return new PipeSegment
         {
             RoomRevitElementId = ProjectScopeRoomRevitElementId,
             SegmentType = segmentType,
-            DiameterInches = MainDiameterInches,
+            DiameterInches = mainDiameterInches,
             Start = start,
             End = end,
             LengthFeet = OrthogonalLengthFeet(start, end),
@@ -308,6 +315,18 @@ public static class ProjectTrunkRouter
     private static double OrthogonalLengthFeet(Point3D start, Point3D end)
     {
         return Math.Abs(end.X - start.X) + Math.Abs(end.Y - start.Y) + Math.Abs(end.Z - start.Z);
+    }
+
+    private static double ResolveMainDiameterInches(SchematicPipeRoutingSummary summary, double fallbackDiameterInches)
+    {
+        double fromSegments = summary?.Segments?
+            .Where(segment => segment.DiameterInches > 0
+                && !string.Equals(segment.SegmentType, PipeSegmentTypes.Branch, StringComparison.OrdinalIgnoreCase))
+            .Select(segment => segment.DiameterInches)
+            .DefaultIfEmpty(0)
+            .Max() ?? 0;
+
+        return fromSegments > 0 ? fromSegments : fallbackDiameterInches;
     }
 }
 

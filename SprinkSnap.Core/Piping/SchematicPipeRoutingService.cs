@@ -9,7 +9,9 @@ public static class SchematicPipeRoutingService
 {
     public static SchematicPipeRoutingSummary RefreshProjectRouting(SprinkSnapProjectState projectState)
     {
-        SchematicPipeRoutingSummary summary = SchematicPipeRouter.RouteProject(projectState?.Rooms);
+        SchematicPipeRoutingSummary summary = SchematicPipeRouter.RouteProject(
+            projectState?.Rooms,
+            projectState?.Preferences);
         if (projectState != null)
         {
             projectState.SchematicPipeRouting = summary;

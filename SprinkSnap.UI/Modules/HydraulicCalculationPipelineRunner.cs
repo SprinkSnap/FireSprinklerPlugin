@@ -79,7 +79,8 @@ public sealed class HydraulicCalculationPipelineRunner
             context.ProjectState.PlacementSummary,
             context.ProjectState.SchematicPipeRouting,
             context.ProjectState.PipePlacementSummary,
-            context.ProjectState.HydraulicSupplyAnchor);
+            context.ProjectState.HydraulicSupplyAnchor,
+            context.ProjectState.Preferences);
 
         if (syncSummaryForFlags != null)
         {

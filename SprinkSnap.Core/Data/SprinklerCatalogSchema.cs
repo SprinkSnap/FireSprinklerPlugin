@@ -74,6 +74,10 @@ public sealed class SprinkSnapProjectPreferences
 
     public double DefaultKFactor { get; set; } = 5.6;
 
+    public double DefaultBranchDiameterInches { get; set; } = 1.25;
+
+    public double DefaultMainDiameterInches { get; set; } = 4.0;
+
     public bool AllowAlternateManufacturers { get; set; } = true;
 
     public string CatalogPath { get; set; } = string.Empty;

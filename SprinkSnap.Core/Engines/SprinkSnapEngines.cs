@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
@@ -96,8 +97,6 @@ public sealed class LayoutEngine : ILayoutEngine
 public sealed class HydraulicEngine : IHydraulicEngine
 {
     private const double DefaultKFactor = 5.6;
-    private const double BranchDiameterInches = 1.25;
-    private const double MainDiameterInches = 4.0;
 
     public HydraulicCalculationResult Calculate(
         IEnumerable<RoomInfo> rooms,
@@ -105,8 +104,11 @@ public sealed class HydraulicEngine : IHydraulicEngine
         SprinklerPlacementSummary placementSummary = null,
         SchematicPipeRoutingSummary schematicPipeRouting = null,
         PipePlacementSummary pipePlacementSummary = null,
-        HydraulicSupplyAnchor supplyAnchor = null)
+        HydraulicSupplyAnchor supplyAnchor = null,
+        SprinkSnapProjectPreferences preferences = null)
     {
+        double branchDiameterInches = PipeDiameterDefaults.ResolveBranchDiameterInches(preferences);
+        double mainDiameterInches = PipeDiameterDefaults.ResolveMainDiameterInches(preferences);
         List<RoomInfo> roomList = rooms?.ToList() ?? new List<RoomInfo>();
         HydraulicCalculationResult result = new HydraulicCalculationResult();
 
@@ -152,8 +154,8 @@ public sealed class HydraulicEngine : IHydraulicEngine
             result.FlowPerOperatingSprinklerGpm,
             controllingCriteria.HoseStreamAllowanceGpm,
             equivalentKFactor,
-            BranchDiameterInches,
-            MainDiameterInches,
+            branchDiameterInches,
+            mainDiameterInches,
             schematicPipeRouting,
             pipePlacementSummary,
             supplyAnchor,
