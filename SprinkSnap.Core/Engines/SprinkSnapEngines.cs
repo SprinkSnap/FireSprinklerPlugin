@@ -172,6 +172,8 @@ public sealed class HydraulicEngine : IHydraulicEngine
         result.CriticalPathVelocityViolationCount = layoutPath.CriticalPathVelocityViolationCount;
         result.MaxCriticalPathVelocityFeetPerSecond = layoutPath.MaxCriticalPathVelocityFeetPerSecond;
         result.CriticalPathDiameterSuggestionCount = layoutPath.CriticalPathDiameterSuggestionCount;
+        result.UsesAppliedPipeSizing = layoutPath.UsesAppliedPipeSizing;
+        result.AppliedPipeSizingSegmentCount = layoutPath.AppliedPipeSizingSegmentCount;
         result.UsesPlacedPipeLengths = layoutPath.UsesPlacedPipeLengths;
         result.UsesPlacedPipeTopology = layoutPath.UsesPlacedPipeTopology;
         result.PipeLengthDataSource = layoutPath.PipeLengthDataSource ?? string.Empty;

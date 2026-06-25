@@ -8,6 +8,8 @@ namespace FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 
 public static class HydraulicPipeSizingService
 {
+    public const int MaxSizingIterations = 4;
+
     private static readonly double[] StandardDiameterInches =
     {
         0.75,
@@ -63,6 +65,161 @@ public static class HydraulicPipeSizingService
         }
 
         return StandardDiameterInches[StandardDiameterInches.Length - 1];
+    }
+
+    public static bool SegmentChainHasVelocityViolations(IEnumerable<HydraulicGraphSegment> segments)
+    {
+        foreach (HydraulicGraphSegment segment in segments ?? Enumerable.Empty<HydraulicGraphSegment>())
+        {
+            HydraulicVelocityCheck check = HydraulicVelocityValidator.Evaluate(
+                segment.FlowGpm,
+                segment.DiameterInches,
+                segment.SegmentType);
+            if (check.ExceedsLimit)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static int ApplyVelocityDrivenUpsizing(IList<HydraulicGraphSegment> segments)
+    {
+        if (segments == null || segments.Count == 0)
+        {
+            return 0;
+        }
+
+        int appliedCount = 0;
+        foreach (HydraulicGraphSegment segment in segments)
+        {
+            double suggestedDiameterInches = SuggestCompliantDiameterInches(
+                segment.FlowGpm,
+                segment.SegmentType,
+                segment.DiameterInches);
+            if (suggestedDiameterInches <= 0
+                || suggestedDiameterInches <= segment.DiameterInches + 0.01)
+            {
+                continue;
+            }
+
+            segment.DiameterInches = suggestedDiameterInches;
+            appliedCount++;
+        }
+
+        return appliedCount;
+    }
+
+    public static void RefreshFittingEquivalentLengths(
+        IList<CriticalPathFitting> fittings,
+        IList<HydraulicGraphSegment> segments)
+    {
+        if (fittings == null || segments == null)
+        {
+            return;
+        }
+
+        foreach (CriticalPathFitting fitting in fittings)
+        {
+            if (fitting.SegmentIndex < 0 || fitting.SegmentIndex >= segments.Count)
+            {
+                continue;
+            }
+
+            HydraulicGraphSegment segment = segments[fitting.SegmentIndex];
+            double diameterInches = ResolveFittingDiameterInches(fitting, segment);
+            fitting.EquivalentLengthFeet = FittingEquivalentLengthTable.GetEquivalentLengthFeet(
+                fitting.Joint?.JointType ?? string.Empty,
+                diameterInches);
+        }
+    }
+
+    public static void SyncPathSummaryDiameters(LayoutLinkedHydraulicPath path)
+    {
+        if (path?.SegmentChain == null || path.SegmentChain.Count == 0)
+        {
+            return;
+        }
+
+        double branchDiameterInches = path.SegmentChain
+            .Where(segment => string.Equals(segment.SegmentType, PipeSegmentTypes.Branch, StringComparison.OrdinalIgnoreCase))
+            .Select(segment => segment.DiameterInches)
+            .DefaultIfEmpty(path.BranchDiameterInches)
+            .Max();
+        double mainDiameterInches = path.SegmentChain
+            .Where(segment => !string.Equals(segment.SegmentType, PipeSegmentTypes.Branch, StringComparison.OrdinalIgnoreCase))
+            .Select(segment => segment.DiameterInches)
+            .DefaultIfEmpty(path.MainDiameterInches)
+            .Max();
+
+        if (branchDiameterInches > 0)
+        {
+            path.BranchDiameterInches = branchDiameterInches;
+        }
+
+        if (mainDiameterInches > 0)
+        {
+            path.MainDiameterInches = mainDiameterInches;
+        }
+    }
+
+    public static int ApplyFallbackPathUpsizing(LayoutLinkedHydraulicPath path)
+    {
+        if (path?.CriticalPath == null || path.CriticalPath.Count == 0)
+        {
+            return 0;
+        }
+
+        int appliedCount = 0;
+        foreach (HydraulicNode node in path.CriticalPath)
+        {
+            if (node.DiameterInches <= 0 || node.FlowGpm <= 0)
+            {
+                continue;
+            }
+
+            if (string.Equals(node.SegmentType, "Sprinkler", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(node.SegmentType, "Source", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            double suggestedDiameterInches = SuggestCompliantDiameterInches(
+                node.FlowGpm,
+                node.SegmentType,
+                node.DiameterInches);
+            if (suggestedDiameterInches <= 0
+                || suggestedDiameterInches <= node.DiameterInches + 0.01)
+            {
+                continue;
+            }
+
+            node.DiameterInches = suggestedDiameterInches;
+            if (IsBranchSegment(node.SegmentType))
+            {
+                path.BranchDiameterInches = suggestedDiameterInches;
+            }
+            else
+            {
+                path.MainDiameterInches = suggestedDiameterInches;
+            }
+
+            appliedCount++;
+        }
+
+        return appliedCount;
+    }
+
+    public static double ResolveFittingDiameterInches(CriticalPathFitting fitting, HydraulicGraphSegment segment)
+    {
+        double jointDiameterInches = fitting.Joint?.DiameterInches ?? 0.0;
+        if (jointDiameterInches <= 0)
+        {
+            return segment.DiameterInches;
+        }
+
+        return Math.Max(jointDiameterInches, segment.DiameterInches);
     }
 
     public static double SuggestCompliantDiameterInches(
@@ -208,6 +365,11 @@ public static class HydraulicPipeSizingService
 
         path.CriticalPathDiameterSuggestionCount = suggestionCount;
         return suggestionCount;
+    }
+
+    private static bool IsBranchSegment(string segmentType)
+    {
+        return string.Equals(segmentType, PipeSegmentTypes.Branch, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string DescribeSegment(HydraulicGraphSegment segment)

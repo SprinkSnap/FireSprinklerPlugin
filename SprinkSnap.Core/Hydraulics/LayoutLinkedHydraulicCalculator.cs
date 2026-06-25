@@ -143,11 +143,11 @@ public static class LayoutLinkedHydraulicCalculator
                 totalSprinklerFlow,
                 hoseStreamAllowanceGpm,
                 remotePressurePsi);
-            HydraulicVelocityValidator.ValidateFallbackCriticalPath(
+            ApplyFallbackPathSizing(
                 path,
                 totalSprinklerFlow,
-                hoseStreamAllowanceGpm);
-            HydraulicPipeSizingService.ApplyCriticalPathSuggestions(path);
+                hoseStreamAllowanceGpm,
+                remotePressurePsi);
         }
 
         path.Warnings.Add(
@@ -211,8 +211,54 @@ public static class LayoutLinkedHydraulicCalculator
             path.SegmentChain,
             schematicPipeRouting,
             pipePlacementSummary);
-        ILookup<int, CriticalPathFitting> fittingsBySegment = fittings.ToLookup(fitting => fitting.SegmentIndex);
 
+        int totalAppliedSegments = 0;
+        for (int sizingIteration = 0; sizingIteration < HydraulicPipeSizingService.MaxSizingIterations; sizingIteration++)
+        {
+            SolveSegmentChainFriction(path, fittings, remotePressurePsi);
+            if (!HydraulicPipeSizingService.SegmentChainHasVelocityViolations(path.SegmentChain))
+            {
+                break;
+            }
+
+            int appliedSegments = HydraulicPipeSizingService.ApplyVelocityDrivenUpsizing(path.SegmentChain);
+            if (appliedSegments == 0)
+            {
+                break;
+            }
+
+            totalAppliedSegments += appliedSegments;
+            HydraulicPipeSizingService.RefreshFittingEquivalentLengths(fittings, path.SegmentChain);
+        }
+
+        if (totalAppliedSegments > 0)
+        {
+            path.UsesAppliedPipeSizing = true;
+            path.AppliedPipeSizingSegmentCount = totalAppliedSegments;
+            HydraulicPipeSizingService.SyncPathSummaryDiameters(path);
+            path.Warnings.Add(
+                "Applied in-memory velocity-driven pipe upsizing on "
+                + totalAppliedSegments
+                + " critical-path segment(s) and re-solved friction losses.");
+        }
+
+        path.CriticalPath = BuildSegmentCriticalPath(
+            path,
+            headFlows,
+            hoseStreamAllowanceGpm,
+            remotePressurePsi,
+            fittings);
+        HydraulicVelocityValidator.ValidateSegmentChain(path);
+        HydraulicPipeSizingService.ApplySegmentChainSuggestions(path);
+        ApplySegmentVelocityToCriticalPath(path);
+    }
+
+    private static void SolveSegmentChainFriction(
+        LayoutLinkedHydraulicPath path,
+        IList<CriticalPathFitting> fittings,
+        double remotePressurePsi)
+    {
+        ILookup<int, CriticalPathFitting> fittingsBySegment = fittings.ToLookup(fitting => fitting.SegmentIndex);
         double downstreamPressurePsi = remotePressurePsi;
         double branchFrictionPsi = 0.0;
         double mainFrictionPsi = 0.0;
@@ -269,15 +315,75 @@ public static class LayoutLinkedHydraulicCalculator
         path.CriticalPathFittingCount = fittings.Count;
         path.JunctionPressurePsi = remotePressurePsi + branchFrictionPsi;
         path.CriticalPathDemandPsi = downstreamPressurePsi;
-        path.CriticalPath = BuildSegmentCriticalPath(
-            path,
-            headFlows,
-            hoseStreamAllowanceGpm,
-            remotePressurePsi,
-            fittings);
-        HydraulicVelocityValidator.ValidateSegmentChain(path);
-        HydraulicPipeSizingService.ApplySegmentChainSuggestions(path);
-        ApplySegmentVelocityToCriticalPath(path);
+    }
+
+    private static void ApplyFallbackPathSizing(
+        LayoutLinkedHydraulicPath path,
+        double totalSprinklerFlowGpm,
+        double hoseStreamAllowanceGpm,
+        double remotePressurePsi)
+    {
+        int totalAppliedSegments = 0;
+        for (int sizingIteration = 0; sizingIteration < HydraulicPipeSizingService.MaxSizingIterations; sizingIteration++)
+        {
+            HydraulicVelocityValidator.ValidateFallbackCriticalPath(path, totalSprinklerFlowGpm, hoseStreamAllowanceGpm);
+            if (path.CriticalPathVelocityViolationCount == 0)
+            {
+                break;
+            }
+
+            int appliedSegments = HydraulicPipeSizingService.ApplyFallbackPathUpsizing(path);
+            if (appliedSegments == 0)
+            {
+                break;
+            }
+
+            totalAppliedSegments += appliedSegments;
+            path.BranchFrictionPsi = HazenWilliamsCalculator.FrictionLossPsi(
+                totalSprinklerFlowGpm,
+                path.BranchDiameterInches,
+                path.BranchLengthFeet);
+            path.JunctionPressurePsi = remotePressurePsi + path.BranchFrictionPsi;
+            path.MainFrictionPsi = HazenWilliamsCalculator.FrictionLossPsi(
+                totalSprinklerFlowGpm + hoseStreamAllowanceGpm,
+                path.MainDiameterInches,
+                path.MainLengthFeet);
+            path.CriticalPathDemandPsi = remotePressurePsi + path.BranchFrictionPsi + path.MainFrictionPsi;
+
+            foreach (HydraulicNode node in path.CriticalPath)
+            {
+                if (string.Equals(node.SegmentType, "Branch", StringComparison.OrdinalIgnoreCase))
+                {
+                    node.DiameterInches = path.BranchDiameterInches;
+                    node.FrictionLossPsi = path.BranchFrictionPsi;
+                    node.PressurePsi = path.JunctionPressurePsi;
+                }
+                else if (string.Equals(node.SegmentType, "Main", StringComparison.OrdinalIgnoreCase))
+                {
+                    node.DiameterInches = path.MainDiameterInches;
+                    node.FrictionLossPsi = path.MainFrictionPsi;
+                    node.PressurePsi = path.JunctionPressurePsi + path.MainFrictionPsi;
+                }
+                else if (string.Equals(node.SegmentType, "Source", StringComparison.OrdinalIgnoreCase))
+                {
+                    node.DiameterInches = path.MainDiameterInches;
+                    node.PressurePsi = path.CriticalPathDemandPsi;
+                }
+            }
+        }
+
+        if (totalAppliedSegments > 0)
+        {
+            path.UsesAppliedPipeSizing = true;
+            path.AppliedPipeSizingSegmentCount = totalAppliedSegments;
+            path.Warnings.Add(
+                "Applied in-memory velocity-driven pipe upsizing on "
+                + totalAppliedSegments
+                + " fallback critical-path segment(s) and re-solved friction losses.");
+        }
+
+        HydraulicVelocityValidator.ValidateFallbackCriticalPath(path, totalSprinklerFlowGpm, hoseStreamAllowanceGpm);
+        HydraulicPipeSizingService.ApplyCriticalPathSuggestions(path);
     }
 
     private static void ApplySegmentVelocityToCriticalPath(LayoutLinkedHydraulicPath path)
@@ -335,9 +441,7 @@ public static class LayoutLinkedHydraulicCalculator
         double downstreamPressurePsi,
         ref double fittingFrictionPsi)
     {
-        double diameterInches = fitting.Joint?.DiameterInches > 0
-            ? fitting.Joint.DiameterInches
-            : segment.DiameterInches;
+        double diameterInches = HydraulicPipeSizingService.ResolveFittingDiameterInches(fitting, segment);
         fitting.FlowGpm = segment.FlowGpm;
         fitting.DownstreamPressurePsi = downstreamPressurePsi;
         fitting.FrictionLossPsi = HazenWilliamsCalculator.FrictionLossPsi(
