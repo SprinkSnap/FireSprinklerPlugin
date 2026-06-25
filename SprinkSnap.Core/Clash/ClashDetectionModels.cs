@@ -3,6 +3,19 @@ using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Clash;
 
+public sealed class LinkedModelScanOption
+{
+    public int LinkInstanceId { get; set; }
+
+    public string LinkName { get; set; } = string.Empty;
+
+    public string DocumentTitle { get; set; } = string.Empty;
+
+    public bool IsLoaded { get; set; }
+
+    public bool IncludeInClashScan { get; set; } = true;
+}
+
 public sealed class SprinklerClashRecord
 {
     public int RoomRevitElementId { get; set; }
@@ -25,6 +38,12 @@ public sealed class SprinklerClashRecord
 
     public string DetectionSource { get; set; } = string.Empty;
 
+    public bool IsLinkedModelClash { get; set; }
+
+    public int LinkedModelInstanceId { get; set; }
+
+    public string LinkedModelName { get; set; } = string.Empty;
+
     public string NfpaReference { get; set; } = "NFPA 13 Section 10.2.6";
 
     public bool Resolved { get; set; }
@@ -35,6 +54,12 @@ public sealed class SprinklerClashRecord
 public sealed class ClashDetectionSummary
 {
     public int TotalClashes { get; set; }
+
+    public int HostClashCount { get; set; }
+
+    public int LinkedClashCount { get; set; }
+
+    public int LinkedModelsScannedCount { get; set; }
 
     public int ResolvedClashes { get; set; }
 

@@ -85,6 +85,8 @@ public sealed class SprinkSnapProjectState
     public IList<SprinklerFamilyMappingOverride> FamilyMappingOverrides { get; set; } = new List<SprinklerFamilyMappingOverride>();
 
     public PlacementPreflightSummary PlacementPreflight { get; set; } = new PlacementPreflightSummary();
+
+    public IList<LinkedModelScanOption> LinkedModelScanOptions { get; set; } = new List<LinkedModelScanOption>();
 }
 
 public sealed class ComplianceWarning

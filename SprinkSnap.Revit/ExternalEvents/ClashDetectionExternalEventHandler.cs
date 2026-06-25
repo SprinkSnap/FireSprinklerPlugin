@@ -49,7 +49,8 @@ public sealed class ClashDetectionExternalEventHandler : IExternalEventHandler
             {
                 summary = RevitClashDetectionEngine.Detect(
                     pendingDocument,
-                    pendingContext.ProjectState.Rooms);
+                    pendingContext.ProjectState.Rooms,
+                    pendingContext.ProjectState.LinkedModelScanOptions);
 
                 pendingContext.ProjectState.ClashSummary = summary;
                 pendingContext.ProjectState.SessionProgress.ClashDetectionComplete =

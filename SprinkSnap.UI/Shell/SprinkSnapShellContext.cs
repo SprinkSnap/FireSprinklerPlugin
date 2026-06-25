@@ -81,6 +81,10 @@ public sealed class SprinkSnapShellContext
             ProjectState.ModelAnalysis = loadResult.ModelAnalysis;
         }
 
+        ProjectState.LinkedModelScanOptions = LinkedModelScanOptionService.MergeDiscoveredWithExisting(
+            loadResult.LinkedModelScanOptions,
+            ProjectState.LinkedModelScanOptions).ToList();
+
         if (markAnalysisComplete && ProjectState.Rooms.Count > 0)
         {
             ProjectState.SessionProgress.ModelAnalysisComplete = true;
@@ -146,4 +150,6 @@ public sealed class RevitProjectLoadResult
     public string DocumentKey { get; set; } = string.Empty;
 
     public string DocumentTitle { get; set; } = string.Empty;
+
+    public IList<LinkedModelScanOption> LinkedModelScanOptions { get; set; } = new List<LinkedModelScanOption>();
 }

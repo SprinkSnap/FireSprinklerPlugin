@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core;
+using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
@@ -23,6 +24,14 @@ public static class PreviewSampleDataFactory
         state.ModelAnalysis = new ModelAnalysisEngine().Analyze(state);
         state.ModelAnalysis.LinkedModelCount = 1;
         state.ModelAnalysis.ExistingSprinklerCount = 12;
+        state.LinkedModelScanOptions.Add(new LinkedModelScanOption
+        {
+            LinkInstanceId = 9001,
+            LinkName = "MEP_Link",
+            DocumentTitle = "Sample MEP Model",
+            IsLoaded = true,
+            IncludeInClashScan = true
+        });
         state.SessionProgress.ModelAnalysisComplete = true;
         return state;
     }

@@ -28,7 +28,10 @@ public static class RevitClashDetectionEngine
         BuiltInCategory.OST_PipeAccessory
     };
 
-    public static ClashDetectionSummary Detect(Document document, IEnumerable<RoomInfo> rooms)
+    public static ClashDetectionSummary Detect(
+        Document document,
+        IEnumerable<RoomInfo> rooms,
+        IEnumerable<LinkedModelScanOption> linkedModelOptions = null)
     {
         ClashDetectionSummary summary = new ClashDetectionSummary();
         if (document == null)
@@ -39,6 +42,8 @@ public static class RevitClashDetectionEngine
 
         ElementCategoryFilter categoryFilter = BuildObstructionCategoryFilter();
         HashSet<string> dedupeKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        IList<RevitLinkInstance> linkedModelsToScan = ResolveLinkedModelsToScan(document, linkedModelOptions);
+        summary.LinkedModelsScannedCount = linkedModelsToScan.Count;
 
         foreach (RoomInfo room in rooms ?? Array.Empty<RoomInfo>())
         {
@@ -52,44 +57,91 @@ public static class RevitClashDetectionEngine
 
             foreach (SprinklerPlacementCandidate candidate in room.ProposedSprinklers)
             {
-                IList<Element> obstructions = FindObstructions(
+                XYZ pointHost = new XYZ(candidate.Location.X, candidate.Location.Y, candidate.Location.Z);
+
+                IList<Element> hostObstructions = FindObstructionsInDocument(
                     document,
                     room,
-                    candidate,
+                    pointHost,
                     roomBounds,
                     categoryFilter);
 
-                if (obstructions.Count == 0 && room.HasCriticalGeometry)
+                if (hostObstructions.Count == 0 && linkedModelsToScan.Count == 0 && room.HasCriticalGeometry)
                 {
-                    AddClash(summary, dedupeKeys, room, candidate, null, "Irregular Geometry",
+                    AddClash(summary, dedupeKeys, room, candidate, null, null, "Irregular Geometry",
                         "Irregular room geometry may obstruct discharge pattern development.");
                     continue;
                 }
 
-                foreach (Element obstruction in obstructions)
+                foreach (Element obstruction in hostObstructions)
                 {
-                    AddClash(summary, dedupeKeys, room, candidate, obstruction,
+                    AddClash(summary, dedupeKeys, room, candidate, null, obstruction,
                         DescribeCategory(obstruction),
                         DescribeElement(obstruction));
+                }
+
+                foreach (RevitLinkInstance linkInstance in linkedModelsToScan)
+                {
+                    IList<Element> linkedObstructions = FindObstructionsInLinkedModel(
+                        linkInstance,
+                        pointHost,
+                        categoryFilter);
+
+                    foreach (Element obstruction in linkedObstructions)
+                    {
+                        AddClash(summary, dedupeKeys, room, candidate, linkInstance, obstruction,
+                            DescribeCategory(obstruction),
+                            DescribeElement(obstruction));
+                    }
                 }
             }
         }
 
-        FinalizeSummary(summary, "Revit geometry");
+        FinalizeSummary(summary);
         return summary;
     }
 
-    private static IList<Element> FindObstructions(
+    private static IList<RevitLinkInstance> ResolveLinkedModelsToScan(
+        Document document,
+        IEnumerable<LinkedModelScanOption> linkedModelOptions)
+    {
+        Dictionary<int, LinkedModelScanOption> optionById = (linkedModelOptions ?? Array.Empty<LinkedModelScanOption>())
+            .Where(option => option.LinkInstanceId > 0)
+            .GroupBy(option => option.LinkInstanceId)
+            .ToDictionary(group => group.Key, group => group.Last());
+
+        List<RevitLinkInstance> linksToScan = new List<RevitLinkInstance>();
+        foreach (RevitLinkInstance linkInstance in new FilteredElementCollector(document)
+                     .OfClass(typeof(RevitLinkInstance))
+                     .Cast<RevitLinkInstance>())
+        {
+            if (linkInstance.GetLinkDocument() == null)
+            {
+                continue;
+            }
+
+            if (optionById.TryGetValue(linkInstance.Id.IntegerValue, out LinkedModelScanOption option)
+                && !option.IncludeInClashScan)
+            {
+                continue;
+            }
+
+            linksToScan.Add(linkInstance);
+        }
+
+        return linksToScan
+            .OrderBy(link => link.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IList<Element> FindObstructionsInDocument(
         Document document,
         RoomInfo room,
-        SprinklerPlacementCandidate candidate,
+        XYZ point,
         BoundingBoxXYZ roomBounds,
         ElementCategoryFilter categoryFilter)
     {
-        XYZ point = new XYZ(candidate.Location.X, candidate.Location.Y, candidate.Location.Z);
-        Outline clearanceOutline = new Outline(
-            new XYZ(point.X - ClearanceHalfSizeFeet, point.Y - ClearanceHalfSizeFeet, point.Z - ClearanceHalfSizeFeet),
-            new XYZ(point.X + ClearanceHalfSizeFeet, point.Y + ClearanceHalfSizeFeet, point.Z + ClearanceHalfSizeFeet));
+        Outline clearanceOutline = BuildClearanceOutline(point);
 
         IList<ElementFilter> filters = new List<ElementFilter>
         {
@@ -114,6 +166,40 @@ public static class RevitClashDetectionEngine
             .ToList();
     }
 
+    private static IList<Element> FindObstructionsInLinkedModel(
+        RevitLinkInstance linkInstance,
+        XYZ pointHost,
+        ElementCategoryFilter categoryFilter)
+    {
+        Document linkDocument = linkInstance.GetLinkDocument();
+        if (linkDocument == null)
+        {
+            return new List<Element>();
+        }
+
+        Transform inverseTransform = linkInstance.GetTotalTransform().Inverse;
+        XYZ pointLink = inverseTransform.OfPoint(pointHost);
+        Outline clearanceOutline = BuildClearanceOutline(pointLink);
+        LogicalAndFilter compoundFilter = new LogicalAndFilter(
+            new BoundingBoxIntersectsFilter(clearanceOutline),
+            categoryFilter);
+
+        return new FilteredElementCollector(linkDocument)
+            .WhereElementIsNotElementType()
+            .WherePasses(compoundFilter)
+            .ToElements()
+            .Where(element => !IsSprinkler(element))
+            .Where(element => IsNearHeadLocation(element, pointLink))
+            .ToList();
+    }
+
+    private static Outline BuildClearanceOutline(XYZ point)
+    {
+        return new Outline(
+            new XYZ(point.X - ClearanceHalfSizeFeet, point.Y - ClearanceHalfSizeFeet, point.Z - ClearanceHalfSizeFeet),
+            new XYZ(point.X + ClearanceHalfSizeFeet, point.Y + ClearanceHalfSizeFeet, point.Z + ClearanceHalfSizeFeet));
+    }
+
     private static bool IsNearHeadLocation(Element element, XYZ point)
     {
         BoundingBoxXYZ bounds = element.get_BoundingBox(null);
@@ -135,18 +221,21 @@ public static class RevitClashDetectionEngine
         HashSet<string> dedupeKeys,
         RoomInfo room,
         SprinklerPlacementCandidate candidate,
+        RevitLinkInstance linkInstance,
         Element obstruction,
         string clashType,
         string description)
     {
         string candidateId = candidate.CandidateType + "@" + candidate.Location.X.ToString("F1") + "," + candidate.Location.Y.ToString("F1");
         int obstructionId = obstruction?.Id.IntegerValue ?? 0;
-        string dedupeKey = room.RevitElementId + "|" + candidateId + "|" + obstructionId + "|" + clashType;
+        int linkInstanceId = linkInstance?.Id.IntegerValue ?? 0;
+        string dedupeKey = room.RevitElementId + "|" + candidateId + "|" + linkInstanceId + "|" + obstructionId + "|" + clashType;
         if (!dedupeKeys.Add(dedupeKey))
         {
             return;
         }
 
+        bool isLinked = linkInstance != null;
         summary.Clashes.Add(new SprinklerClashRecord
         {
             RoomRevitElementId = room.RevitElementId,
@@ -158,7 +247,10 @@ public static class RevitClashDetectionEngine
             ObstructionDescription = description,
             ObstructionElementId = obstructionId,
             ObstructionCategory = obstruction?.Category?.Name ?? clashType,
-            DetectionSource = "Revit Geometry",
+            DetectionSource = isLinked ? "Linked: " + linkInstance.Name : "Host Model",
+            IsLinkedModelClash = isLinked,
+            LinkedModelInstanceId = linkInstanceId,
+            LinkedModelName = isLinked ? linkInstance.Name : string.Empty,
             Resolved = false
         });
     }
@@ -203,19 +295,39 @@ public static class RevitClashDetectionEngine
         return element.Name + " (Id " + element.Id.IntegerValue + ")";
     }
 
-    internal static void FinalizeSummary(ClashDetectionSummary summary, string sourceLabel)
+    internal static void FinalizeSummary(ClashDetectionSummary summary)
     {
+        summary.HostClashCount = summary.Clashes.Count(record => !record.IsLinkedModelClash);
+        summary.LinkedClashCount = summary.Clashes.Count(record => record.IsLinkedModelClash);
         summary.TotalClashes = summary.Clashes.Count;
         summary.UnresolvedClashes = summary.Clashes.Count(record => !record.Resolved);
         summary.ResolvedClashes = summary.Clashes.Count(record => record.Resolved);
 
         if (summary.TotalClashes == 0)
         {
-            summary.Messages.Add("No clashes detected using " + sourceLabel + " in the host model.");
+            if (summary.LinkedModelsScannedCount > 0)
+            {
+                summary.Messages.Add(
+                    "No clashes detected in the host model or "
+                    + summary.LinkedModelsScannedCount
+                    + " linked model(s).");
+            }
+            else
+            {
+                summary.Messages.Add("No clashes detected in the host model. Enable linked models in Settings to scan MEP coordination links.");
+            }
+
+            return;
         }
-        else
-        {
-            summary.Messages.Add(summary.TotalClashes + " clash(es) found using " + sourceLabel + ". Review linked models separately if needed.");
-        }
+
+        summary.Messages.Add(
+            summary.TotalClashes
+            + " clash(es) found ("
+            + summary.HostClashCount
+            + " host, "
+            + summary.LinkedClashCount
+            + " linked across "
+            + summary.LinkedModelsScannedCount
+            + " linked model(s)).");
     }
 }

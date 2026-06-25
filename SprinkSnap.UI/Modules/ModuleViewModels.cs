@@ -399,6 +399,12 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
 
     public int UnresolvedClashes => context.ProjectState.ClashSummary?.UnresolvedClashes ?? 0;
 
+    public int HostClashCount => context.ProjectState.ClashSummary?.HostClashCount ?? 0;
+
+    public int LinkedClashCount => context.ProjectState.ClashSummary?.LinkedClashCount ?? 0;
+
+    public int LinkedModelsScannedCount => context.ProjectState.ClashSummary?.LinkedModelsScannedCount ?? 0;
+
     public string StatusMessage
     {
         get => statusMessage;
@@ -419,7 +425,7 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
 
         if (context.RequestClashDetection != null && !context.IsPreviewMode)
         {
-            StatusMessage = "Scanning Revit geometry for sprinkler obstructions...";
+            StatusMessage = "Scanning host and linked Revit models for sprinkler obstructions...";
             context.RequestClashDetection(summary =>
             {
                 Application.Current?.Dispatcher.Invoke(() => ApplyDetectionResult(summary));
@@ -512,6 +518,9 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(TotalClashes));
         OnPropertyChanged(nameof(ResolvedClashes));
         OnPropertyChanged(nameof(UnresolvedClashes));
+        OnPropertyChanged(nameof(HostClashCount));
+        OnPropertyChanged(nameof(LinkedClashCount));
+        OnPropertyChanged(nameof(LinkedModelsScannedCount));
     }
 
     private void SyncFromState()
@@ -824,6 +833,52 @@ public sealed class FamilyMappingRowViewModel : ModuleViewModelBase
     }
 }
 
+public sealed class LinkedModelScanOptionViewModel : ModuleViewModelBase
+{
+    private bool includeInClashScan;
+
+    public LinkedModelScanOptionViewModel(LinkedModelScanOption option)
+    {
+        LinkInstanceId = option.LinkInstanceId;
+        LinkName = option.LinkName;
+        DocumentTitle = option.DocumentTitle;
+        IsLoaded = option.IsLoaded;
+        includeInClashScan = option.IncludeInClashScan;
+    }
+
+    public int LinkInstanceId { get; }
+
+    public string LinkName { get; }
+
+    public string DocumentTitle { get; }
+
+    public bool IsLoaded { get; }
+
+    public string LoadStatus => IsLoaded ? "Loaded" : "Not loaded";
+
+    public bool IncludeInClashScan
+    {
+        get => includeInClashScan;
+        set
+        {
+            includeInClashScan = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public LinkedModelScanOption ToOption()
+    {
+        return new LinkedModelScanOption
+        {
+            LinkInstanceId = LinkInstanceId,
+            LinkName = LinkName,
+            DocumentTitle = DocumentTitle,
+            IsLoaded = IsLoaded,
+            IncludeInClashScan = IncludeInClashScan
+        };
+    }
+}
+
 public sealed class SettingsModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
@@ -837,10 +892,14 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         this.context = context;
         FamilyMappingRows = new ObservableCollection<FamilyMappingRowViewModel>();
         LoadedRevitSymbols = new ObservableCollection<LoadedRevitSymbolOption>();
+        LinkedModelScanOptions = new ObservableCollection<LinkedModelScanOptionViewModel>();
         SaveCommand = new ModuleRelayCommand(_ => Save());
         defaultManufacturer = context.SprinklerFamilies.FirstOrDefault()?.Manufacturer ?? "Viking";
         RefreshFamilyMappingGrid();
+        RefreshLinkedModelOptions();
     }
+
+    public ObservableCollection<LinkedModelScanOptionViewModel> LinkedModelScanOptions { get; }
 
     public ICommand SaveCommand { get; }
 
@@ -891,6 +950,15 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         }
     }
 
+    private void RefreshLinkedModelOptions()
+    {
+        LinkedModelScanOptions.Clear();
+        foreach (LinkedModelScanOption option in context.ProjectState.LinkedModelScanOptions)
+        {
+            LinkedModelScanOptions.Add(new LinkedModelScanOptionViewModel(option));
+        }
+    }
+
     private void RefreshFamilyMappingGrid()
     {
         LoadedRevitSymbols.Clear();
@@ -934,14 +1002,25 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
 
         context.ApplyFamilyMapping();
         RefreshFamilyMappingGrid();
+
+        context.ProjectState.LinkedModelScanOptions.Clear();
+        foreach (LinkedModelScanOptionViewModel option in LinkedModelScanOptions)
+        {
+            context.ProjectState.LinkedModelScanOptions.Add(option.ToOption());
+        }
+
+        RefreshLinkedModelOptions();
         context.ProjectState.SessionProgress.SprinklerReviewComplete =
             SprinkSnapWorkflowGate.IsSprinklerReviewComplete(context.ProjectState);
         context.RequestWorkflowRefresh();
 
         int mappedCount = FamilyMappingRows.Count(row => row.MappingStatus.StartsWith("Mapped", StringComparison.OrdinalIgnoreCase));
+        int linkedScanCount = LinkedModelScanOptions.Count(option => option.IncludeInClashScan && option.IsLoaded);
         StatusMessage = "Settings saved. "
             + mappedCount
-            + " catalog family mapping(s) active for this session.";
+            + " catalog family mapping(s) and "
+            + linkedScanCount
+            + " linked model(s) enabled for clash detection.";
     }
 }
 

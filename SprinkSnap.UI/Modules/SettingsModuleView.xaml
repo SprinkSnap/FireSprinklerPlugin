@@ -53,6 +53,29 @@
                 </DataGrid>
             </Border>
 
+            <TextBlock Text="Linked model clash detection" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6" />
+            <TextBlock Text="Choose which loaded Revit links SprinkSnap scans for duct, pipe, beam, and fixture conflicts."
+                       TextWrapping="Wrap"
+                       Foreground="#4B5563"
+                       Margin="0,0,0,10" />
+
+            <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="10" Padding="8" Margin="0,0,0,16">
+                <DataGrid ItemsSource="{Binding LinkedModelScanOptions}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          RowHeight="56"
+                          RowHeaderWidth="0"
+                          GridLinesVisibility="Horizontal"
+                          AlternatingRowBackground="#F8FAFC">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Link Name" Binding="{Binding LinkName}" Width="1.4*" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Document" Binding="{Binding DocumentTitle}" Width="1.4*" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Status" Binding="{Binding LoadStatus}" Width="100" IsReadOnly="True" />
+                        <DataGridCheckBoxColumn Header="Scan for clashes" Binding="{Binding IncludeInClashScan}" Width="130" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+
             <Button Content="Save Settings" Command="{Binding SaveCommand}" Padding="14,8" HorizontalAlignment="Left" />
         </StackPanel>
     </ScrollViewer>

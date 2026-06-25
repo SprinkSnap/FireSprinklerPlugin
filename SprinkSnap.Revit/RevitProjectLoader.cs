@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Autodesk.Revit.DB;
 using FireSprinklerPlugin.SprinkSnap.Core;
+using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
@@ -37,6 +38,7 @@ public static class RevitProjectLoader
         result.ModelAnalysis.LinkedModelCount = new FilteredElementCollector(document)
             .OfClass(typeof(RevitLinkInstance))
             .GetElementCount();
+        result.LinkedModelScanOptions = RevitLinkedModelDiscovery.Discover(document);
         result.ModelAnalysis.ExistingSprinklerCount = new FilteredElementCollector(document)
             .OfCategory(BuiltInCategory.OST_Sprinklers)
             .WhereElementIsNotElementType()
