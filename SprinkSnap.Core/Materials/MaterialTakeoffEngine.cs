@@ -196,17 +196,10 @@ public sealed class MaterialTakeoffEngine : Engines.IMaterialTakeoffEngine
                      .ThenBy(group => group.First().SegmentType))
         {
             PipeSegment first = group.First();
-            double schematicLength = group.Sum(segment => segment.LengthFeet);
             placedRooms.TryGetValue(first.RoomRevitElementId, out PipePlacementRoomResult placedRoom);
-            bool usesPlaced = PlacedPipeTakeoffCalculator.UsesPlacedLengthForGroup(
-                first.SegmentType,
-                first.DiameterInches,
-                placedRoom);
-            double quantity = PlacedPipeTakeoffCalculator.ResolvePipeLengthFeet(
-                first.SegmentType,
-                first.DiameterInches,
-                schematicLength,
-                placedRoom);
+            bool usesPlaced = group.Any(segment => PlacedPipeTakeoffCalculator.UsesPlacedLength(segment, placedRoom));
+            double quantity = group.Sum(segment =>
+                PlacedPipeTakeoffCalculator.ResolvePipeLengthFeet(segment, segment.LengthFeet, placedRoom));
 
             detailRows.Add(new MaterialTakeoffItem
             {
@@ -243,9 +236,12 @@ public sealed class MaterialTakeoffEngine : Engines.IMaterialTakeoffEngine
         foreach (RoomFittingTakeoff takeoff in fittingTakeoffs)
         {
             string source = takeoff.UsesPlacedFittings ? "Placed" : "Schematic";
-            AddFittingRow(detailRows, takeoff, "Fitting", "1.25\" Elbow", takeoff.Elbow125Count, source);
-            AddFittingRow(detailRows, takeoff, "Fitting", "1.25\" Tee", takeoff.Tee125Count, source);
-            AddFittingRow(detailRows, takeoff, "Fitting", "4\" Elbow", takeoff.Elbow4InchCount, source);
+            foreach (FittingTakeoffEntry entry in takeoff.FittingCounts)
+            {
+                string familyName = entry.DiameterInches.ToString("0.##") + "\" " + entry.JointType;
+                AddFittingRow(detailRows, takeoff, "Fitting", familyName, entry.Count, source);
+            }
+
             AddFittingRow(detailRows, takeoff, "Riser Assembly", "Wet riser assembly", takeoff.RiserAssemblyCount, source);
             AddFittingRow(detailRows, takeoff, "Valve", "OS&Y control valve", takeoff.ValveCount, source);
         }

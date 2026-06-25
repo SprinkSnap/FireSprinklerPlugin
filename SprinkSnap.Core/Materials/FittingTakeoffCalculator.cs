@@ -5,6 +5,15 @@ using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Materials;
 
+public sealed class FittingTakeoffEntry
+{
+    public string JointType { get; set; } = string.Empty;
+
+    public double DiameterInches { get; set; }
+
+    public int Count { get; set; }
+}
+
 public sealed class RoomFittingTakeoff
 {
     public int RoomRevitElementId { get; set; }
@@ -15,11 +24,7 @@ public sealed class RoomFittingTakeoff
 
     public string LevelName { get; set; } = string.Empty;
 
-    public int Elbow125Count { get; set; }
-
-    public int Tee125Count { get; set; }
-
-    public int Elbow4InchCount { get; set; }
+    public IList<FittingTakeoffEntry> FittingCounts { get; set; } = new List<FittingTakeoffEntry>();
 
     public int RiserAssemblyCount { get; set; }
 
@@ -67,21 +72,9 @@ public static class FittingTakeoffCalculator
                 RoomNumber = first.RoomNumber,
                 RoomName = first.RoomName,
                 LevelName = first.LevelName,
-                Tee125Count = usesPlacedFittings
-                    ? PlacedFittingTakeoffCalculator.CountFittings(placedRoom, PipeJointTypes.Tee, 1.25)
-                    : joints.Count(joint =>
-                        string.Equals(joint.JointType, PipeJointTypes.Tee, StringComparison.OrdinalIgnoreCase)
-                        && Math.Abs(joint.DiameterInches - 1.25) < 0.01),
-                Elbow125Count = usesPlacedFittings
-                    ? PlacedFittingTakeoffCalculator.CountFittings(placedRoom, PipeJointTypes.Elbow, 1.25)
-                    : joints.Count(joint =>
-                        string.Equals(joint.JointType, PipeJointTypes.Elbow, StringComparison.OrdinalIgnoreCase)
-                        && Math.Abs(joint.DiameterInches - 1.25) < 0.01),
-                Elbow4InchCount = usesPlacedFittings
-                    ? PlacedFittingTakeoffCalculator.CountFittings(placedRoom, PipeJointTypes.Elbow, 4.0)
-                    : joints.Count(joint =>
-                        string.Equals(joint.JointType, PipeJointTypes.Elbow, StringComparison.OrdinalIgnoreCase)
-                        && Math.Abs(joint.DiameterInches - 4.0) < 0.01),
+                FittingCounts = usesPlacedFittings
+                    ? BuildPlacedFittingCounts(placedRoom)
+                    : BuildSchematicFittingCounts(joints),
                 RiserAssemblyCount = PlacedFittingTakeoffCalculator.CountRiserAssemblies(placedRoom, hasRiser),
                 ValveCount = usesPlacedFittings
                     ? PlacedFittingTakeoffCalculator.CountValves(placedRoom)
@@ -91,9 +84,7 @@ public static class FittingTakeoffCalculator
                 UsesPlacedFittings = usesPlacedFittings
             };
 
-            if (takeoff.Elbow125Count > 0
-                || takeoff.Tee125Count > 0
-                || takeoff.Elbow4InchCount > 0
+            if (takeoff.FittingCounts.Count > 0
                 || takeoff.RiserAssemblyCount > 0
                 || takeoff.ValveCount > 0)
             {
@@ -102,5 +93,50 @@ public static class FittingTakeoffCalculator
         }
 
         return takeoffs.OrderBy(takeoff => takeoff.LevelName).ThenBy(takeoff => takeoff.RoomNumber).ToList();
+    }
+
+    private static IList<FittingTakeoffEntry> BuildSchematicFittingCounts(IEnumerable<PipeJoint> joints)
+    {
+        return joints
+            .Where(joint => !string.Equals(joint.JointType, PipeJointTypes.Valve, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(joint => joint.JointType + "|" + joint.DiameterInches.ToString("0.##"), StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                PipeJoint first = group.First();
+                return new FittingTakeoffEntry
+                {
+                    JointType = first.JointType,
+                    DiameterInches = first.DiameterInches,
+                    Count = group.Count()
+                };
+            })
+            .OrderBy(entry => entry.JointType)
+            .ThenBy(entry => entry.DiameterInches)
+            .ToList();
+    }
+
+    private static IList<FittingTakeoffEntry> BuildPlacedFittingCounts(PipePlacementRoomResult placedRoom)
+    {
+        if (placedRoom?.PlacedFittings == null || placedRoom.PlacedFittings.Count == 0)
+        {
+            return new List<FittingTakeoffEntry>();
+        }
+
+        return placedRoom.PlacedFittings
+            .Where(fitting => !string.Equals(fitting.JointType, PipeJointTypes.Valve, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(fitting => fitting.JointType + "|" + fitting.DiameterInches.ToString("0.##"), StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                PipePlacementFittingResult first = group.First();
+                return new FittingTakeoffEntry
+                {
+                    JointType = first.JointType,
+                    DiameterInches = first.DiameterInches,
+                    Count = group.Count()
+                };
+            })
+            .OrderBy(entry => entry.JointType)
+            .ThenBy(entry => entry.DiameterInches)
+            .ToList();
     }
 }
