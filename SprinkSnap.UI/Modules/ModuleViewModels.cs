@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
@@ -13,6 +14,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
+using FireSprinklerPlugin.SprinkSnap.Core.Reports;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
@@ -360,12 +362,25 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private readonly IReportEngine reportEngine = new ReportEngine();
-    private string outputFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-    private string statusMessage = "Select report options and export PDF summaries.";
+    private readonly IHydraulicEngine hydraulicEngine = new HydraulicEngine();
+    private readonly IMaterialTakeoffEngine takeoffEngine = new MaterialTakeoffEngine();
+    private string outputFolder;
+    private bool includeDesignSummary = true;
+    private bool includeHydraulicReport = true;
+    private bool includeNodeDiagram = true;
+    private bool includeMaterialTakeoff = true;
+    private string statusMessage = "Select report options and export PDF submittal packages.";
 
     public ReportsModuleViewModel(SprinkSnapShellContext context)
     {
         this.context = context;
+        outputFolder = string.IsNullOrWhiteSpace(context.ProjectState.ReportExport.OutputFolder)
+            ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+            : context.ProjectState.ReportExport.OutputFolder;
+        includeDesignSummary = context.ProjectState.ReportExport.IncludeDesignSummary;
+        includeHydraulicReport = context.ProjectState.ReportExport.IncludeHydraulicReport;
+        includeNodeDiagram = context.ProjectState.ReportExport.IncludeNodeDiagram;
+        includeMaterialTakeoff = context.ProjectState.ReportExport.IncludeMaterialTakeoff;
         ExportCommand = new ModuleRelayCommand(_ => ExportReports());
     }
 
@@ -381,13 +396,45 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
         }
     }
 
-    public bool IncludeDesignSummary { get; set; } = true;
+    public bool IncludeDesignSummary
+    {
+        get => includeDesignSummary;
+        set
+        {
+            includeDesignSummary = value;
+            OnPropertyChanged();
+        }
+    }
 
-    public bool IncludeHydraulicReport { get; set; } = true;
+    public bool IncludeHydraulicReport
+    {
+        get => includeHydraulicReport;
+        set
+        {
+            includeHydraulicReport = value;
+            OnPropertyChanged();
+        }
+    }
 
-    public bool IncludeNodeDiagram { get; set; } = true;
+    public bool IncludeNodeDiagram
+    {
+        get => includeNodeDiagram;
+        set
+        {
+            includeNodeDiagram = value;
+            OnPropertyChanged();
+        }
+    }
 
-    public bool IncludeMaterialTakeoff { get; set; } = true;
+    public bool IncludeMaterialTakeoff
+    {
+        get => includeMaterialTakeoff;
+        set
+        {
+            includeMaterialTakeoff = value;
+            OnPropertyChanged();
+        }
+    }
 
     public string StatusMessage
     {
@@ -401,6 +448,12 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
 
     private void ExportReports()
     {
+        if (string.IsNullOrWhiteSpace(OutputFolder))
+        {
+            StatusMessage = "Enter an output folder before exporting reports.";
+            return;
+        }
+
         ReportExportRequest request = new ReportExportRequest
         {
             OutputFolder = OutputFolder,
@@ -410,18 +463,35 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
             IncludeMaterialTakeoff = IncludeMaterialTakeoff
         };
 
-        HydraulicCalculationResult hydraulicResult = new HydraulicEngine()
-            .Calculate(context.ProjectState.Rooms, context.ProjectState.WaterSupply);
-        IReadOnlyList<MaterialTakeoffItem> materialTakeoff = new MaterialTakeoffEngine()
-            .Generate(context.ProjectState.Rooms);
-        IReadOnlyList<string> reports = reportEngine.ExportAll(
+        context.ProjectState.ReportExport = request;
+
+        HydraulicCalculationResult hydraulicResult = context.ProjectState.HydraulicResult?.TotalFlowGpm > 0
+            ? context.ProjectState.HydraulicResult
+            : hydraulicEngine.Calculate(context.ProjectState.Rooms, context.ProjectState.WaterSupply);
+        context.ProjectState.HydraulicResult = hydraulicResult;
+
+        IReadOnlyList<MaterialTakeoffItem> materialTakeoff = takeoffEngine.Generate(context.ProjectState.Rooms);
+        ReportExportResult exportResult = reportEngine.ExportAll(
             context.ProjectState,
             hydraulicResult,
             materialTakeoff,
             request);
 
-        StatusMessage = "Prepared reports in " + OutputFolder + ": " + string.Join(", ", reports);
-        context.ProjectState.SessionProgress.ReportsExported = reports.Count > 0;
+        if (exportResult.Errors.Count > 0)
+        {
+            StatusMessage = string.Join(" ", exportResult.Errors);
+            return;
+        }
+
+        StatusMessage = "Exported "
+            + exportResult.ExportedFiles.Count
+            + " PDF(s) to "
+            + exportResult.ExportFolder
+            + ": "
+            + string.Join(", ", exportResult.ExportedFiles.Select(Path.GetFileName));
+
+        context.ProjectState.SessionProgress.ReportsExported = exportResult.ExportedFiles.Count > 0;
+        context.RequestPersistToRevit();
         context.RequestWorkflowRefresh();
     }
 }

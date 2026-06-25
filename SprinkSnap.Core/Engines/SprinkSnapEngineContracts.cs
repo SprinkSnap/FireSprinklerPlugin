@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Reports;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Engines;
 
@@ -45,7 +46,7 @@ public interface IMaterialTakeoffEngine
 
 public interface IReportEngine
 {
-    IReadOnlyList<string> ExportAll(
+    ReportExportResult ExportAll(
         SprinkSnapProjectState projectState,
         HydraulicCalculationResult hydraulicResult,
         IReadOnlyList<MaterialTakeoffItem> materialTakeoff,

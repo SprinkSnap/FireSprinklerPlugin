@@ -83,6 +83,8 @@ public sealed class SprinkSnapSessionSnapshot
     public SprinklerPlacementSummary PlacementSummary { get; set; } = new SprinklerPlacementSummary();
 
     public HydraulicCalculationResult HydraulicResult { get; set; } = new HydraulicCalculationResult();
+
+    public ReportExportRequest ReportExport { get; set; } = new ReportExportRequest();
 }
 
 public sealed class ModelChangeAssessment

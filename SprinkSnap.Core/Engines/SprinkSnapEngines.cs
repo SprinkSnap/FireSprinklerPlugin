@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Reports;
 using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Engines;
@@ -257,18 +258,17 @@ public sealed class MaterialTakeoffEngine : IMaterialTakeoffEngine
 
 public sealed class ReportEngine : IReportEngine
 {
-    public IReadOnlyList<string> ExportAll(
+    public ReportExportResult ExportAll(
         SprinkSnapProjectState projectState,
         HydraulicCalculationResult hydraulicResult,
         IReadOnlyList<MaterialTakeoffItem> materialTakeoff,
         ReportExportRequest request)
     {
-        List<string> reports = new List<string>();
-        if (request.IncludeDesignSummary) reports.Add("Design Summary PDF");
-        if (request.IncludeHydraulicReport) reports.Add("Hydraulic Report PDF");
-        if (request.IncludeNodeDiagram) reports.Add("Node Diagram PDF");
-        if (request.IncludeMaterialTakeoff) reports.Add("Material Takeoff PDF");
-        return reports;
+        return SprinkSnapPdfReportExporter.ExportAll(
+            projectState,
+            hydraulicResult,
+            materialTakeoff,
+            request);
     }
 }
 

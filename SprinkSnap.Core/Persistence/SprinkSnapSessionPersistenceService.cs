@@ -40,7 +40,8 @@ public static class SprinkSnapSessionPersistenceService
             Rooms = state.Rooms.Select(CreateRoomSnapshot).ToList(),
             ClashSummary = state.ClashSummary,
             PlacementSummary = state.PlacementSummary,
-            HydraulicResult = state.HydraulicResult
+            HydraulicResult = state.HydraulicResult,
+            ReportExport = CloneReportExport(state.ReportExport)
         };
     }
 
@@ -66,6 +67,7 @@ public static class SprinkSnapSessionPersistenceService
         state.ClashSummary = snapshot.ClashSummary ?? new ClashDetectionSummary();
         state.PlacementSummary = snapshot.PlacementSummary ?? new SprinklerPlacementSummary();
         state.HydraulicResult = snapshot.HydraulicResult ?? new HydraulicCalculationResult();
+        state.ReportExport = CloneReportExport(snapshot.ReportExport);
 
         Dictionary<int, PersistedRoomSnapshot> roomSnapshots = (snapshot.Rooms ?? new List<PersistedRoomSnapshot>())
             .Where(room => room.RevitElementId > 0)
@@ -292,6 +294,23 @@ public static class SprinkSnapSessionPersistenceService
             FlowAtResidualGpm = input.FlowAtResidualGpm,
             HydrantTestDate = input.HydrantTestDate,
             ImportedSourcePath = input.ImportedSourcePath
+        };
+    }
+
+    private static ReportExportRequest CloneReportExport(ReportExportRequest request)
+    {
+        if (request == null)
+        {
+            return new ReportExportRequest();
+        }
+
+        return new ReportExportRequest
+        {
+            OutputFolder = request.OutputFolder,
+            IncludeDesignSummary = request.IncludeDesignSummary,
+            IncludeHydraulicReport = request.IncludeHydraulicReport,
+            IncludeNodeDiagram = request.IncludeNodeDiagram,
+            IncludeMaterialTakeoff = request.IncludeMaterialTakeoff
         };
     }
 }

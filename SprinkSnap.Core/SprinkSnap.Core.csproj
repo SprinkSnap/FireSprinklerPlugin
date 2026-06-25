@@ -4,5 +4,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="QuestPDF" Version="2025.7.2" />
+  </ItemGroup>
 </Project>
 

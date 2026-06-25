@@ -4,6 +4,8 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="4" MaxWidth="760">
             <TextBlock Text="Reports" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <TextBlock Text="Export PDF submittal packages for design summary, hydraulics, node diagram, and material takeoff."
+                       TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,8" />
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,16" />
 
             <TextBlock Text="Output folder" Margin="0,0,0,4" />
@@ -14,7 +16,7 @@
             <CheckBox Content="Node diagram PDF" IsChecked="{Binding IncludeNodeDiagram}" Margin="0,0,0,8" />
             <CheckBox Content="Material takeoff PDF" IsChecked="{Binding IncludeMaterialTakeoff}" Margin="0,0,0,16" />
 
-            <Button Content="Export Reports" Command="{Binding ExportCommand}" Padding="14,8" HorizontalAlignment="Left" />
+            <Button Content="Export PDF Reports" Command="{Binding ExportCommand}" Padding="14,8" HorizontalAlignment="Left" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

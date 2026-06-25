@@ -92,6 +92,8 @@ public sealed class SprinkSnapProjectState
     public ModelChangeAssessment ModelChangeAssessment { get; set; } = new ModelChangeAssessment();
 
     public HydraulicCalculationResult HydraulicResult { get; set; } = new HydraulicCalculationResult();
+
+    public ReportExportRequest ReportExport { get; set; } = new ReportExportRequest();
 }
 
 public sealed class ComplianceWarning
