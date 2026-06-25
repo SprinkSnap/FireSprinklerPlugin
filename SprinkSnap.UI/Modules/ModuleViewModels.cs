@@ -226,6 +226,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
     private readonly SprinkSnapShellContext context;
     private readonly IWaterSupplyEngine waterSupplyEngine = new WaterSupplyEngine();
     private readonly IHydraulicEngine hydraulicEngine = new HydraulicEngine();
+    private readonly HydraulicCalculationPipelineRunner pipelineRunner = new HydraulicCalculationPipelineRunner();
     private string staticPressurePsi = string.Empty;
     private string residualPressurePsi = string.Empty;
     private string flowGpm = string.Empty;
@@ -429,28 +430,54 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             input.ImportedSourcePath = ImportedSourcePath;
         }
 
-        HydraulicCalculationResult demand = hydraulicEngine.Calculate(
-            context.ProjectState.Rooms,
-            input,
-            context.ProjectState.PlacementSummary,
-            context.ProjectState.SchematicPipeRouting,
-            context.ProjectState.PipePlacementSummary,
-            context.ProjectState.HydraulicSupplyAnchor);
+        ValidationSummary = "Running unified hydraulic pipeline for supply validation...";
+        pipelineRunner.Run(
+            context,
+            hydraulicEngine,
+            new HydraulicCalculationPipelineCallbacks
+            {
+                OnStatusChanged = status =>
+                {
+                    Application.Current?.Dispatcher.Invoke(() =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(status))
+                        {
+                            ValidationSummary = status;
+                        }
+                    });
+                },
+                OnCompleted = completion =>
+                {
+                    Application.Current?.Dispatcher.Invoke(() =>
+                    {
+                        CompleteSupplyValidation(input, completion);
+                    });
+                }
+            });
+    }
+
+    private void CompleteSupplyValidation(WaterSupplyInput input, HydraulicCalculationPipelineCompletion completion)
+    {
+        HydraulicCalculationResult demand = completion.Result;
         WaterSupplyValidationResult result = waterSupplyEngine.Validate(input, demand);
 
-        context.ProjectState.HydraulicResult = demand;
         context.ProjectState.WaterSupplyValidation = result;
         supplyCurve = result.Curve?.ToList() ?? new List<WaterSupplyCurvePoint>();
         demandFlowGpm = demand.DemandFlowGpm;
         demandPressurePsi = demand.DemandPressurePsi;
 
-        ValidationSummary = result.IsAdequate
-            ? "Water supply is adequate at "
-              + demand.TotalFlowGpm.ToString("N0")
-              + " GPM. Safety margin: "
-              + result.SafetyMarginPsi.ToString("N1")
-              + " PSI."
-            : "Water supply warning: " + string.Join(" ", result.Warnings);
+        string pipelinePrefix = completion.PipelineMessages.Count > 0
+            ? string.Join(" ", completion.PipelineMessages) + " "
+            : string.Empty;
+
+        ValidationSummary = pipelinePrefix
+            + (result.IsAdequate
+                ? "Water supply is adequate at "
+                  + demand.TotalFlowGpm.ToString("N0")
+                  + " GPM. Safety margin: "
+                  + result.SafetyMarginPsi.ToString("N1")
+                  + " PSI."
+                : "Water supply warning: " + string.Join(" ", result.Warnings));
 
         OnPropertyChanged(nameof(SupplyCurve));
         OnPropertyChanged(nameof(ShowSupplyChart));
@@ -477,6 +504,7 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 {
     private readonly SprinkSnapShellContext context;
     private readonly IHydraulicEngine hydraulicEngine = new HydraulicEngine();
+    private readonly HydraulicCalculationPipelineRunner pipelineRunner = new HydraulicCalculationPipelineRunner();
     private HydraulicCalculationResult result = new HydraulicCalculationResult();
     private string statusMessage = "Run NFPA 13 remote-area hydraulics after clash resolution and water supply entry.";
 
@@ -608,112 +636,41 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
             return;
         }
 
-        if (HydraulicsPipeDataRefreshPolicy.ShouldRemeasureBeforeCalculation(
-                context.ProjectState.SchematicPipeRouting,
-                context.ProjectState.PipePlacementSummary,
-                context.IsPreviewMode,
-                context.RequestRemeasurePlacedPipes != null))
-        {
-            StatusMessage = "Re-measuring placed pipe lengths from Revit before hydraulic calculation...";
-            context.RequestRemeasurePlacedPipes(summary =>
+        pipelineRunner.Run(
+            context,
+            hydraulicEngine,
+            new HydraulicCalculationPipelineCallbacks
             {
-                Application.Current?.Dispatcher.Invoke(() =>
+                OnStatusChanged = status =>
                 {
-                    context.ProjectState.PipePlacementSummary = summary;
-                    RunHydraulicCalculation(summary.Messages);
-                });
+                    Application.Current?.Dispatcher.Invoke(() =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(status))
+                        {
+                            StatusMessage = status;
+                        }
+                    });
+                },
+                OnCompleted = completion =>
+                {
+                    Application.Current?.Dispatcher.Invoke(() =>
+                    {
+                        result = completion.Result;
+                        CompleteHydraulicCalculationStatus(completion.PipelineMessages);
+                    });
+                }
             });
-            return;
-        }
-
-        RunHydraulicCalculation(null);
     }
 
-    private void RunHydraulicCalculation(
-        IList<string> remeasureMessages,
-        bool skipDiameterSync = false,
-        IList<string> priorSyncMessages = null,
-        PipePlacementSummary syncSummaryForFlags = null)
+    private void CompleteHydraulicCalculationStatus(IList<string> pipelineMessages)
     {
-        result = hydraulicEngine.Calculate(
-            context.ProjectState.Rooms,
-            context.ProjectState.WaterSupply,
-            context.ProjectState.PlacementSummary,
-            context.ProjectState.SchematicPipeRouting,
-            context.ProjectState.PipePlacementSummary,
-            context.ProjectState.HydraulicSupplyAnchor);
-
-        if (syncSummaryForFlags != null)
+        if (pipelineMessages != null && pipelineMessages.Count > 0)
         {
-            result.UsesRevitPipeDiameterSync = syncSummaryForFlags.UsesRevitPipeDiameterSync;
-            result.RevitPipeDiameterSyncCount = syncSummaryForFlags.RevitPipeDiameterSyncCount;
-            result.UsesRevitFittingDiameterSync = syncSummaryForFlags.UsesRevitFittingDiameterSync;
-            result.RevitFittingDiameterSyncCount = syncSummaryForFlags.RevitFittingDiameterSyncCount;
-            result.UsesPostSyncHydraulicReSolve = true;
-        }
-
-        context.ProjectState.HydraulicResult = result;
-        context.ProjectState.SessionProgress.HydraulicsComplete = result.TotalFlowGpm > 0;
-        context.RequestPersistToRevit();
-        context.RequestWorkflowRefresh();
-
-        if (!skipDiameterSync
-            && HydraulicsPipeDataRefreshPolicy.ShouldSyncPlacedPipeDiametersAfterCalculation(
-                result,
-                context.ProjectState.PipePlacementSummary,
-                context.IsPreviewMode,
-                context.RequestSyncPlacedPipeDiameters != null))
-        {
-            StatusMessage = "Syncing velocity-sized pipe and fitting diameters to placed Revit elements...";
-            context.RequestSyncPlacedPipeDiameters(summary =>
-            {
-                Application.Current?.Dispatcher.Invoke(() =>
-                {
-                    context.ProjectState.PipePlacementSummary = summary;
-
-                    if (HydraulicsPipeDataRefreshPolicy.ShouldReSolveAfterDiameterSync(
-                            diameterSyncWasAttempted: true,
-                            context.IsPreviewMode))
-                    {
-                        StatusMessage = "Re-running hydraulics with synced Revit pipe diameters...";
-                        RunHydraulicCalculation(
-                            remeasureMessages,
-                            skipDiameterSync: true,
-                            priorSyncMessages: summary.Messages,
-                            syncSummaryForFlags: summary);
-                        return;
-                    }
-
-                    if (context.ProjectState.HydraulicResult != null)
-                    {
-                        result = context.ProjectState.HydraulicResult;
-                    }
-
-                    CompleteHydraulicCalculationStatus(remeasureMessages, summary.Messages);
-                });
-            });
-            return;
-        }
-
-        CompleteHydraulicCalculationStatus(remeasureMessages, priorSyncMessages);
-    }
-
-    private void CompleteHydraulicCalculationStatus(IList<string> remeasureMessages, IList<string> syncMessages)
-    {
-        if (remeasureMessages != null && remeasureMessages.Count > 0)
-        {
-            StatusMessage = string.Join(" ", remeasureMessages);
+            StatusMessage = string.Join(" ", pipelineMessages);
         }
         else
         {
             StatusMessage = string.Empty;
-        }
-
-        if (syncMessages != null && syncMessages.Count > 0)
-        {
-            StatusMessage = string.IsNullOrWhiteSpace(StatusMessage)
-                ? string.Join(" ", syncMessages)
-                : StatusMessage + " " + string.Join(" ", syncMessages);
         }
 
         if (result.UsesPostSyncHydraulicReSolve)
