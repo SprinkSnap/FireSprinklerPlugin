@@ -66,6 +66,30 @@ public sealed class SprinkSnapWorkflowGateTests
         Assert.False(SprinkSnapWorkflowGate.IsHazardReviewComplete(state));
     }
 
+    [Fact]
+    public void Evaluate_Hydraulics_IsBlocked_WhenWaterSupplyIsIncomplete()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.SessionProgress.WaterSupplyComplete = false;
+        state.WaterSupply = new WaterSupplyInput();
+
+        WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.Hydraulics);
+
+        Assert.False(access.IsUnlocked);
+        Assert.Contains("water supply", access.BlockReason, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Evaluate_Hydraulics_IsUnlocked_WhenWaterSupplyAndClashAreComplete()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+
+        WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.Hydraulics);
+
+        Assert.True(access.IsUnlocked);
+        Assert.True(string.IsNullOrWhiteSpace(access.BlockReason));
+    }
+
     private static SprinkSnapProjectState CreateReadyForPlacementState()
     {
         return new SprinkSnapProjectState

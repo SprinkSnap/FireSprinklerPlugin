@@ -175,6 +175,15 @@ public static class SprinkSnapWorkflowGate
                 return CreateAccess(step, true, placementComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.Hydraulics:
+                if (!waterSupplyComplete)
+                {
+                    return CreateAccess(
+                        step,
+                        false,
+                        hydraulicsComplete,
+                        "Enter and validate water supply data before running hydraulics.");
+                }
+
                 if (!clashComplete)
                 {
                     return CreateAccess(

@@ -36,6 +36,24 @@ public static class DownstreamDesignInvalidationService
         InvalidateChangedRoomLayouts(state, changedRoomRevitElementIds, clearHazardApprovalsForChangedRooms);
     }
 
+    public static void InvalidateHydraulicResults(SprinkSnapProjectState state, bool clearWaterSupplyValidation = true)
+    {
+        if (state == null)
+        {
+            return;
+        }
+
+        state.HydraulicResult = new HydraulicCalculationResult();
+        if (clearWaterSupplyValidation)
+        {
+            state.WaterSupplyValidation = new WaterSupplyValidationResult();
+        }
+
+        state.SessionProgress.HydraulicsComplete = false;
+        state.SessionProgress.MaterialsComplete = false;
+        state.SessionProgress.ReportsExported = false;
+    }
+
     private static void InvalidateChangedRoomLayouts(
         SprinkSnapProjectState state,
         IEnumerable<int> changedRoomRevitElementIds,

@@ -239,9 +239,21 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
     public WaterSupplyModuleViewModel(SprinkSnapShellContext context)
     {
         this.context = context;
+        context.WorkflowChanged += OnWorkflowChanged;
         LoadFromState();
         ValidateCommand = new ModuleRelayCommand(_ => ValidateSupply());
         ImportCsvCommand = new ModuleRelayCommand(_ => ImportCsv());
+    }
+
+    private void OnWorkflowChanged(object sender, EventArgs e)
+    {
+        RefreshSupplyAnchorBindings();
+    }
+
+    private void RefreshSupplyAnchorBindings()
+    {
+        OnPropertyChanged(nameof(HasUserSupplyAnchor));
+        OnPropertyChanged(nameof(SupplyAnchorSummary));
     }
 
     public ICommand ValidateCommand { get; }
@@ -323,6 +335,12 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
     public double DemandPressurePsi => demandPressurePsi;
 
     public bool ShowSupplyChart => supplyCurve.Count > 1;
+
+    public bool HasUserSupplyAnchor => context.ProjectState.HydraulicSupplyAnchor?.IsSet == true;
+
+    public string SupplyAnchorSummary => HasUserSupplyAnchor
+        ? context.ProjectState.HydraulicSupplyAnchor.ElementLabel
+        : "Automatic (project trunk heuristic or room centroids)";
 
     private void LoadFromState()
     {
@@ -416,7 +434,8 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             input,
             context.ProjectState.PlacementSummary,
             context.ProjectState.SchematicPipeRouting,
-            context.ProjectState.PipePlacementSummary);
+            context.ProjectState.PipePlacementSummary,
+            context.ProjectState.HydraulicSupplyAnchor);
         WaterSupplyValidationResult result = waterSupplyEngine.Validate(input, demand);
 
         context.ProjectState.HydraulicResult = demand;
@@ -766,8 +785,12 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
                 if (anchor?.IsSet == true)
                 {
                     context.ProjectState.HydraulicSupplyAnchor = anchor;
+                    DownstreamDesignInvalidationService.InvalidateHydraulicResults(context.ProjectState);
                     context.RequestPersistToRevit();
-                    StatusMessage = "Hydraulic supply anchored to " + anchor.ElementLabel + ".";
+                    context.RequestWorkflowRefresh();
+                    StatusMessage = "Hydraulic supply anchored to "
+                        + anchor.ElementLabel
+                        + ". Re-run hydraulics to apply the new source point.";
                 }
                 else if (!string.IsNullOrWhiteSpace(anchor?.ElementLabel))
                 {
@@ -787,8 +810,10 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
     private void ClearSupplyAnchor()
     {
         context.ProjectState.HydraulicSupplyAnchor = new HydraulicSupplyAnchor();
+        DownstreamDesignInvalidationService.InvalidateHydraulicResults(context.ProjectState);
         context.RequestPersistToRevit();
-        StatusMessage = "Cleared user supply anchor. Hydraulics will use automatic source resolution.";
+        context.RequestWorkflowRefresh();
+        StatusMessage = "Cleared user supply anchor. Re-run hydraulics to use automatic source resolution.";
         OnPropertyChanged(nameof(HasUserSupplyAnchor));
         OnPropertyChanged(nameof(SupplyAnchorSummary));
     }
