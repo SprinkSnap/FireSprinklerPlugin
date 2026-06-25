@@ -23,7 +23,9 @@ public static class LayoutLinkedHydraulicCalculator
         double mainDiameterInches,
         SchematicPipeRoutingSummary schematicPipeRouting = null,
         PipePlacementSummary pipePlacementSummary = null,
-        HydraulicSupplyAnchor supplyAnchor = null)
+        HydraulicSupplyAnchor supplyAnchor = null,
+        double remoteAreaSquareFeet = 0,
+        double maxCoverageSquareFeet = 0)
     {
         List<RoomInfo> roomList = controllingRooms?.ToList() ?? new List<RoomInfo>();
         HydraulicSupplyAnchorService.PrepareRouting(
@@ -42,7 +44,10 @@ public static class LayoutLinkedHydraulicCalculator
         IList<LayoutSprinklerPoint> operatingSprinklers = HydraulicGraphBuilder.SelectOperatingSprinklers(
             sprinklerPoints,
             sourcePoint,
-            operatingSprinklerCount);
+            operatingSprinklerCount,
+            remoteAreaSquareFeet,
+            maxCoverageSquareFeet,
+            schematicPipeRouting);
 
         LayoutLinkedHydraulicPath path = HydraulicGraphBuilder.BuildPath(
             controllingRooms,
@@ -53,6 +58,12 @@ public static class LayoutLinkedHydraulicCalculator
             schematicPipeRouting,
             pipePlacementSummary,
             supplyAnchor);
+        path.UsesRemoteAreaSelection = remoteAreaSquareFeet > 0 && maxCoverageSquareFeet > 0;
+        if (path.UsesRemoteAreaSelection)
+        {
+            path.Warnings.Add(
+                "Operating sprinklers selected from an NFPA remote-area rectangle along the branch/cross-main layout axis.");
+        }
 
         double targetSprinklerFlow = designFlowPerSprinklerGpm * Math.Max(operatingSprinklers.Count, 1);
         if (operatingSprinklers.Count == 0)

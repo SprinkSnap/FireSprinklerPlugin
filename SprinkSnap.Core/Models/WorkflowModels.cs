@@ -258,6 +258,8 @@ public sealed class HydraulicCalculationResult
 
     public bool UsesProjectTrunk { get; set; }
 
+    public bool UsesRemoteAreaSelection { get; set; }
+
     public int CriticalPathSegmentCount { get; set; }
 
     public double FittingFrictionPsi { get; set; }
