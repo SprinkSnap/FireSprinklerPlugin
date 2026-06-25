@@ -152,6 +152,12 @@
                 </Border>
                 <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                     <StackPanel>
+                        <TextBlock Text="Fitting sync" Foreground="#6B7280" />
+                        <TextBlock Text="{Binding RevitFittingDiameterSyncCount}" FontSize="22" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+                <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                    <StackPanel>
                         <TextBlock Text="Post-sync re-solve" Foreground="#6B7280" />
                         <TextBlock Text="{Binding UsesPostSyncHydraulicReSolve}" FontSize="22" FontWeight="SemiBold" />
                     </StackPanel>

@@ -292,6 +292,10 @@ public sealed class HydraulicCalculationResult
 
     public int RevitPipeDiameterSyncCount { get; set; }
 
+    public bool UsesRevitFittingDiameterSync { get; set; }
+
+    public int RevitFittingDiameterSyncCount { get; set; }
+
     public bool UsesPostSyncHydraulicReSolve { get; set; }
 
     public bool UsesUserSupplyAnchor { get; set; }

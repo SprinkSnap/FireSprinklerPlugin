@@ -576,6 +576,10 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public int RevitPipeDiameterSyncCount => result.RevitPipeDiameterSyncCount;
 
+    public bool UsesRevitFittingDiameterSync => result.UsesRevitFittingDiameterSync;
+
+    public int RevitFittingDiameterSyncCount => result.RevitFittingDiameterSyncCount;
+
     public bool UsesPostSyncHydraulicReSolve => result.UsesPostSyncHydraulicReSolve;
 
     public IList<HydraulicNode> CriticalPath => result.CriticalPath ?? new List<HydraulicNode>();
@@ -643,6 +647,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         {
             result.UsesRevitPipeDiameterSync = syncSummaryForFlags.UsesRevitPipeDiameterSync;
             result.RevitPipeDiameterSyncCount = syncSummaryForFlags.RevitPipeDiameterSyncCount;
+            result.UsesRevitFittingDiameterSync = syncSummaryForFlags.UsesRevitFittingDiameterSync;
+            result.RevitFittingDiameterSyncCount = syncSummaryForFlags.RevitFittingDiameterSyncCount;
             result.UsesPostSyncHydraulicReSolve = true;
         }
 
@@ -658,7 +664,7 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
                 context.IsPreviewMode,
                 context.RequestSyncPlacedPipeDiameters != null))
         {
-            StatusMessage = "Syncing velocity-sized pipe diameters to placed Revit pipes...";
+            StatusMessage = "Syncing velocity-sized pipe and fitting diameters to placed Revit elements...";
             context.RequestSyncPlacedPipeDiameters(summary =>
             {
                 Application.Current?.Dispatcher.Invoke(() =>
@@ -761,6 +767,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(SchematicWritebackSegmentCount));
         OnPropertyChanged(nameof(UsesRevitPipeDiameterSync));
         OnPropertyChanged(nameof(RevitPipeDiameterSyncCount));
+        OnPropertyChanged(nameof(UsesRevitFittingDiameterSync));
+        OnPropertyChanged(nameof(RevitFittingDiameterSyncCount));
         OnPropertyChanged(nameof(UsesPostSyncHydraulicReSolve));
         OnPropertyChanged(nameof(CriticalPath));
         OnPropertyChanged(nameof(NfpaReference));

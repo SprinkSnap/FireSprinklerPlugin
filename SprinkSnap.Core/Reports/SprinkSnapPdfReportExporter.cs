@@ -219,6 +219,8 @@ public static class SprinkSnapPdfReportExporter
                         AddRow(table, "Schematic segments updated", hydraulicResult.SchematicWritebackSegmentCount.ToString());
                         AddRow(table, "Revit diameter sync", hydraulicResult.UsesRevitPipeDiameterSync ? "Yes" : "No");
                         AddRow(table, "Revit pipes updated", hydraulicResult.RevitPipeDiameterSyncCount.ToString());
+                        AddRow(table, "Revit fitting sync", hydraulicResult.UsesRevitFittingDiameterSync ? "Yes" : "No");
+                        AddRow(table, "Revit fittings updated", hydraulicResult.RevitFittingDiameterSyncCount.ToString());
                         AddRow(table, "Post-sync re-solve", hydraulicResult.UsesPostSyncHydraulicReSolve ? "Yes" : "No");
                         AddRow(table, "System demand pressure", hydraulicResult.SystemDemandPsi.ToString("N1") + " PSI");
                         AddRow(table, "Demand flow (chart)", hydraulicResult.DemandFlowGpm.ToString("N1") + " GPM");
