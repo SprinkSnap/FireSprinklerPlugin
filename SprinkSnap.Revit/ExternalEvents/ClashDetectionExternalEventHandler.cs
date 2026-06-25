@@ -55,6 +55,7 @@ public sealed class ClashDetectionExternalEventHandler : IExternalEventHandler
                 pendingContext.ProjectState.ClashSummary = summary;
                 pendingContext.ProjectState.SessionProgress.ClashDetectionComplete =
                     SprinkSnapWorkflowGate.IsClashDetectionComplete(pendingContext.ProjectState);
+                RevitSessionPersistence.Save(pendingDocument, pendingContext.ProjectState);
                 pendingContext.RequestWorkflowRefresh();
             }
         }

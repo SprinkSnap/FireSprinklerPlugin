@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
+using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Models;
@@ -87,6 +88,8 @@ public sealed class SprinkSnapProjectState
     public PlacementPreflightSummary PlacementPreflight { get; set; } = new PlacementPreflightSummary();
 
     public IList<LinkedModelScanOption> LinkedModelScanOptions { get; set; } = new List<LinkedModelScanOption>();
+
+    public ModelChangeAssessment ModelChangeAssessment { get; set; } = new ModelChangeAssessment();
 }
 
 public sealed class ComplianceWarning

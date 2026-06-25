@@ -223,9 +223,16 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
         ShowModuleDashboard = true;
         ActiveModuleContent = null;
-        actionFeedback = string.IsNullOrWhiteSpace(context.DocumentTitle)
-            ? "Select a workflow panel to open the module workspace."
-            : "Revit project loaded: " + context.DocumentTitle + ". Select a workflow panel to continue.";
+        if (context.ProjectState.ModelChangeAssessment?.IsStale == true)
+        {
+            actionFeedback = string.Join(" ", context.ProjectState.ModelChangeAssessment.Messages);
+        }
+        else
+        {
+            actionFeedback = string.IsNullOrWhiteSpace(context.DocumentTitle)
+                ? "Select a workflow panel to open the module workspace."
+                : "Revit project loaded: " + context.DocumentTitle + ". Select a workflow panel to continue.";
+        }
         RefreshWorkflowGates();
         UpdateModuleCapabilities();
 

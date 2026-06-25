@@ -104,6 +104,7 @@ public sealed class SprinkSnapRevitSession
     private void PersistApprovedHazardsToRevit()
     {
         RevitHazardPersistence.SaveApprovedHazards(Document, Context.ProjectState.Rooms);
+        RevitSessionPersistence.Save(Document, Context.ProjectState);
     }
 
     private void RequestPlaceSprinklersInRevit(Action<SprinklerPlacementSummary> callback)

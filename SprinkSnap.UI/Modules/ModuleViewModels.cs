@@ -11,6 +11,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
@@ -60,6 +61,12 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
 
     public int LinkedModelCount => context.ProjectState.ModelAnalysis.LinkedModelCount;
 
+    public bool IsModelStale => context.ProjectState.ModelChangeAssessment?.IsStale ?? false;
+
+    public string ModelChangeSummary => context.ProjectState.ModelChangeAssessment?.Messages.Count > 0
+        ? string.Join(" ", context.ProjectState.ModelChangeAssessment.Messages)
+        : string.Empty;
+
     public string StatusMessage
     {
         get => statusMessage;
@@ -85,6 +92,12 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
             ? "Preview analysis complete using sample room data."
             : "Revit model analysis complete. Review extracted rooms below.";
         context.ProjectState.SessionProgress.ModelAnalysisComplete = true;
+        context.ProjectState.ModelChangeAssessment = new ModelChangeAssessment
+        {
+            HasBaseline = true,
+            Messages = { "Analysis refreshed in the current SprinkSnap session." }
+        };
+        context.RequestPersistToRevit();
         context.RequestWorkflowRefresh();
         RefreshSummary();
     }
@@ -107,6 +120,8 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(ObstructionZoneCount));
         OnPropertyChanged(nameof(ExistingSprinklerCount));
         OnPropertyChanged(nameof(LinkedModelCount));
+        OnPropertyChanged(nameof(IsModelStale));
+        OnPropertyChanged(nameof(ModelChangeSummary));
     }
 }
 
@@ -209,6 +224,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             && input.FlowAtResidualGpm.HasValue)
         {
             context.ProjectState.SessionProgress.WaterSupplyComplete = true;
+            context.RequestPersistToRevit();
             context.RequestWorkflowRefresh();
         }
     }
@@ -1012,6 +1028,7 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         RefreshLinkedModelOptions();
         context.ProjectState.SessionProgress.SprinklerReviewComplete =
             SprinkSnapWorkflowGate.IsSprinklerReviewComplete(context.ProjectState);
+        context.RequestPersistToRevit();
         context.RequestWorkflowRefresh();
 
         int mappedCount = FamilyMappingRows.Count(row => row.MappingStatus.StartsWith("Mapped", StringComparison.OrdinalIgnoreCase));

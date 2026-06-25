@@ -56,6 +56,7 @@ public sealed class SprinklerPlacementExternalEventHandler : IExternalEventHandl
                 pendingContext.ProjectState.PlacementSummary = summary;
                 pendingContext.ProjectState.SessionProgress.SprinklersPlacedInRevit =
                     SprinkSnapWorkflowGate.IsSprinklersPlacedInRevit(pendingContext.ProjectState);
+                RevitSessionPersistence.Save(pendingDocument, pendingContext.ProjectState);
                 pendingContext.RequestWorkflowRefresh();
             }
         }

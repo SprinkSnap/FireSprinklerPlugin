@@ -5,6 +5,7 @@ using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
+using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Shell;
@@ -54,6 +55,11 @@ public sealed class SprinkSnapShellContext
         WorkflowChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    public void RequestPersistToRevit()
+    {
+        PersistToRevitRequested?.Invoke();
+    }
+
     public void ApplyRevitLoad(RevitProjectLoadResult loadResult, bool markAnalysisComplete)
     {
         if (loadResult == null)
@@ -81,9 +87,33 @@ public sealed class SprinkSnapShellContext
             ProjectState.ModelAnalysis = loadResult.ModelAnalysis;
         }
 
+        int linkedModelCount = ProjectState.ModelAnalysis?.LinkedModelCount ?? 0;
+        if (loadResult.SessionSnapshot != null)
+        {
+            SprinkSnapSessionPersistenceService.ApplySnapshot(ProjectState, loadResult.SessionSnapshot);
+        }
+
         ProjectState.LinkedModelScanOptions = LinkedModelScanOptionService.MergeDiscoveredWithExisting(
             loadResult.LinkedModelScanOptions,
             ProjectState.LinkedModelScanOptions).ToList();
+
+        ProjectState.ModelChangeAssessment = loadResult.SessionSnapshot != null
+            ? SprinkSnapSessionPersistenceService.AssessModelChangeFromSnapshot(
+                loadResult.SessionSnapshot,
+                ProjectState.Rooms,
+                linkedModelCount)
+            : new ModelChangeAssessment();
+
+        if (ProjectState.ModelChangeAssessment.IsStale)
+        {
+            foreach (string message in ProjectState.ModelChangeAssessment.Messages)
+            {
+                if (!ProjectState.ModelAnalysis.Warnings.Contains(message))
+                {
+                    ProjectState.ModelAnalysis.Warnings.Add(message);
+                }
+            }
+        }
 
         if (markAnalysisComplete && ProjectState.Rooms.Count > 0)
         {
@@ -152,4 +182,6 @@ public sealed class RevitProjectLoadResult
     public string DocumentTitle { get; set; } = string.Empty;
 
     public IList<LinkedModelScanOption> LinkedModelScanOptions { get; set; } = new List<LinkedModelScanOption>();
+
+    public SprinkSnapSessionSnapshot SessionSnapshot { get; set; }
 }

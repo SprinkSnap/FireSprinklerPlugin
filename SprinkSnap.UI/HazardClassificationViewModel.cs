@@ -815,7 +815,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         if (IsEmbeddedInShell)
         {
             PersistToRevitRequested?.Invoke();
-            ValidationMessage = "Hazard and sprinkler selections saved to the current SprinkSnap session and written to Revit room parameters.";
+            ValidationMessage = "Hazard and sprinkler selections saved to SprinkSnap and persisted in the Revit project.";
             NotifyWorkflowProgressChanged();
             return;
         }
