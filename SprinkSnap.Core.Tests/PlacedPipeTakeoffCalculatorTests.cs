@@ -76,4 +76,37 @@ public sealed class PlacedPipeTakeoffCalculatorTests
             4.0,
             placedRoom));
     }
+
+    [Fact]
+    public void ResolvePipeLengthFeet_MatchesPlacedSegmentByDescription_WhenSchematicDiameterIsUpsized()
+    {
+        PipeSegment schematicSegment = new PipeSegment
+        {
+            RoomRevitElementId = 101,
+            SegmentType = PipeSegmentTypes.Branch,
+            DiameterInches = 1.5,
+            Description = "1.5\" branch drop #1",
+            LengthFeet = 10.0
+        };
+        PipePlacementRoomResult placedRoom = new PipePlacementRoomResult
+        {
+            RoomRevitElementId = 101,
+            PlacedSegmentCount = 1,
+            PlacedSegments =
+            {
+                new PipePlacementSegmentResult
+                {
+                    SegmentType = PipeSegmentTypes.Branch,
+                    DiameterInches = 1.25,
+                    Description = "1.25\" branch drop #1",
+                    LengthFeet = 11.5
+                }
+            }
+        };
+
+        double length = PlacedPipeTakeoffCalculator.ResolvePipeLengthFeet(schematicSegment, 10.0, placedRoom);
+
+        Assert.Equal(11.5, length);
+        Assert.True(PlacedPipeTakeoffCalculator.UsesPlacedLength(schematicSegment, placedRoom));
+    }
 }

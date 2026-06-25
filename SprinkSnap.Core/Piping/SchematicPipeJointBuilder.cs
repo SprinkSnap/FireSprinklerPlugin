@@ -7,9 +7,9 @@ namespace FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
 public static class SchematicPipeJointBuilder
 {
-    private const double BranchDiameterInches = 1.25;
+    private const double DefaultBranchDiameterInches = 1.25;
 
-    private const double MainDiameterInches = 4.0;
+    private const double DefaultMainDiameterInches = 4.0;
 
     private const double LocationToleranceFeet = 0.15;
 
@@ -34,8 +34,7 @@ public static class SchematicPipeJointBuilder
         }
 
         PipeSegment first = segments.First();
-        bool hasRiser = segments.Any(segment =>
-            string.Equals(segment.SegmentType, PipeSegmentTypes.Riser, StringComparison.OrdinalIgnoreCase));
+        double mainDiameterInches = ResolveMainDiameterInches(segments);
         bool hasCrossMain = segments.Any(segment =>
             string.Equals(segment.SegmentType, PipeSegmentTypes.CrossMain, StringComparison.OrdinalIgnoreCase));
 
@@ -43,13 +42,14 @@ public static class SchematicPipeJointBuilder
             string.Equals(segment.SegmentType, PipeSegmentTypes.Riser, StringComparison.OrdinalIgnoreCase));
         if (riser != null)
         {
+            double riserDiameterInches = ResolveSegmentDiameterInches(riser, mainDiameterInches);
             AddJoint(
                 joints,
                 first,
                 PipeJointTypes.Valve,
-                MainDiameterInches,
+                riserDiameterInches,
                 riser.Start,
-                MainDiameterInches.ToString("0.##") + "\" OS&Y control valve at riser base");
+                FormatDiameterDescription(riserDiameterInches, " OS&Y control valve at riser base"));
 
             if (hasCrossMain)
             {
@@ -57,9 +57,9 @@ public static class SchematicPipeJointBuilder
                     joints,
                     first,
                     PipeJointTypes.Elbow,
-                    MainDiameterInches,
+                    riserDiameterInches,
                     riser.End,
-                    MainDiameterInches.ToString("0.##") + "\" elbow at riser / cross main");
+                    FormatDiameterDescription(riserDiameterInches, " elbow at riser / cross main"));
             }
         }
 
@@ -72,6 +72,7 @@ public static class SchematicPipeJointBuilder
                 continue;
             }
 
+            double branchDiameterInches = ResolveSegmentDiameterInches(segment, DefaultBranchDiameterInches);
             string description = segment.Description ?? string.Empty;
             if (description.IndexOf("branch tie-in", StringComparison.OrdinalIgnoreCase) >= 0)
             {
@@ -79,17 +80,17 @@ public static class SchematicPipeJointBuilder
                     joints,
                     first,
                     PipeJointTypes.Tee,
-                    BranchDiameterInches,
+                    branchDiameterInches,
                     segment.End,
-                    BranchDiameterInches.ToString("0.##") + "\" tee at cross main tie-in");
+                    FormatDiameterDescription(branchDiameterInches, " tee at cross main tie-in"));
 
                 AddJoint(
                     joints,
                     first,
                     PipeJointTypes.Elbow,
-                    BranchDiameterInches,
+                    branchDiameterInches,
                     segment.Start,
-                    BranchDiameterInches.ToString("0.##") + "\" elbow at branch tie-in");
+                    FormatDiameterDescription(branchDiameterInches, " elbow at branch tie-in"));
             }
             else if (description.IndexOf("branch drop", StringComparison.OrdinalIgnoreCase) >= 0)
             {
@@ -97,9 +98,9 @@ public static class SchematicPipeJointBuilder
                     joints,
                     first,
                     PipeJointTypes.Elbow,
-                    BranchDiameterInches,
+                    branchDiameterInches,
                     segment.End,
-                    BranchDiameterInches.ToString("0.##") + "\" elbow at branch drop");
+                    FormatDiameterDescription(branchDiameterInches, " elbow at branch drop"));
             }
         }
 
@@ -110,17 +111,38 @@ public static class SchematicPipeJointBuilder
                          string.Equals(segment.SegmentType, PipeSegmentTypes.Branch, StringComparison.OrdinalIgnoreCase)
                          && (segment.Description ?? string.Empty).IndexOf("branch drop", StringComparison.OrdinalIgnoreCase) >= 0))
             {
+                double branchDiameterInches = ResolveSegmentDiameterInches(segment, DefaultBranchDiameterInches);
                 AddJoint(
                     joints,
                     first,
                     PipeJointTypes.Elbow,
-                    BranchDiameterInches,
+                    branchDiameterInches,
                     segment.Start,
-                    BranchDiameterInches.ToString("0.##") + "\" elbow at sprinkler outlet");
+                    FormatDiameterDescription(branchDiameterInches, " elbow at sprinkler outlet"));
             }
         }
 
         return joints;
+    }
+
+    private static double ResolveMainDiameterInches(IEnumerable<PipeSegment> segments)
+    {
+        return segments
+            .Where(segment => !IsBranchSegment(segment.SegmentType))
+            .Select(segment => segment.DiameterInches)
+            .Where(diameterInches => diameterInches > 0)
+            .DefaultIfEmpty(DefaultMainDiameterInches)
+            .Max();
+    }
+
+    private static double ResolveSegmentDiameterInches(PipeSegment segment, double fallbackDiameterInches)
+    {
+        return segment?.DiameterInches > 0 ? segment.DiameterInches : fallbackDiameterInches;
+    }
+
+    private static string FormatDiameterDescription(double diameterInches, string suffix)
+    {
+        return diameterInches.ToString("0.##") + "\"" + suffix;
     }
 
     private static void AddJoint(
@@ -155,6 +177,11 @@ public static class SchematicPipeJointBuilder
             Location = new Point3D(location.X, location.Y, location.Z),
             Description = description
         });
+    }
+
+    private static bool IsBranchSegment(string segmentType)
+    {
+        return string.Equals(segmentType, PipeSegmentTypes.Branch, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool LocationsMatch(Point3D left, Point3D right)
