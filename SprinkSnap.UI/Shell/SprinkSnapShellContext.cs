@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core;
+using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Shell;
@@ -35,6 +36,12 @@ public sealed class SprinkSnapShellContext
     public Action PersistToRevitRequested { get; set; }
 
     public Action<Action<SprinklerPlacementSummary>> RequestPlaceSprinklers { get; set; }
+
+    public Action<Action<ClashDetectionSummary>> RequestClashDetection { get; set; }
+
+    public Action<SprinklerClashRecord> RequestShowClashInRevit { get; set; }
+
+    public Action<int> RequestShowRoomInRevit { get; set; }
 
     public static SprinkSnapShellContext CreateEmpty()
     {
@@ -92,7 +99,8 @@ public sealed class SprinkSnapShellContext
         hazardViewModel = new HazardClassificationViewModel(ProjectState.Rooms, SprinklerFamilies)
         {
             IsEmbeddedInShell = true,
-            PersistToRevitRequested = PersistToRevitRequested
+            PersistToRevitRequested = PersistToRevitRequested,
+            ShowRoomInRevitRequested = roomId => RequestShowRoomInRevit?.Invoke(roomId)
         };
         hazardViewModel.WorkflowProgressChanged += (_, _) => RequestWorkflowRefresh();
 

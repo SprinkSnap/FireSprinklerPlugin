@@ -78,6 +78,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         OverrideCommand = new RelayCommand(_ => OverrideVisibleExceptions(), _ => Rooms.Count > 0);
         ResetSprinklerOverridesCommand = new RelayCommand(_ => ResetSprinklerOverridesToProjectDefault(), _ => Rooms.Count > 0);
         SaveCommand = new RelayCommand(_ => Save(), _ => Rooms.Count > 0);
+        ShowRoomInRevitCommand = new RelayCommand(_ => ShowRoomInRevit(), _ => SelectedRoom != null);
     }
 
     public event PropertyChangedEventHandler PropertyChanged;
@@ -120,6 +121,10 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
     public ICommand SaveCommand { get; }
 
+    public ICommand ShowRoomInRevitCommand { get; }
+
+    public Action<int> ShowRoomInRevitRequested { get; set; }
+
     public int TotalRoomCount
     {
         get => Rooms.Count;
@@ -157,6 +162,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             selectedRoom = value;
             UpdateActiveCodeReference();
             OnPropertyChanged();
+            OnPropertyChanged(nameof(ShowRoomInRevitCommand));
         }
     }
 
@@ -882,6 +888,16 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
         field = value;
         OnPropertyChanged(propertyName);
         return true;
+    }
+
+    private void ShowRoomInRevit()
+    {
+        if (SelectedRoom?.Room == null)
+        {
+            return;
+        }
+
+        ShowRoomInRevitRequested?.Invoke(SelectedRoom.Room.RevitElementId);
     }
 
     public void NotifyExternalRefresh()

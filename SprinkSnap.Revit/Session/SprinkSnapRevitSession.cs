@@ -4,6 +4,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
+using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Revit.ExternalEvents;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
@@ -20,6 +21,9 @@ public sealed class SprinkSnapRevitSession
         Context = context;
         Context.PersistToRevitRequested = PersistApprovedHazardsToRevit;
         Context.RequestPlaceSprinklers = RequestPlaceSprinklersInRevit;
+        Context.RequestClashDetection = RequestClashDetectionInRevit;
+        Context.RequestShowClashInRevit = ShowClashInRevit;
+        Context.RequestShowRoomInRevit = ShowRoomInRevit;
     }
 
     public Document Document { get; }
@@ -105,5 +109,20 @@ public sealed class SprinkSnapRevitSession
     private void RequestPlaceSprinklersInRevit(Action<SprinklerPlacementSummary> callback)
     {
         SprinklerPlacementExternalEventHandler.Instance.RequestPlacement(Document, Context, callback);
+    }
+
+    private void RequestClashDetectionInRevit(Action<ClashDetectionSummary> callback)
+    {
+        ClashDetectionExternalEventHandler.Instance.RequestDetect(Document, Context, callback);
+    }
+
+    private void ShowClashInRevit(SprinklerClashRecord clash)
+    {
+        RevitNavigationExternalEventHandler.Instance.RequestShowClash(clash);
+    }
+
+    private void ShowRoomInRevit(int roomRevitElementId)
+    {
+        RevitNavigationExternalEventHandler.Instance.RequestShowRoom(roomRevitElementId);
     }
 }

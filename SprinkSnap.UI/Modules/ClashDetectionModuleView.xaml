@@ -13,11 +13,12 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button Content="Detect Clashes" Command="{Binding DetectClashesCommand}" Padding="12,8" Margin="0,0,8,0" />
+                    <Button Content="Show in Revit" Command="{Binding ShowClashInRevitCommand}" Padding="12,8" Margin="0,0,8,0" />
                     <Button Content="Resolve &amp; Update Layout" Command="{Binding ResolveClashesCommand}" Background="#2563EB" Foreground="White" FontWeight="SemiBold" Padding="12,8" />
                 </StackPanel>
                 <StackPanel>
                     <TextBlock Text="Clash Detection" Foreground="White" FontSize="22" FontWeight="SemiBold" />
-                    <TextBlock Text="Find sprinkler conflicts with ducts, beams, lights, and geometry — then update layout per NFPA 13 Section 10.2.6."
+                    <TextBlock Text="Scan Revit geometry for duct, pipe, beam, and fixture conflicts — then update layout per NFPA 13 Section 10.2.6."
                                Foreground="#CBD5E1" TextWrapping="Wrap" Margin="0,6,0,0" />
                 </StackPanel>
             </DockPanel>
@@ -53,6 +54,7 @@
                 <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,10" />
                 <DataGrid Grid.Row="1"
                           ItemsSource="{Binding Clashes}"
+                          SelectedItem="{Binding SelectedClash, Mode=TwoWay}"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
                           IsReadOnly="True"
@@ -63,6 +65,7 @@
                         <DataGridTextColumn Header="Name" Binding="{Binding RoomName}" Width="1.2*" />
                         <DataGridTextColumn Header="Type" Binding="{Binding ClashType}" Width="120" />
                         <DataGridTextColumn Header="Obstruction" Binding="{Binding ObstructionDescription}" Width="2*" />
+                        <DataGridTextColumn Header="Source" Binding="{Binding DetectionSource}" Width="110" />
                         <DataGridTextColumn Header="NFPA 13" Binding="{Binding NfpaReference}" Width="1.2*" />
                         <DataGridCheckBoxColumn Header="Resolved" Binding="{Binding Resolved}" Width="90" />
                     </DataGrid.Columns>

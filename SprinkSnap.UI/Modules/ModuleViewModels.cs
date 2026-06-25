@@ -362,6 +362,7 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
     private readonly IClashDetectionEngine clashEngine = new ClashDetectionEngine();
     private readonly ISprinklerLayoutOptimizer layoutOptimizer = new SprinklerLayoutOptimizer();
     private string statusMessage = "Run clash detection after generating sprinkler layout.";
+    private SprinklerClashRecord selectedClash;
 
     public ClashDetectionModuleViewModel(SprinkSnapShellContext context)
     {
@@ -369,6 +370,7 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
         Clashes = new ObservableCollection<SprinklerClashRecord>();
         DetectClashesCommand = new ModuleRelayCommand(_ => DetectClashes());
         ResolveClashesCommand = new ModuleRelayCommand(_ => ResolveClashes(), _ => TotalClashes > 0);
+        ShowClashInRevitCommand = new ModuleRelayCommand(_ => ShowSelectedClashInRevit(), _ => SelectedClash != null);
         SyncFromState();
     }
 
@@ -377,6 +379,18 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
     public ICommand DetectClashesCommand { get; }
 
     public ICommand ResolveClashesCommand { get; }
+
+    public ICommand ShowClashInRevitCommand { get; }
+
+    public SprinklerClashRecord SelectedClash
+    {
+        get => selectedClash;
+        set
+        {
+            selectedClash = value;
+            OnPropertyChanged();
+        }
+    }
 
     public int TotalClashes => context.ProjectState.ClashSummary?.TotalClashes ?? 0;
 
@@ -402,7 +416,21 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
             return;
         }
 
-        ClashDetectionSummary summary = clashEngine.Detect(context.ProjectState.Rooms);
+        if (context.RequestClashDetection != null && !context.IsPreviewMode)
+        {
+            StatusMessage = "Scanning Revit geometry for sprinkler obstructions...";
+            context.RequestClashDetection(summary =>
+            {
+                Application.Current?.Dispatcher.Invoke(() => ApplyDetectionResult(summary));
+            });
+            return;
+        }
+
+        ApplyDetectionResult(clashEngine.Detect(context.ProjectState.Rooms));
+    }
+
+    private void ApplyDetectionResult(ClashDetectionSummary summary)
+    {
         context.ProjectState.ClashSummary = summary;
         ApplySummary(summary);
         StatusMessage = summary.Messages.Count > 0
@@ -411,6 +439,29 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
         context.ProjectState.SessionProgress.ClashDetectionComplete =
             SprinkSnapWorkflowGate.IsClashDetectionComplete(context.ProjectState);
         context.RequestWorkflowRefresh();
+    }
+
+    private void ShowSelectedClashInRevit()
+    {
+        if (SelectedClash == null)
+        {
+            return;
+        }
+
+        if (context.IsPreviewMode)
+        {
+            StatusMessage = "Show in Revit is available inside the Revit SprinkSnap dockable pane.";
+            return;
+        }
+
+        if (context.RequestShowClashInRevit == null)
+        {
+            StatusMessage = "Revit navigation is not connected for this session.";
+            return;
+        }
+
+        context.RequestShowClashInRevit(SelectedClash);
+        StatusMessage = "Zoomed to clash in Revit for room " + SelectedClash.RoomNumber + ".";
     }
 
     private void ResolveClashes()
@@ -428,13 +479,24 @@ public sealed class ClashDetectionModuleViewModel : ModuleViewModelBase
             layoutOptimizer,
             sprinkler);
         context.ProjectState.ClashSummary = summary;
+        context.GetOrCreateHazardViewModel().NotifyExternalRefresh();
+
+        if (context.RequestClashDetection != null && !context.IsPreviewMode)
+        {
+            StatusMessage = "Layout updated. Rescanning Revit geometry for remaining clashes...";
+            context.RequestClashDetection(rescanSummary =>
+            {
+                Application.Current?.Dispatcher.Invoke(() => ApplyDetectionResult(rescanSummary));
+            });
+            return;
+        }
+
         ApplySummary(summary);
         StatusMessage = summary.Messages.Count > 0
             ? string.Join(" ", summary.Messages)
             : "Layout updated after clash resolution.";
         context.ProjectState.SessionProgress.ClashDetectionComplete =
             SprinkSnapWorkflowGate.IsClashDetectionComplete(context.ProjectState);
-        context.GetOrCreateHazardViewModel().NotifyExternalRefresh();
         context.RequestWorkflowRefresh();
     }
 

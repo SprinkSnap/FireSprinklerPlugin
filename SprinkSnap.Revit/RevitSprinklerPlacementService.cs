@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.DB.Structure;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
@@ -120,6 +121,12 @@ public static class RevitSprinklerPlacementService
             return result;
         }
 
+        int removedExisting = RemoveSprinkSnapPlacedHeads(document, room);
+        if (removedExisting > 0)
+        {
+            result.Message = "Removed " + removedExisting + " previous SprinkSnap head(s) before re-placing.";
+        }
+
         foreach (SprinklerPlacementCandidate candidate in room.ProposedSprinklers)
         {
             try
@@ -195,5 +202,54 @@ public static class RevitSprinklerPlacementService
         }
 
         parameter.Set(value);
+    }
+
+    private static int RemoveSprinkSnapPlacedHeads(Document document, RoomInfo room)
+    {
+        Room revitRoom = document.GetElement(new ElementId(room.RevitElementId)) as Room;
+        BoundingBoxXYZ roomBounds = revitRoom?.get_BoundingBox(null);
+        if (roomBounds == null)
+        {
+            return 0;
+        }
+
+        int removed = 0;
+        IList<Element> sprinklers = new FilteredElementCollector(document)
+            .OfCategory(BuiltInCategory.OST_Sprinklers)
+            .WhereElementIsNotElementType()
+            .WherePasses(new BoundingBoxIntersectsFilter(new Outline(roomBounds.Min, roomBounds.Max)))
+            .ToElements();
+
+        foreach (Element element in sprinklers)
+        {
+            if (!IsSprinkSnapHeadForRoom(element, room.Number))
+            {
+                continue;
+            }
+
+            document.Delete(element.Id);
+            removed++;
+        }
+
+        return removed;
+    }
+
+    private static bool IsSprinkSnapHeadForRoom(Element element, string roomNumber)
+    {
+        if (string.IsNullOrWhiteSpace(roomNumber))
+        {
+            return false;
+        }
+
+        Parameter roomParameter = element.LookupParameter("SS_RoomNumber");
+        string ssRoom = roomParameter?.AsString() ?? roomParameter?.AsValueString() ?? string.Empty;
+        if (string.Equals(ssRoom, roomNumber, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        Parameter comments = element.LookupParameter("Comments");
+        string commentValue = comments?.AsString() ?? comments?.AsValueString() ?? string.Empty;
+        return commentValue.IndexOf("SprinkSnap Room " + roomNumber, StringComparison.OrdinalIgnoreCase) >= 0;
     }
 }

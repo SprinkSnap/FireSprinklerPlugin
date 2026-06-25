@@ -14,6 +14,8 @@ public sealed class SprinkSnapApplication : IExternalApplication
         CreateRibbonPanels(application);
         SprinkSnapDockablePaneRegistration.Register(application);
         ExternalEvents.SprinklerPlacementExternalEventHandler.Register();
+        ExternalEvents.ClashDetectionExternalEventHandler.Register();
+        ExternalEvents.RevitNavigationExternalEventHandler.Register();
         return Result.Succeeded;
     }
 

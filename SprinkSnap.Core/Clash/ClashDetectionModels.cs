@@ -19,6 +19,12 @@ public sealed class SprinklerClashRecord
 
     public string ObstructionDescription { get; set; } = string.Empty;
 
+    public int ObstructionElementId { get; set; }
+
+    public string ObstructionCategory { get; set; } = string.Empty;
+
+    public string DetectionSource { get; set; } = string.Empty;
+
     public string NfpaReference { get; set; } = "NFPA 13 Section 10.2.6";
 
     public bool Resolved { get; set; }
