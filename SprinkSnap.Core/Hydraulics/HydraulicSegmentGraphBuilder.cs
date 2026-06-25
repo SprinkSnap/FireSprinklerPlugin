@@ -25,10 +25,6 @@ public static class HydraulicSegmentGraphBuilder
             return;
         }
 
-        ProjectTrunkRouter.EnsureProjectTrunk(
-            schematicPipeRouting,
-            controllingRooms ?? path.OperatingSprinklers.Select(point => point.Room));
-
         LayoutSprinklerPoint remote = path.MostRemoteSprinkler;
         int remoteRoomId = remote.Room?.RevitElementId ?? 0;
         IList<HydraulicGraphSegment> roomSegments = PlacedPipeHydraulicResolver.ResolveSegmentsForRoom(
@@ -90,7 +86,9 @@ public static class HydraulicSegmentGraphBuilder
         IDictionary<LayoutSprinklerPoint, double> headFlows,
         double totalSprinklerFlowGpm,
         double hoseStreamAllowanceGpm,
-        SchematicPipeRoutingSummary schematicPipeRouting = null)
+        SchematicPipeRoutingSummary schematicPipeRouting = null,
+        PipePlacementSummary pipePlacementSummary = null,
+        HydraulicSupplyAnchor supplyAnchor = null)
     {
         if (path.SegmentChain == null || path.SegmentChain.Count == 0)
         {
@@ -124,14 +122,17 @@ public static class HydraulicSegmentGraphBuilder
                 continue;
             }
 
-            Point3D supplyHeader = path.UsesProjectTrunk
-                ? ProjectTrunkRouter.ResolveSupplyHeader(schematicPipeRouting)
+            Point3D supplyHeader = path.UsesProjectTrunk || path.UsesUserSupplyAnchor
+                ? HydraulicSupplyAnchorService.ResolveSupplyHeader(
+                    schematicPipeRouting,
+                    supplyAnchor,
+                    pipePlacementSummary)
                 : new Point3D();
             segment.FlowGpm = ResolveTrunkFlowForSegment(
                 segment,
                 trunkPoints,
                 totalSprinklerFlowGpm,
-                path.UsesProjectTrunk,
+                path.UsesProjectTrunk || path.UsesUserSupplyAnchor,
                 supplyHeader);
         }
     }

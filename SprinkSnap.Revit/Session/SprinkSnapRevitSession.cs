@@ -6,6 +6,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
+using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Revit.ExternalEvents;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
@@ -30,6 +31,7 @@ public sealed class SprinkSnapRevitSession
         Context.RequestRefreshLoadedSprinklerSymbols = RequestRefreshLoadedSprinklerSymbolsInRevit;
         Context.RequestShowClashInRevit = ShowClashInRevit;
         Context.RequestShowRoomInRevit = ShowRoomInRevit;
+        Context.RequestPickHydraulicSupplyAnchor = RequestPickHydraulicSupplyAnchorInRevit;
     }
 
     public Document Document { get; }
@@ -151,5 +153,10 @@ public sealed class SprinkSnapRevitSession
     private void ShowRoomInRevit(int roomRevitElementId)
     {
         RevitNavigationExternalEventHandler.Instance.RequestShowRoom(roomRevitElementId);
+    }
+
+    private void RequestPickHydraulicSupplyAnchorInRevit(Action<HydraulicSupplyAnchor> callback)
+    {
+        HydraulicSupplyPickExternalEventHandler.Instance.RequestPick(Context, callback);
     }
 }

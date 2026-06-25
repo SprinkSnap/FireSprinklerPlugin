@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Data;
+using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
@@ -106,6 +107,8 @@ public sealed class SprinkSnapProjectState
     public PipePlacementSummary PipePlacementSummary { get; set; } = new PipePlacementSummary();
 
     public bool PlaceSchematicFittingsWithPipes { get; set; } = true;
+
+    public HydraulicSupplyAnchor HydraulicSupplyAnchor { get; set; } = new HydraulicSupplyAnchor();
 
     public SprinkSnapProjectPreferences Preferences { get; set; } = new SprinkSnapProjectPreferences();
 
@@ -256,6 +259,10 @@ public sealed class HydraulicCalculationResult
     public bool UsesProjectTrunk { get; set; }
 
     public int CriticalPathSegmentCount { get; set; }
+
+    public bool UsesUserSupplyAnchor { get; set; }
+
+    public string UserSupplyAnchorLabel { get; set; } = string.Empty;
 
     public string RemoteSprinklerLabel { get; set; } = string.Empty;
 

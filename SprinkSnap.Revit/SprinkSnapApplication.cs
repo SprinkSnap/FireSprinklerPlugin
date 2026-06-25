@@ -20,6 +20,7 @@ public sealed class SprinkSnapApplication : IExternalApplication
         ExternalEvents.ModelReanalysisExternalEventHandler.Register();
         ExternalEvents.LoadedSprinklerSymbolScanExternalEventHandler.Register();
         ExternalEvents.RevitNavigationExternalEventHandler.Register();
+        ExternalEvents.HydraulicSupplyPickExternalEventHandler.Register();
         return Result.Succeeded;
     }
 

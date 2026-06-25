@@ -104,7 +104,8 @@ public sealed class HydraulicEngine : IHydraulicEngine
         WaterSupplyInput waterSupply,
         SprinklerPlacementSummary placementSummary = null,
         SchematicPipeRoutingSummary schematicPipeRouting = null,
-        PipePlacementSummary pipePlacementSummary = null)
+        PipePlacementSummary pipePlacementSummary = null,
+        HydraulicSupplyAnchor supplyAnchor = null)
     {
         List<RoomInfo> roomList = rooms?.ToList() ?? new List<RoomInfo>();
         HydraulicCalculationResult result = new HydraulicCalculationResult();
@@ -154,11 +155,14 @@ public sealed class HydraulicEngine : IHydraulicEngine
             BranchDiameterInches,
             MainDiameterInches,
             schematicPipeRouting,
-            pipePlacementSummary);
+            pipePlacementSummary,
+            supplyAnchor);
 
         result.UsesLayoutLinkedHydraulics = layoutPath.UsesLayoutGeometry;
         result.UsesSegmentGraphHydraulics = layoutPath.UsesSegmentGraphHydraulics;
         result.UsesProjectTrunk = layoutPath.UsesProjectTrunk;
+        result.UsesUserSupplyAnchor = layoutPath.UsesUserSupplyAnchor;
+        result.UserSupplyAnchorLabel = layoutPath.UserSupplyAnchorLabel ?? string.Empty;
         result.CriticalPathSegmentCount = layoutPath.CriticalPathSegmentCount;
         result.UsesPlacedPipeLengths = layoutPath.UsesPlacedPipeLengths;
         result.UsesPlacedPipeTopology = layoutPath.UsesPlacedPipeTopology;

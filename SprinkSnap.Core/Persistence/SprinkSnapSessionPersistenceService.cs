@@ -7,6 +7,7 @@ using System.Text.Json;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Data;
+using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
@@ -46,6 +47,7 @@ public static class SprinkSnapSessionPersistenceService
             WaterSupplyValidation = state.WaterSupplyValidation,
             SchematicPipeRouting = state.SchematicPipeRouting,
             PipePlacementSummary = state.PipePlacementSummary,
+            HydraulicSupplyAnchor = CloneSupplyAnchor(state.HydraulicSupplyAnchor),
             Preferences = ClonePreferences(state.Preferences),
             ReportExport = CloneReportExport(state.ReportExport)
         };
@@ -76,6 +78,7 @@ public static class SprinkSnapSessionPersistenceService
         state.WaterSupplyValidation = snapshot.WaterSupplyValidation ?? new WaterSupplyValidationResult();
         state.SchematicPipeRouting = snapshot.SchematicPipeRouting ?? new SchematicPipeRoutingSummary();
         state.PipePlacementSummary = snapshot.PipePlacementSummary ?? new PipePlacementSummary();
+        state.HydraulicSupplyAnchor = CloneSupplyAnchor(snapshot.HydraulicSupplyAnchor);
         state.Preferences = ClonePreferences(snapshot.Preferences);
         state.ReportExport = CloneReportExport(snapshot.ReportExport);
 
@@ -340,6 +343,24 @@ public static class SprinkSnapSessionPersistenceService
             DefaultKFactor = preferences.DefaultKFactor,
             AllowAlternateManufacturers = preferences.AllowAlternateManufacturers,
             CatalogPath = preferences.CatalogPath
+        };
+    }
+
+    private static HydraulicSupplyAnchor CloneSupplyAnchor(HydraulicSupplyAnchor anchor)
+    {
+        if (anchor == null)
+        {
+            return new HydraulicSupplyAnchor();
+        }
+
+        return new HydraulicSupplyAnchor
+        {
+            IsSet = anchor.IsSet,
+            RevitElementId = anchor.RevitElementId,
+            ElementLabel = anchor.ElementLabel ?? string.Empty,
+            SupplyPoint = anchor.SupplyPoint,
+            HeaderPoint = anchor.HeaderPoint,
+            SourceKind = anchor.SourceKind ?? string.Empty
         };
     }
 }

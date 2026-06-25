@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Piping;
@@ -15,10 +16,19 @@ public static class ProjectTrunkRouter
 
     public static void EnsureProjectTrunk(
         SchematicPipeRoutingSummary summary,
-        IEnumerable<RoomInfo> rooms)
+        IEnumerable<RoomInfo> rooms,
+        HydraulicSupplyAnchor supplyAnchor = null)
     {
         if (summary == null)
         {
+            return;
+        }
+
+        if (supplyAnchor?.IsSet == true)
+        {
+            RemoveProjectTrunkSegments(summary);
+            summary.UsesProjectTrunk = false;
+            AppendProjectTrunk(summary, rooms, supplyAnchor);
             return;
         }
 
@@ -27,12 +37,13 @@ public static class ProjectTrunkRouter
             return;
         }
 
-        AppendProjectTrunk(summary, rooms);
+        AppendProjectTrunk(summary, rooms, null);
     }
 
     public static void AppendProjectTrunk(
         SchematicPipeRoutingSummary summary,
-        IEnumerable<RoomInfo> rooms)
+        IEnumerable<RoomInfo> rooms,
+        HydraulicSupplyAnchor supplyAnchor = null)
     {
         if (summary == null)
         {
@@ -42,6 +53,13 @@ public static class ProjectTrunkRouter
         IList<RoomTrunkTap> taps = CollectRoomTrunkTaps(summary, rooms);
         if (taps.Count < 2)
         {
+            if (supplyAnchor?.IsSet == true)
+            {
+                summary.SupplyPoint = supplyAnchor.SupplyPoint;
+                summary.UsesUserSupplyAnchor = true;
+                summary.UserSupplyAnchorLabel = supplyAnchor.ElementLabel ?? string.Empty;
+            }
+
             return;
         }
 
@@ -56,8 +74,28 @@ public static class ProjectTrunkRouter
 
         foreach (IGrouping<string, RoomTrunkTap> levelGroup in levelGroups)
         {
-            AppendLevelTrunk(summary, levelGroup.ToList());
+            AppendLevelTrunk(summary, levelGroup.ToList(), supplyAnchor);
         }
+    }
+
+    public static void RemoveProjectTrunkSegments(SchematicPipeRoutingSummary summary)
+    {
+        if (summary?.Segments == null)
+        {
+            return;
+        }
+
+        List<PipeSegment> remaining = summary.Segments
+            .Where(segment => segment.RoomRevitElementId != ProjectScopeRoomRevitElementId)
+            .ToList();
+        summary.Segments.Clear();
+        foreach (PipeSegment segment in remaining)
+        {
+            summary.Segments.Add(segment);
+        }
+
+        summary.TotalSegmentCount = summary.Segments.Count;
+        summary.TotalLengthFeet = summary.Segments.Sum(segment => segment.LengthFeet);
     }
 
     public static double ComputePathDistanceFromSupplyFeet(
@@ -125,15 +163,22 @@ public static class ProjectTrunkRouter
             summary.SupplyPoint.Z + 9.0);
     }
 
-    private static void AppendLevelTrunk(SchematicPipeRoutingSummary summary, IList<RoomTrunkTap> taps)
+    private static void AppendLevelTrunk(
+        SchematicPipeRoutingSummary summary,
+        IList<RoomTrunkTap> taps,
+        HydraulicSupplyAnchor supplyAnchor)
     {
         RoomTrunkTap supplyTap = taps
             .OrderBy(tap => tap.FloorPoint.X + tap.FloorPoint.Y)
             .ThenBy(tap => tap.FloorPoint.X)
             .First();
-        Point3D supplyFloor = ClonePoint(supplyTap.FloorPoint);
         double branchElevationFeet = taps.Max(tap => tap.BranchElevationFeet);
-        Point3D supplyHeader = new Point3D(supplyFloor.X, supplyFloor.Y, branchElevationFeet);
+        Point3D supplyFloor = supplyAnchor?.IsSet == true
+            ? ClonePoint(supplyAnchor.SupplyPoint)
+            : ClonePoint(supplyTap.FloorPoint);
+        Point3D supplyHeader = supplyAnchor?.IsSet == true
+            ? ClonePoint(supplyAnchor.HeaderPoint)
+            : new Point3D(supplyFloor.X, supplyFloor.Y, branchElevationFeet);
 
         summary.Segments.Add(CreateProjectSegment(
             PipeSegmentTypes.Riser,
@@ -141,6 +186,11 @@ public static class ProjectTrunkRouter
             supplyHeader,
             "4\" building riser"));
         summary.SupplyPoint = supplyFloor;
+        if (supplyAnchor?.IsSet == true)
+        {
+            summary.UsesUserSupplyAnchor = true;
+            summary.UserSupplyAnchorLabel = supplyAnchor.ElementLabel ?? string.Empty;
+        }
 
         foreach (RoomTrunkTap tap in taps)
         {
@@ -164,11 +214,15 @@ public static class ProjectTrunkRouter
         summary.TotalSegmentCount = summary.Segments.Count;
         summary.TotalLengthFeet = summary.Segments.Sum(segment => segment.LengthFeet);
         summary.Messages.Add(
-            "Connected "
-            + taps.Count
-            + " room(s) on "
-            + supplyTap.LevelKey
-            + " with a shared building riser and project trunk main(s).");
+            supplyAnchor?.IsSet == true
+                ? "Connected "
+                  + taps.Count
+                  + " room(s) with a user-picked supply anchor and project trunk main(s)."
+                : "Connected "
+                  + taps.Count
+                  + " room(s) on "
+                  + supplyTap.LevelKey
+                  + " with a shared building riser and project trunk main(s).");
     }
 
     private static IList<RoomTrunkTap> CollectRoomTrunkTaps(

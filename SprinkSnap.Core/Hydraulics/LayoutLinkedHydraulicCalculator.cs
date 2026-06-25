@@ -22,9 +22,20 @@ public static class LayoutLinkedHydraulicCalculator
         double branchDiameterInches,
         double mainDiameterInches,
         SchematicPipeRoutingSummary schematicPipeRouting = null,
-        PipePlacementSummary pipePlacementSummary = null)
+        PipePlacementSummary pipePlacementSummary = null,
+        HydraulicSupplyAnchor supplyAnchor = null)
     {
-        Point3D sourcePoint = HydraulicGraphBuilder.ResolveSourcePoint(controllingRooms, schematicPipeRouting);
+        List<RoomInfo> roomList = controllingRooms?.ToList() ?? new List<RoomInfo>();
+        HydraulicSupplyAnchorService.PrepareRouting(
+            schematicPipeRouting,
+            roomList,
+            supplyAnchor,
+            pipePlacementSummary);
+
+        Point3D sourcePoint = HydraulicSupplyAnchorService.ResolveSourcePoint(
+            roomList,
+            schematicPipeRouting,
+            supplyAnchor);
         IList<LayoutSprinklerPoint> sprinklerPoints = HydraulicGraphBuilder.CollectSprinklerPoints(
             controllingRooms,
             defaultKFactor);
@@ -40,7 +51,8 @@ public static class LayoutLinkedHydraulicCalculator
             branchDiameterInches,
             mainDiameterInches,
             schematicPipeRouting,
-            pipePlacementSummary);
+            pipePlacementSummary,
+            supplyAnchor);
 
         double targetSprinklerFlow = designFlowPerSprinklerGpm * Math.Max(operatingSprinklers.Count, 1);
         if (operatingSprinklers.Count == 0)
@@ -100,7 +112,9 @@ public static class LayoutLinkedHydraulicCalculator
                 totalSprinklerFlow,
                 hoseStreamAllowanceGpm,
                 remotePressurePsi,
-                schematicPipeRouting);
+                schematicPipeRouting,
+                pipePlacementSummary,
+                supplyAnchor);
         }
         else
         {
@@ -161,14 +175,18 @@ public static class LayoutLinkedHydraulicCalculator
         double totalSprinklerFlowGpm,
         double hoseStreamAllowanceGpm,
         double remotePressurePsi,
-        SchematicPipeRoutingSummary schematicPipeRouting)
+        SchematicPipeRoutingSummary schematicPipeRouting,
+        PipePlacementSummary pipePlacementSummary,
+        HydraulicSupplyAnchor supplyAnchor)
     {
         HydraulicSegmentGraphBuilder.AssignSegmentFlows(
             path,
             headFlows,
             totalSprinklerFlowGpm,
             hoseStreamAllowanceGpm,
-            schematicPipeRouting);
+            schematicPipeRouting,
+            pipePlacementSummary,
+            supplyAnchor);
 
         double downstreamPressurePsi = remotePressurePsi;
         double branchFrictionPsi = 0.0;

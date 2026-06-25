@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Data;
+using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
@@ -91,6 +92,8 @@ public sealed class SprinkSnapSessionSnapshot
     public SchematicPipeRoutingSummary SchematicPipeRouting { get; set; } = new SchematicPipeRoutingSummary();
 
     public PipePlacementSummary PipePlacementSummary { get; set; } = new PipePlacementSummary();
+
+    public HydraulicSupplyAnchor HydraulicSupplyAnchor { get; set; } = new HydraulicSupplyAnchor();
 
     public SprinkSnapProjectPreferences Preferences { get; set; } = new SprinkSnapProjectPreferences();
 

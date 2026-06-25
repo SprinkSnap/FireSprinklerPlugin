@@ -12,6 +12,17 @@
                        TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,8" />
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,16" />
 
+            <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="Hydraulic supply anchor" Foreground="#6B7280" />
+                    <TextBlock Text="{Binding SupplyAnchorSummary}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,8" />
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Pick Supply in Revit" Command="{Binding PickSupplyAnchorCommand}" Padding="12,6" Margin="0,0,8,0" />
+                        <Button Content="Clear Anchor" Command="{Binding ClearSupplyAnchorCommand}" Padding="12,6" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <Button Content="Run Hydraulics" Command="{Binding CalculateCommand}" Padding="14,8" HorizontalAlignment="Left" Margin="0,0,0,16" />
 
             <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16">

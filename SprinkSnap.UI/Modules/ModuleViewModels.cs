@@ -465,6 +465,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
     {
         this.context = context;
         CalculateCommand = new ModuleRelayCommand(_ => Calculate());
+        PickSupplyAnchorCommand = new ModuleRelayCommand(_ => PickSupplyAnchor(), _ => CanPickSupplyAnchor);
+        ClearSupplyAnchorCommand = new ModuleRelayCommand(_ => ClearSupplyAnchor(), _ => HasUserSupplyAnchor);
         if (context.ProjectState.HydraulicResult != null
             && context.ProjectState.HydraulicResult.TotalFlowGpm > 0)
         {
@@ -474,6 +476,22 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
     }
 
     public ICommand CalculateCommand { get; }
+
+    public ICommand PickSupplyAnchorCommand { get; }
+
+    public ICommand ClearSupplyAnchorCommand { get; }
+
+    public bool CanPickSupplyAnchor => !context.IsPreviewMode && context.RequestPickHydraulicSupplyAnchor != null;
+
+    public bool HasUserSupplyAnchor => context.ProjectState.HydraulicSupplyAnchor?.IsSet == true;
+
+    public string SupplyAnchorSummary => HasUserSupplyAnchor
+        ? context.ProjectState.HydraulicSupplyAnchor.ElementLabel
+        : "Automatic (project trunk heuristic or room centroids)";
+
+    public bool UsesUserSupplyAnchor => result.UsesUserSupplyAnchor;
+
+    public string UserSupplyAnchorLabel => result.UserSupplyAnchorLabel ?? string.Empty;
 
     public string ControllingHazard => result.ControllingHazardClassification;
 
@@ -575,7 +593,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
             context.ProjectState.WaterSupply,
             context.ProjectState.PlacementSummary,
             context.ProjectState.SchematicPipeRouting,
-            context.ProjectState.PipePlacementSummary);
+            context.ProjectState.PipePlacementSummary,
+            context.ProjectState.HydraulicSupplyAnchor);
         context.ProjectState.HydraulicResult = result;
         context.ProjectState.SessionProgress.HydraulicsComplete = result.TotalFlowGpm > 0;
         context.RequestPersistToRevit();
@@ -627,6 +646,51 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(CriticalPath));
         OnPropertyChanged(nameof(NfpaReference));
         OnPropertyChanged(nameof(WarningSummary));
+        OnPropertyChanged(nameof(UsesUserSupplyAnchor));
+        OnPropertyChanged(nameof(UserSupplyAnchorLabel));
+    }
+
+    private void PickSupplyAnchor()
+    {
+        if (!CanPickSupplyAnchor)
+        {
+            StatusMessage = "Supply anchor picking is available in Revit only.";
+            return;
+        }
+
+        StatusMessage = "Select the supply riser or main pipe in Revit...";
+        context.RequestPickHydraulicSupplyAnchor(anchor =>
+        {
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                if (anchor?.IsSet == true)
+                {
+                    context.ProjectState.HydraulicSupplyAnchor = anchor;
+                    context.RequestPersistToRevit();
+                    StatusMessage = "Hydraulic supply anchored to " + anchor.ElementLabel + ".";
+                }
+                else if (!string.IsNullOrWhiteSpace(anchor?.ElementLabel))
+                {
+                    StatusMessage = anchor.ElementLabel;
+                }
+                else
+                {
+                    StatusMessage = "Supply anchor pick cancelled.";
+                }
+
+                OnPropertyChanged(nameof(HasUserSupplyAnchor));
+                OnPropertyChanged(nameof(SupplyAnchorSummary));
+            });
+        });
+    }
+
+    private void ClearSupplyAnchor()
+    {
+        context.ProjectState.HydraulicSupplyAnchor = new HydraulicSupplyAnchor();
+        context.RequestPersistToRevit();
+        StatusMessage = "Cleared user supply anchor. Hydraulics will use automatic source resolution.";
+        OnPropertyChanged(nameof(HasUserSupplyAnchor));
+        OnPropertyChanged(nameof(SupplyAnchorSummary));
     }
 }
 

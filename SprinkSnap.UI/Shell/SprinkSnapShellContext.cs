@@ -5,6 +5,7 @@ using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
+using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
@@ -57,6 +58,8 @@ public sealed class SprinkSnapShellContext
     public Action<SprinklerClashRecord> RequestShowClashInRevit { get; set; }
 
     public Action<int> RequestShowRoomInRevit { get; set; }
+
+    public Action<Action<HydraulicSupplyAnchor>> RequestPickHydraulicSupplyAnchor { get; set; }
 
     public Action<SprinkSnapWorkflowStep> RequestNavigateToWorkflowStep { get; set; }
 

@@ -89,6 +89,10 @@ public sealed class LayoutLinkedHydraulicPath
 
     public bool UsesPlacedPipeTopology { get; set; }
 
+    public bool UsesUserSupplyAnchor { get; set; }
+
+    public string UserSupplyAnchorLabel { get; set; } = string.Empty;
+
     public bool UsesProjectTrunk { get; set; }
 
     public IList<HydraulicGraphSegment> SegmentChain { get; set; } = new List<HydraulicGraphSegment>();

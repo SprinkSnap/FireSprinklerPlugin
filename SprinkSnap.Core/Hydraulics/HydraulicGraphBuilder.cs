@@ -88,14 +88,20 @@ public static class HydraulicGraphBuilder
         double branchDiameterInches,
         double mainDiameterInches,
         SchematicPipeRoutingSummary schematicPipeRouting = null,
-        PipePlacementSummary pipePlacementSummary = null)
+        PipePlacementSummary pipePlacementSummary = null,
+        HydraulicSupplyAnchor supplyAnchor = null)
     {
         LayoutLinkedHydraulicPath path = new LayoutLinkedHydraulicPath
         {
             SourcePoint = sourcePoint,
             BranchDiameterInches = branchDiameterInches,
             MainDiameterInches = mainDiameterInches,
-            OperatingSprinklers = operatingSprinklers?.ToList() ?? new List<LayoutSprinklerPoint>()
+            OperatingSprinklers = operatingSprinklers?.ToList() ?? new List<LayoutSprinklerPoint>(),
+            UsesUserSupplyAnchor = supplyAnchor?.IsSet == true
+                || schematicPipeRouting?.UsesUserSupplyAnchor == true,
+            UserSupplyAnchorLabel = supplyAnchor?.IsSet == true
+                ? supplyAnchor.ElementLabel ?? string.Empty
+                : schematicPipeRouting?.UserSupplyAnchorLabel ?? string.Empty
         };
 
         if (path.OperatingSprinklers.Count == 0)
@@ -221,6 +227,16 @@ public static class HydraulicGraphBuilder
                     + path.CriticalPathSegmentCount
                     + " segment(s).");
             }
+        }
+
+        if (path.UsesUserSupplyAnchor)
+        {
+            path.Warnings.Add(
+                "Hydraulic source anchored to user-selected supply "
+                + (string.IsNullOrWhiteSpace(path.UserSupplyAnchorLabel)
+                    ? "element"
+                    : path.UserSupplyAnchorLabel)
+                + ".");
         }
 
         int operatingRoomCount = path.OperatingSprinklers.Select(point => point.Room.RevitElementId).Distinct().Count();

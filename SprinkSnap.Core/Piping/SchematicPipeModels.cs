@@ -49,6 +49,10 @@ public sealed class SchematicPipeRoutingSummary
 
     public bool UsesProjectTrunk { get; set; }
 
+    public bool UsesUserSupplyAnchor { get; set; }
+
+    public string UserSupplyAnchorLabel { get; set; } = string.Empty;
+
     public Point3D SupplyPoint { get; set; } = new Point3D();
 
     public IList<int> ProjectTrunkRoomRevitElementIds { get; set; } = new List<int>();
