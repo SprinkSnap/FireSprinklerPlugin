@@ -16,6 +16,7 @@ public sealed class SprinkSnapApplication : IExternalApplication
         ExternalEvents.SprinklerPlacementExternalEventHandler.Register();
         ExternalEvents.PipePlacementExternalEventHandler.Register();
         ExternalEvents.ClashDetectionExternalEventHandler.Register();
+        ExternalEvents.ModelReanalysisExternalEventHandler.Register();
         ExternalEvents.RevitNavigationExternalEventHandler.Register();
         return Result.Succeeded;
     }

@@ -47,6 +47,8 @@ public sealed class SprinkSnapShellContext
 
     public Action<Action<ClashDetectionSummary>> RequestClashDetection { get; set; }
 
+    public Action<Action<RevitProjectLoadResult>> RequestReanalyze { get; set; }
+
     public Action<SprinklerClashRecord> RequestShowClashInRevit { get; set; }
 
     public Action<int> RequestShowRoomInRevit { get; set; }
@@ -188,6 +190,25 @@ public sealed class SprinkSnapShellContext
         ResetHazardViewModel();
         RequestWorkflowRefresh();
         return loadResult;
+    }
+
+    public void ApplyPostReanalysisInvalidation()
+    {
+        ProjectState.SessionProgress.ClashDetectionComplete = false;
+        ProjectState.SessionProgress.SprinklersPlacedInRevit = false;
+        ProjectState.SessionProgress.DesignGenerated = false;
+        ProjectState.SessionProgress.HydraulicsComplete = false;
+        ProjectState.SessionProgress.MaterialsComplete = false;
+
+        if (ProjectState.ModelChangeAssessment?.IsStale != true)
+        {
+            ProjectState.ModelChangeAssessment = new ModelChangeAssessment
+            {
+                HasBaseline = true,
+                IsStale = false,
+                Messages = { "Revit model re-analyzed and refreshed in the current SprinkSnap session." }
+            };
+        }
     }
 
     public HazardClassificationViewModel GetOrCreateHazardViewModel()

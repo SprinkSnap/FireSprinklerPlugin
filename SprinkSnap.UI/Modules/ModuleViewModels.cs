@@ -87,6 +87,24 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
 
     private void RunAnalysis()
     {
+        if (!context.IsPreviewMode && context.RequestReanalyze != null)
+        {
+            StatusMessage = "Re-extracting rooms and geometry from Revit...";
+            context.RequestReanalyze(loadResult =>
+            {
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    ApplyReanalysisResult(loadResult);
+                });
+            });
+            return;
+        }
+
+        RunPreviewAnalysis();
+    }
+
+    private void RunPreviewAnalysis()
+    {
         context.ProjectState.ModelAnalysis = analysisEngine.Analyze(context.ProjectState);
         context.ProjectState.ModelAnalysis.RoomCount = context.ProjectState.Rooms.Count;
         context.ProjectState.ModelAnalysis.ExistingSprinklerCount = context.ProjectState.ModelAnalysis.ExistingSprinklerCount;
@@ -100,14 +118,44 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
             ? "Preview analysis complete using sample room data."
             : "Revit model analysis complete. Review extracted rooms below.";
         context.ProjectState.SessionProgress.ModelAnalysisComplete = true;
-        context.ProjectState.ModelChangeAssessment = new ModelChangeAssessment
+        context.ApplyPostReanalysisInvalidation();
+        context.RequestPersistToRevit();
+        context.RequestWorkflowRefresh();
+        RefreshSummary();
+    }
+
+    private void ApplyReanalysisResult(RevitProjectLoadResult loadResult)
+    {
+        Rooms.Clear();
+        foreach (RoomInfo room in context.ProjectState.Rooms)
         {
-            HasBaseline = true,
-            IsStale = false,
-            Messages = { "Analysis refreshed in the current SprinkSnap session." }
-        };
-        context.ProjectState.SessionProgress.ClashDetectionComplete = false;
-        context.ProjectState.SessionProgress.SprinklersPlacedInRevit = false;
+            Rooms.Add(room);
+        }
+
+        ModelAnalysisSummary summary = context.ProjectState.ModelAnalysis;
+        StatusMessage = summary.RoomCount > 0
+            ? "Revit re-analysis complete: "
+              + summary.RoomCount
+              + " rooms, "
+              + summary.SlopedCeilingCount
+              + " sloped ceilings, "
+              + summary.MissingCeilingCount
+              + " missing ceilings, "
+              + summary.ObstructionZoneCount
+              + " obstruction zones."
+            : "No rooms were extracted from the Revit model. Verify room bounding elements and levels.";
+
+        if (context.ProjectState.ModelChangeAssessment?.IsStale == true
+            && context.ProjectState.ModelChangeAssessment.Messages.Count > 0)
+        {
+            StatusMessage += " " + string.Join(" ", context.ProjectState.ModelChangeAssessment.Messages);
+        }
+
+        if (loadResult?.ModelAnalysis?.Warnings?.Count > 0)
+        {
+            StatusMessage += " " + string.Join(" ", loadResult.ModelAnalysis.Warnings);
+        }
+
         context.RequestPersistToRevit();
         context.RequestWorkflowRefresh();
         RefreshSummary();
