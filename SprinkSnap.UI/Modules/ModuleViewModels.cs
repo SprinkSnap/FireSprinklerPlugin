@@ -549,6 +549,10 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public int AppliedPipeSizingSegmentCount => result.AppliedPipeSizingSegmentCount;
 
+    public bool UsesSchematicPipeSizingWriteback => result.UsesSchematicPipeSizingWriteback;
+
+    public int SchematicWritebackSegmentCount => result.SchematicWritebackSegmentCount;
+
     public IList<HydraulicNode> CriticalPath => result.CriticalPath ?? new List<HydraulicNode>();
 
     public string NfpaReference => result.NfpaReference;
@@ -658,6 +662,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(CriticalPathDiameterSuggestionCount));
         OnPropertyChanged(nameof(UsesAppliedPipeSizing));
         OnPropertyChanged(nameof(AppliedPipeSizingSegmentCount));
+        OnPropertyChanged(nameof(UsesSchematicPipeSizingWriteback));
+        OnPropertyChanged(nameof(SchematicWritebackSegmentCount));
         OnPropertyChanged(nameof(CriticalPath));
         OnPropertyChanged(nameof(NfpaReference));
         OnPropertyChanged(nameof(WarningSummary));

@@ -150,6 +150,11 @@ public static class LayoutLinkedHydraulicCalculator
                 remotePressurePsi);
         }
 
+        if (path.UsesAppliedPipeSizing && schematicPipeRouting != null)
+        {
+            SchematicPipeSizingWritebackService.WriteBackAppliedSizing(schematicPipeRouting, path);
+        }
+
         path.Warnings.Add(
             "Layout-linked hydraulics solved "
             + operatingSprinklers.Count

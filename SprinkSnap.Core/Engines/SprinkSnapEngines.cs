@@ -174,6 +174,8 @@ public sealed class HydraulicEngine : IHydraulicEngine
         result.CriticalPathDiameterSuggestionCount = layoutPath.CriticalPathDiameterSuggestionCount;
         result.UsesAppliedPipeSizing = layoutPath.UsesAppliedPipeSizing;
         result.AppliedPipeSizingSegmentCount = layoutPath.AppliedPipeSizingSegmentCount;
+        result.UsesSchematicPipeSizingWriteback = layoutPath.UsesSchematicPipeSizingWriteback;
+        result.SchematicWritebackSegmentCount = layoutPath.SchematicWritebackSegmentCount;
         result.UsesPlacedPipeLengths = layoutPath.UsesPlacedPipeLengths;
         result.UsesPlacedPipeTopology = layoutPath.UsesPlacedPipeTopology;
         result.PipeLengthDataSource = layoutPath.PipeLengthDataSource ?? string.Empty;
