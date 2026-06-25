@@ -83,6 +83,12 @@ public sealed class LayoutLinkedHydraulicPath
 
     public double JunctionPressurePsi { get; set; }
 
+    public double FittingFrictionPsi { get; set; }
+
+    public int CriticalPathFittingCount { get; set; }
+
+    public double CriticalPathDemandPsi { get; set; }
+
     public double CalculatedSprinklerFlowGpm { get; set; }
 
     public bool UsesSegmentGraphHydraulics { get; set; }

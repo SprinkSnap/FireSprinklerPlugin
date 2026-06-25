@@ -164,6 +164,8 @@ public sealed class HydraulicEngine : IHydraulicEngine
         result.UsesUserSupplyAnchor = layoutPath.UsesUserSupplyAnchor;
         result.UserSupplyAnchorLabel = layoutPath.UserSupplyAnchorLabel ?? string.Empty;
         result.CriticalPathSegmentCount = layoutPath.CriticalPathSegmentCount;
+        result.FittingFrictionPsi = layoutPath.FittingFrictionPsi;
+        result.CriticalPathFittingCount = layoutPath.CriticalPathFittingCount;
         result.UsesPlacedPipeLengths = layoutPath.UsesPlacedPipeLengths;
         result.UsesPlacedPipeTopology = layoutPath.UsesPlacedPipeTopology;
         result.PipeLengthDataSource = layoutPath.PipeLengthDataSource ?? string.Empty;
@@ -171,7 +173,9 @@ public sealed class HydraulicEngine : IHydraulicEngine
         result.MainLengthFeet = layoutPath.MainLengthFeet;
         result.TotalPipeLengthFeet = layoutPath.TotalPipeLengthFeet;
         result.RemoteSprinklerLabel = layoutPath.MostRemoteSprinkler?.Label ?? string.Empty;
-        result.SystemDemandPsi = layoutPath.JunctionPressurePsi + layoutPath.MainFrictionPsi;
+        result.SystemDemandPsi = layoutPath.UsesSegmentGraphHydraulics && layoutPath.CriticalPathDemandPsi > 0
+            ? layoutPath.CriticalPathDemandPsi
+            : layoutPath.JunctionPressurePsi + layoutPath.MainFrictionPsi + layoutPath.FittingFrictionPsi;
         result.FlowPerOperatingSprinklerGpm = layoutPath.OperatingSprinklers.Count > 0
             ? layoutPath.CalculatedSprinklerFlowGpm / layoutPath.OperatingSprinklers.Count
             : result.FlowPerOperatingSprinklerGpm;
