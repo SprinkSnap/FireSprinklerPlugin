@@ -6,6 +6,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
+using FireSprinklerPlugin.SprinkSnap.Core.Mapping;
 using FireSprinklerPlugin.SprinkSnap.Revit.ExternalEvents;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
