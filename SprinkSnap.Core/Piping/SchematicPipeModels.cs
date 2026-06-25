@@ -56,4 +56,8 @@ public sealed class SchematicPipeRoutingSummary
     public Point3D SupplyPoint { get; set; } = new Point3D();
 
     public IList<int> ProjectTrunkRoomRevitElementIds { get; set; } = new List<int>();
+
+    public bool UsesAppliedPipeSizing { get; set; }
+
+    public int AppliedPipeSizingSegmentCount { get; set; }
 }

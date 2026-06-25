@@ -284,6 +284,10 @@ public sealed class HydraulicCalculationResult
 
     public int AppliedPipeSizingSegmentCount { get; set; }
 
+    public bool UsesSchematicPipeSizingWriteback { get; set; }
+
+    public int SchematicWritebackSegmentCount { get; set; }
+
     public bool UsesUserSupplyAnchor { get; set; }
 
     public string UserSupplyAnchorLabel { get; set; } = string.Empty;

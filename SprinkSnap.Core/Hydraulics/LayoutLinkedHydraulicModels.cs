@@ -103,6 +103,10 @@ public sealed class LayoutLinkedHydraulicPath
 
     public int AppliedPipeSizingSegmentCount { get; set; }
 
+    public bool UsesSchematicPipeSizingWriteback { get; set; }
+
+    public int SchematicWritebackSegmentCount { get; set; }
+
     public double CalculatedSprinklerFlowGpm { get; set; }
 
     public bool UsesSegmentGraphHydraulics { get; set; }
