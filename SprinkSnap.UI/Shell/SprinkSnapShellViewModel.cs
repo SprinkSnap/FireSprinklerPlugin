@@ -15,7 +15,8 @@ namespace FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 {
-    private readonly SprinkSnapShellContext context;
+    private SprinkSnapShellContext context;
+    private HazardClassificationViewModel subscribedHazardViewModel;
     private SprinkSnapModulePanel selectedModulePanel;
     private string actionFeedback = "Select a workflow panel to open the module workspace.";
     private FrameworkElement activeModuleContent;
@@ -24,7 +25,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     public SprinkSnapShellViewModel(SprinkSnapShellContext context = null)
     {
         this.context = context ?? SprinkSnapShellContext.CreateEmpty();
-        context.WorkflowChanged += (_, _) => RefreshWorkflowGates();
+        context.WorkflowChanged += OnContextWorkflowChanged;
 
         WorkflowSteps = new ObservableCollection<WorkflowStepState>();
         ModulePanels = new ObservableCollection<SprinkSnapModulePanel>
@@ -43,7 +44,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
         AiAssistant = new AiAssistantViewModel(this.context);
         NfpaReferences = new ObservableCollection<Nfpa13CodeReference>(Nfpa13CodeReferenceLibrary.GetAllReferences());
-        context.GetOrCreateHazardViewModel().PropertyChanged += OnHazardViewModelPropertyChanged;
+        SubscribeToHazardViewModel(this.context.GetOrCreateHazardViewModel());
 
         selectedModulePanel = ModulePanels[0];
         ModuleCapabilities = new ObservableCollection<string>();
@@ -57,13 +58,17 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
     public SprinkSnapShellContext Context => context;
 
+    public string DocumentTitle => string.IsNullOrWhiteSpace(context.DocumentTitle)
+        ? "SprinkSnap AI"
+        : context.DocumentTitle;
+
     public ObservableCollection<WorkflowStepState> WorkflowSteps { get; }
 
     public ObservableCollection<SprinkSnapModulePanel> ModulePanels { get; }
 
     public ObservableCollection<string> ModuleCapabilities { get; }
 
-    public AiAssistantViewModel AiAssistant { get; }
+    public AiAssistantViewModel AiAssistant { get; private set; }
 
     public HazardClassificationViewModel HazardViewModel => context.GetOrCreateHazardViewModel();
 
@@ -187,6 +192,46 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
             int completeCount = ModulePanels.Count(panel => panel.IsComplete);
             return completeCount + " of " + ModulePanels.Count + " modules complete in this session.";
         }
+    }
+
+    public void SetActionFeedback(string feedback)
+    {
+        ActionFeedback = feedback;
+    }
+
+    public void AttachContext(SprinkSnapShellContext newContext)
+    {
+        if (newContext == null || ReferenceEquals(context, newContext))
+        {
+            return;
+        }
+
+        context.WorkflowChanged -= OnContextWorkflowChanged;
+        UnsubscribeFromHazardViewModel();
+
+        context = newContext;
+        context.WorkflowChanged += OnContextWorkflowChanged;
+
+        AiAssistant = new AiAssistantViewModel(context);
+        OnPropertyChanged(nameof(AiAssistant));
+        OnPropertyChanged(nameof(HazardViewModel));
+        OnPropertyChanged(nameof(Context));
+        OnPropertyChanged(nameof(DocumentTitle));
+
+        SubscribeToHazardViewModel(context.GetOrCreateHazardViewModel());
+
+        ShowModuleDashboard = true;
+        ActiveModuleContent = null;
+        actionFeedback = string.IsNullOrWhiteSpace(context.DocumentTitle)
+            ? "Select a workflow panel to open the module workspace."
+            : "Revit project loaded: " + context.DocumentTitle + ". Select a workflow panel to continue.";
+        RefreshWorkflowGates();
+        UpdateModuleCapabilities();
+
+        OnPropertyChanged(nameof(ActionFeedback));
+        OnPropertyChanged(nameof(ShowModuleDashboard));
+        OnPropertyChanged(nameof(ShowModuleWorkspace));
+        OnPropertyChanged(nameof(ActiveModuleContent));
     }
 
     public void OpenInitialModule(string moduleTitle)
@@ -323,6 +368,29 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         if (!selectedModulePanel.IsUnlocked && !string.IsNullOrWhiteSpace(selectedModulePanel.BlockReason))
         {
             ModuleCapabilities.Insert(0, selectedModulePanel.BlockReason);
+        }
+    }
+
+    private void OnContextWorkflowChanged(object sender, EventArgs e)
+    {
+        RefreshWorkflowGates();
+    }
+
+    private void SubscribeToHazardViewModel(HazardClassificationViewModel hazardViewModel)
+    {
+        subscribedHazardViewModel = hazardViewModel;
+        if (subscribedHazardViewModel != null)
+        {
+            subscribedHazardViewModel.PropertyChanged += OnHazardViewModelPropertyChanged;
+        }
+    }
+
+    private void UnsubscribeFromHazardViewModel()
+    {
+        if (subscribedHazardViewModel != null)
+        {
+            subscribedHazardViewModel.PropertyChanged -= OnHazardViewModelPropertyChanged;
+            subscribedHazardViewModel = null;
         }
     }
 

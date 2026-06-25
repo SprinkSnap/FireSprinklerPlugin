@@ -86,6 +86,8 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
     public event EventHandler<bool> RequestClose;
 
+    public Action PersistToRevitRequested { get; set; }
+
     public ObservableCollection<RoomHazardReviewItem> Rooms { get; }
 
     public ICollectionView RoomsView { get; }
@@ -797,7 +799,8 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
         if (IsEmbeddedInShell)
         {
-            ValidationMessage = "Hazard and sprinkler selections saved to the current SprinkSnap session.";
+            PersistToRevitRequested?.Invoke();
+            ValidationMessage = "Hazard and sprinkler selections saved to the current SprinkSnap session and written to Revit room parameters.";
             NotifyWorkflowProgressChanged();
             return;
         }

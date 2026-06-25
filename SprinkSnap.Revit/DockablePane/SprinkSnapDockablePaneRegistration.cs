@@ -1,5 +1,6 @@
 using System;
 using Autodesk.Revit.UI;
+using FireSprinklerPlugin.SprinkSnap.Revit.Session;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 namespace FireSprinklerPlugin.SprinkSnap.Revit;
@@ -19,11 +20,12 @@ public sealed class SprinkSnapPaneProvider : IDockablePaneProvider
 {
     public void SetupDockablePane(DockablePaneProviderData data)
     {
-        data.FrameworkElement = new SprinkSnapShellView();
+        SprinkSnapShellView shellView = new SprinkSnapShellView();
+        SprinkSnapRevitSessionHost.RegisterShellView(shellView);
+        data.FrameworkElement = shellView;
         data.InitialState = new DockablePaneState
         {
             DockPosition = DockPosition.Right
         };
     }
 }
-

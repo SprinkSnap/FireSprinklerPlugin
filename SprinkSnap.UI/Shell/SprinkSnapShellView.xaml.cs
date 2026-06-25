@@ -5,13 +5,33 @@ namespace FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 public partial class SprinkSnapShellView : UserControl
 {
+    private SprinkSnapShellContext boundContext;
+
     public SprinkSnapShellView(SprinkSnapShellContext context = null)
     {
         InitializeComponent();
+        boundContext = context;
         DataContext = new SprinkSnapShellViewModel(context);
     }
 
     public SprinkSnapShellViewModel ViewModel => DataContext as SprinkSnapShellViewModel;
+
+    public void AttachContext(SprinkSnapShellContext context)
+    {
+        if (context == null)
+        {
+            return;
+        }
+
+        boundContext = context;
+        if (ViewModel == null)
+        {
+            DataContext = new SprinkSnapShellViewModel(context);
+            return;
+        }
+
+        ViewModel.AttachContext(context);
+    }
 
     public void OpenModule(SprinkSnapWorkflowStep step)
     {

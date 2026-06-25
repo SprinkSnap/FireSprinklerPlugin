@@ -1,11 +1,8 @@
 using System;
-using System.IO;
 using Autodesk.Revit.Attributes;
-using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using FireSprinklerPlugin.SprinkSnap.Core;
-using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Revit.Session;
 
 namespace FireSprinklerPlugin.SprinkSnap.Revit.Commands;
 
@@ -16,13 +13,30 @@ public abstract class SprinkSnapWorkflowCommandBase : IExternalCommand
 
     protected abstract string DisplayName { get; }
 
+    protected virtual bool RefreshRoomsOnOpen => false;
+
+    protected virtual bool RunModelAnalysisOnOpen => false;
+
     public virtual Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {
         try
         {
-            DockablePane pane = commandData.Application.GetDockablePane(SprinkSnapDockablePaneRegistration.PaneId);
-            pane.Show();
-            TaskDialog.Show("SprinkSnap AI", DisplayName + " workspace opened.");
+            UIApplication uiApplication = commandData.Application;
+            if (uiApplication.ActiveUIDocument == null)
+            {
+                TaskDialog.Show("SprinkSnap AI", "No active Revit document is available.");
+                return Result.Succeeded;
+            }
+
+            SprinkSnapRevitSession session = SprinkSnapRevitSession.Activate(uiApplication);
+            if (session == null)
+            {
+                TaskDialog.Show("SprinkSnap AI", "Unable to activate SprinkSnap for the current document.");
+                return Result.Failed;
+            }
+
+            session.EnsureLoaded(refreshRooms: RefreshRoomsOnOpen, runModelAnalysis: RunModelAnalysisOnOpen);
+            session.ShowWorkflowStep(uiApplication, WorkflowStep, BuildOpenFeedback(session));
             return Result.Succeeded;
         }
         catch (Exception ex)
@@ -32,6 +46,17 @@ public abstract class SprinkSnapWorkflowCommandBase : IExternalCommand
             return Result.Failed;
         }
     }
+
+    protected virtual string BuildOpenFeedback(SprinkSnapRevitSession session)
+    {
+        int roomCount = session.Context.ProjectState.Rooms.Count;
+        if (roomCount == 0)
+        {
+            return DisplayName + " opened. No rooms were found — run Analyze Model to extract rooms from Revit.";
+        }
+
+        return DisplayName + " opened for " + roomCount + " room(s) from " + session.Context.DocumentTitle + ".";
+    }
 }
 
 public sealed class AnalyzeModelCommand : SprinkSnapWorkflowCommandBase
@@ -40,75 +65,22 @@ public sealed class AnalyzeModelCommand : SprinkSnapWorkflowCommandBase
 
     protected override string DisplayName => "Analyze Model";
 
-    public override Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+    protected override bool RefreshRoomsOnOpen => true;
+
+    protected override bool RunModelAnalysisOnOpen => true;
+
+    protected override string BuildOpenFeedback(SprinkSnapRevitSession session)
     {
-        UIDocument uiDocument = commandData.Application.ActiveUIDocument;
-        if (uiDocument == null)
-        {
-            TaskDialog.Show("SprinkSnap AI", "No active Revit document is available.");
-            return Result.Succeeded;
-        }
-
-        Document document = uiDocument.Document;
-        IHazardClassificationParameterStorage parameterStorage = new HazardClassificationParameterStorage();
-        IRoomExtractor roomExtractor = new RoomExtractor(
-            new RoomBoundaryExtractor(),
-            new RoomAnalyzer(),
-            new HazardClassifier(),
-            parameterStorage);
-
-        SprinkSnapProjectState state = new SprinkSnapProjectState();
-        foreach (RoomInfo room in roomExtractor.ExtractRooms(document))
-        {
-            state.Rooms.Add(room);
-        }
-
-        state.ModelAnalysis.LinkedModelCount = new FilteredElementCollector(document)
-            .OfClass(typeof(RevitLinkInstance))
-            .GetElementCount();
-        state.ModelAnalysis.ExistingSprinklerCount = new FilteredElementCollector(document)
-            .OfCategory(BuiltInCategory.OST_Sprinklers)
-            .WhereElementIsNotElementType()
-            .GetElementCount();
-
-        IModelAnalysisEngine engine = new ModelAnalysisEngine();
-        ModelAnalysisSummary summary = engine.Analyze(state);
-        summary.LinkedModelCount = state.ModelAnalysis.LinkedModelCount;
-        summary.ExistingSprinklerCount = state.ModelAnalysis.ExistingSprinklerCount;
-
-        string jsonPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "SprinkSnap_ModelAnalysis.json");
-        File.WriteAllText(jsonPath, engine.ExportJson(summary));
-
-        TaskDialog.Show(
-            "Model Analysis Summary",
-            "✓ "
+        ModelAnalysisSummary summary = session.Context.ProjectState.ModelAnalysis;
+        return "Analyze Model complete: "
             + summary.RoomCount
-            + " rooms extracted"
-            + Environment.NewLine
-            + "✓ "
+            + " rooms, "
             + summary.SlopedCeilingCount
-            + " sloped ceilings"
-            + Environment.NewLine
-            + "✓ "
-            + summary.LinkedModelCount
-            + " linked models"
-            + Environment.NewLine
-            + "⚠ "
+            + " sloped ceilings, "
             + summary.MissingCeilingCount
-            + " rooms missing ceilings"
-            + Environment.NewLine
-            + "⚠ "
+            + " missing ceilings, "
             + summary.ObstructionZoneCount
-            + " obstruction zones"
-            + Environment.NewLine
-            + Environment.NewLine
-            + "JSON exported:"
-            + Environment.NewLine
-            + jsonPath);
-
-        return Result.Succeeded;
+            + " obstruction zones.";
     }
 }
 
@@ -167,4 +139,3 @@ public sealed class SettingsCommand : SprinkSnapWorkflowCommandBase
 
     protected override string DisplayName => "Settings";
 }
-

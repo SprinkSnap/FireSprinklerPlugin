@@ -1,0 +1,101 @@
+using System;
+using System.Collections.Generic;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
+using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.UI.Shell;
+
+namespace FireSprinklerPlugin.SprinkSnap.Revit.Session;
+
+public sealed class SprinkSnapRevitSession
+{
+    private static readonly Dictionary<string, SprinkSnapRevitSession> SessionsByDocumentKey =
+        new Dictionary<string, SprinkSnapRevitSession>();
+
+    private SprinkSnapRevitSession(Document document, SprinkSnapShellContext context)
+    {
+        Document = document;
+        Context = context;
+        Context.PersistToRevitRequested = PersistApprovedHazardsToRevit;
+    }
+
+    public Document Document { get; }
+
+    public SprinkSnapShellContext Context { get; }
+
+    public string DocumentKey => RevitDocumentKey.Create(Document);
+
+    public static SprinkSnapRevitSession GetOrCreate(UIApplication uiApplication)
+    {
+        UIDocument uiDocument = uiApplication.ActiveUIDocument;
+        if (uiDocument == null)
+        {
+            return null;
+        }
+
+        Document document = uiDocument.Document;
+        string documentKey = RevitDocumentKey.Create(document);
+        if (SessionsByDocumentKey.TryGetValue(documentKey, out SprinkSnapRevitSession existingSession)
+            && existingSession.Document.IsValidObject)
+        {
+            return existingSession;
+        }
+
+        SprinkSnapShellContext context = new SprinkSnapShellContext(new SprinkSnapProjectState());
+        SprinkSnapRevitSession session = new SprinkSnapRevitSession(document, context);
+        SessionsByDocumentKey[documentKey] = session;
+        return session;
+    }
+
+    public static SprinkSnapRevitSession Activate(UIApplication uiApplication)
+    {
+        SprinkSnapRevitSession session = GetOrCreate(uiApplication);
+        if (session == null)
+        {
+            return null;
+        }
+
+        SprinkSnapShellView shellView = SprinkSnapRevitSessionHost.SharedShellView;
+        shellView?.AttachContext(session.Context);
+        return session;
+    }
+
+    public bool EnsureLoaded(bool refreshRooms, bool runModelAnalysis = false)
+    {
+        string currentDocumentKey = RevitDocumentKey.Create(Document);
+        bool documentChanged = !string.Equals(Context.DocumentKey, currentDocumentKey, StringComparison.OrdinalIgnoreCase);
+        if (!refreshRooms && !documentChanged && Context.ProjectState.Rooms.Count > 0)
+        {
+            return true;
+        }
+
+        RevitProjectLoadResult loadResult = RevitProjectLoader.Load(Document, runModelAnalysis);
+        Context.ApplyRevitLoad(loadResult, runModelAnalysis);
+        return Context.ProjectState.Rooms.Count > 0;
+    }
+
+    public void ShowWorkflowStep(UIApplication uiApplication, SprinkSnapWorkflowStep step, string feedback = null)
+    {
+        DockablePane pane = uiApplication.GetDockablePane(SprinkSnapDockablePaneRegistration.PaneId);
+        pane.Show();
+
+        SprinkSnapShellView shellView = SprinkSnapRevitSessionHost.SharedShellView;
+        if (shellView == null)
+        {
+            return;
+        }
+
+        shellView.AttachContext(Context);
+        if (!string.IsNullOrWhiteSpace(feedback))
+        {
+            shellView.ViewModel?.SetActionFeedback(feedback);
+        }
+
+        shellView.OpenModule(step);
+    }
+
+    private void PersistApprovedHazardsToRevit()
+    {
+        RevitHazardPersistence.SaveApprovedHazards(Document, Context.ProjectState.Rooms);
+    }
+}
