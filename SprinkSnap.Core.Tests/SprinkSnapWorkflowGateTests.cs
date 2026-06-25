@@ -90,6 +90,34 @@ public sealed class SprinkSnapWorkflowGateTests
         Assert.True(string.IsNullOrWhiteSpace(access.BlockReason));
     }
 
+    [Fact]
+    public void Evaluate_Materials_ShowsWarning_WhenHydraulicsCompleteAndTakeoffStale()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.SessionProgress.HydraulicsComplete = true;
+        state.SessionProgress.MaterialsComplete = false;
+
+        WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.Materials);
+
+        Assert.True(access.IsUnlocked);
+        Assert.Equal(WorkflowStepStatus.Warning, access.Status);
+        Assert.Equal("Refresh needed", access.StatusLabel);
+    }
+
+    [Fact]
+    public void Evaluate_Reports_ShowsWarning_WhenMaterialTakeoffIsStale()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.SessionProgress.HydraulicsComplete = true;
+        state.SessionProgress.MaterialsComplete = false;
+
+        WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.Reports);
+
+        Assert.True(access.IsUnlocked);
+        Assert.Equal(WorkflowStepStatus.Warning, access.Status);
+        Assert.Equal("Refresh materials", access.StatusLabel);
+    }
+
     private static SprinkSnapProjectState CreateReadyForPlacementState()
     {
         return new SprinkSnapProjectState

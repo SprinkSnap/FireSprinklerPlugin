@@ -245,10 +245,32 @@ public static class SprinkSnapWorkflowGate
                         "Reconcile");
                 }
 
+                if (hydraulicsComplete && !materialsComplete)
+                {
+                    return CreateAccess(
+                        step,
+                        true,
+                        false,
+                        string.Empty,
+                        WorkflowStepStatus.Warning,
+                        "Refresh needed");
+                }
+
                 return CreateAccess(step, true, materialsComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.Reports:
                 bool reportsUnlocked = hydraulicsComplete || materialsComplete;
+                if (reportsUnlocked && hydraulicsComplete && !materialsComplete)
+                {
+                    return CreateAccess(
+                        step,
+                        isUnlocked: true,
+                        isComplete: state.SessionProgress.ReportsExported,
+                        blockReason: string.Empty,
+                        status: WorkflowStepStatus.Warning,
+                        statusLabel: "Refresh materials");
+                }
+
                 return CreateAccess(
                     step,
                     isUnlocked: reportsUnlocked,
