@@ -11,12 +11,18 @@ namespace FireSprinklerPlugin.SprinkSnap.Revit;
 
 public static class RevitFittingPlacementService
 {
+    public static int RemoveRoomFittings(Document document, RoomInfo room, string roomNumber)
+    {
+        return RemoveSprinkSnapPlacedFittings(document, room, roomNumber);
+    }
+
     public static void PlaceRoomJoints(
         Document document,
         RoomInfo room,
         IList<PipeJoint> joints,
         Level level,
-        PipePlacementRoomResult result)
+        PipePlacementRoomResult result,
+        bool removeExisting = true)
     {
         if (document == null || joints == null || joints.Count == 0 || level == null || result == null)
         {
@@ -24,10 +30,13 @@ public static class RevitFittingPlacementService
         }
 
         PipeJoint first = joints.First();
-        int removedExisting = RemoveSprinkSnapPlacedFittings(document, room, first.RoomNumber);
-        if (removedExisting > 0)
+        if (removeExisting)
         {
-            result.Message = AppendMessage(result.Message, "Removed " + removedExisting + " previous SprinkSnap fitting(s) before re-placing.");
+            int removedExisting = RemoveSprinkSnapPlacedFittings(document, room, first.RoomNumber);
+            if (removedExisting > 0)
+            {
+                result.Message = AppendMessage(result.Message, "Removed " + removedExisting + " previous SprinkSnap fitting(s) before re-placing.");
+            }
         }
 
         foreach (PipeJoint joint in joints)

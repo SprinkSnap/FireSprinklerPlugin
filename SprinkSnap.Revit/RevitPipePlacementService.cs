@@ -75,6 +75,8 @@ public static class RevitPipePlacementService
                 summary.PlacedLengthFeet += roomResult.PlacedLengthFeet;
                 summary.PlacedFittingCount += roomResult.PlacedFittingCount;
                 summary.SkippedFittingCount += roomResult.SkippedFittingCount;
+                summary.ConnectedJointCount += roomResult.ConnectedJointCount;
+                summary.ConnectedFittingCount += roomResult.ConnectedFittingCount;
             }
 
             transaction.Commit();
@@ -111,6 +113,16 @@ public static class RevitPipePlacementService
                     + summary.PlacedFittingCount
                     + " schematic fitting(s) and valve(s) at routing joints.");
             }
+        }
+
+        if (summary.ConnectedJointCount > 0)
+        {
+            summary.Messages.Add(
+                "Connected "
+                + summary.ConnectedJointCount
+                + " routing joint(s) with "
+                + summary.ConnectedFittingCount
+                + " Revit connector fitting(s).");
         }
 
         return summary;
@@ -154,8 +166,18 @@ public static class RevitPipePlacementService
             result.Message = "Removed " + removedExisting + " previous SprinkSnap pipe segment(s) before re-placing.";
         }
 
-        foreach (PipeSegment segment in segments)
+        int removedFittings = RevitFittingPlacementService.RemoveRoomFittings(document, room, first.RoomNumber);
+        if (removedFittings > 0)
         {
+            result.Message = AppendMessage(
+                result.Message,
+                "Removed " + removedFittings + " previous SprinkSnap fitting(s) before re-placing.");
+        }
+
+        List<PlacedPipeRecord> placedPipes = new List<PlacedPipeRecord>();
+        for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
+        {
+            PipeSegment segment = segments[segmentIndex];
             if (segment.LengthFeet < MinimumSegmentLengthFeet)
             {
                 result.SkippedSegmentCount++;
@@ -186,6 +208,12 @@ public static class RevitPipePlacementService
                     PlacedElementId = pipe.Id.IntegerValue,
                     Description = segment.Description
                 });
+                placedPipes.Add(new PlacedPipeRecord
+                {
+                    SegmentIndex = segmentIndex,
+                    Segment = segment,
+                    Pipe = pipe
+                });
                 result.PlacedSegmentCount++;
                 result.PlacedLengthFeet += placedLengthFeet;
             }
@@ -202,9 +230,26 @@ public static class RevitPipePlacementService
             result.Message = "Placed " + result.PlacedSegmentCount + " schematic pipe segment(s).";
         }
 
+        if (placedPipes.Count > 1)
+        {
+            RevitPipeConnectionResult connectionResult = RevitPipeConnectionService.ConnectRoomPipes(
+                document,
+                segments,
+                placedPipes,
+                first.RoomNumber);
+            result.ConnectedJointCount = connectionResult.ConnectedJointCount;
+            result.SkippedConnectionCount = connectionResult.SkippedConnectionCount;
+            result.ConnectedFittingCount = connectionResult.CreatedFittingCount;
+            if (connectionResult.Messages.Count > 0)
+            {
+                result.Message = AppendMessage(result.Message, string.Join("; ", connectionResult.Messages));
+            }
+        }
+
         if (roomJoints != null && roomJoints.Count > 0 && result.PlacedSegmentCount > 0)
         {
-            RevitFittingPlacementService.PlaceRoomJoints(document, room, roomJoints, level, result);
+            IList<PipeJoint> orphanJoints = FilterOrphanJoints(roomJoints, result.ConnectedJointCount > 0);
+            RevitFittingPlacementService.PlaceRoomJoints(document, room, orphanJoints, level, result, removeExisting: false);
             if (result.PlacedFittingCount > 0)
             {
                 result.Message = AppendMessage(
@@ -294,6 +339,19 @@ public static class RevitPipePlacementService
     private static string AppendMessage(string existing, string addition)
     {
         return string.IsNullOrWhiteSpace(existing) ? addition : existing + "; " + addition;
+    }
+
+    private static IList<PipeJoint> FilterOrphanJoints(IList<PipeJoint> joints, bool connectorRoutingSucceeded)
+    {
+        if (!connectorRoutingSucceeded)
+        {
+            return joints;
+        }
+
+        return joints
+            .Where(joint => !string.Equals(joint.JointType, PipeJointTypes.Elbow, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(joint.JointType, PipeJointTypes.Tee, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     private static int RemoveSprinkSnapPlacedPipes(Document document, RoomInfo room, string roomNumber)
