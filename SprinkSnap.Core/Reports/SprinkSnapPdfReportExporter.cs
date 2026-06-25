@@ -199,6 +199,10 @@ public static class SprinkSnapPdfReportExporter
                         AddRow(table, "Total calculated flow", hydraulicResult.TotalFlowGpm.ToString("N1") + " GPM");
                         AddRow(table, "Equivalent K-factor", hydraulicResult.EquivalentKFactor.ToString("N1"));
                         AddRow(table, "Layout-linked hydraulics", hydraulicResult.UsesLayoutLinkedHydraulics ? "Yes" : "Estimated");
+                        AddRow(table, "Pipe length source", string.IsNullOrWhiteSpace(hydraulicResult.PipeLengthDataSource)
+                            ? "Geometry"
+                            : hydraulicResult.PipeLengthDataSource);
+                        AddRow(table, "Uses placed pipe lengths", hydraulicResult.UsesPlacedPipeLengths ? "Yes" : "No");
                         AddRow(table, "Remote sprinkler", string.IsNullOrWhiteSpace(hydraulicResult.RemoteSprinklerLabel)
                             ? "Not available"
                             : hydraulicResult.RemoteSprinklerLabel);

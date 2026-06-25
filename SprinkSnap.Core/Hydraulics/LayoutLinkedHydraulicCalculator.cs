@@ -21,7 +21,8 @@ public static class LayoutLinkedHydraulicCalculator
         double defaultKFactor,
         double branchDiameterInches,
         double mainDiameterInches,
-        SchematicPipeRoutingSummary schematicPipeRouting = null)
+        SchematicPipeRoutingSummary schematicPipeRouting = null,
+        PipePlacementSummary pipePlacementSummary = null)
     {
         Point3D sourcePoint = HydraulicGraphBuilder.ResolveSourcePoint(controllingRooms);
         IList<LayoutSprinklerPoint> sprinklerPoints = HydraulicGraphBuilder.CollectSprinklerPoints(
@@ -38,7 +39,8 @@ public static class LayoutLinkedHydraulicCalculator
             sourcePoint,
             branchDiameterInches,
             mainDiameterInches,
-            schematicPipeRouting);
+            schematicPipeRouting,
+            pipePlacementSummary);
 
         double targetSprinklerFlow = designFlowPerSprinklerGpm * Math.Max(operatingSprinklers.Count, 1);
         if (operatingSprinklers.Count == 0)
@@ -105,7 +107,9 @@ public static class LayoutLinkedHydraulicCalculator
         path.Warnings.Add(
             "Layout-linked hydraulics solved "
             + operatingSprinklers.Count
-            + " operating head(s) with Q = K√P and geometry-derived pipe lengths.");
+            + " operating head(s) with Q = K√P and "
+            + (path.UsesPlacedPipeLengths ? "placed Revit" : path.PipeLengthDataSource.ToLowerInvariant())
+            + " pipe lengths.");
 
         return path;
     }

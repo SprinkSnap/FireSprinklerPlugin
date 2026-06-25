@@ -237,6 +237,10 @@ public sealed class HydraulicCalculationResult
 
     public bool UsesLayoutLinkedHydraulics { get; set; }
 
+    public bool UsesPlacedPipeLengths { get; set; }
+
+    public string PipeLengthDataSource { get; set; } = string.Empty;
+
     public double BranchLengthFeet { get; set; }
 
     public double MainLengthFeet { get; set; }

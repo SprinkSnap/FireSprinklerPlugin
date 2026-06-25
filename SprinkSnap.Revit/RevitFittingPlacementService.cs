@@ -58,6 +58,13 @@ public static class RevitFittingPlacementService
                     StructuralType.NonStructural);
                 TagFittingInstance(instance, joint, room);
                 result.PlacedFittingElementIds.Add(instance.Id.IntegerValue);
+                result.PlacedFittings.Add(new PipePlacementFittingResult
+                {
+                    JointType = joint.JointType,
+                    DiameterInches = joint.DiameterInches,
+                    PlacedElementId = instance.Id.IntegerValue,
+                    Description = joint.Description
+                });
                 result.PlacedFittingCount++;
             }
             catch (Exception ex)
@@ -71,7 +78,7 @@ public static class RevitFittingPlacementService
     private static void TagFittingInstance(FamilyInstance instance, PipeJoint joint, RoomInfo room)
     {
         string roomNumber = room?.Number ?? joint.RoomNumber;
-        SetParameter(instance, "Comments", "SprinkSnap Schematic Fitting | Room " + roomNumber + " | " + joint.JointType);
+        SetParameter(instance, "Comments", "SprinkSnap Schematic Fitting | Room " + roomNumber + " | " + joint.JointType + " | " + joint.DiameterInches.ToString("0.##") + "\"");
         SetParameter(instance, "Mark", roomNumber + "-" + joint.JointType.ToUpperInvariant());
         SetParameter(instance, "SS_RoomNumber", roomNumber);
         SetParameter(instance, "SS_SegmentType", joint.JointType);

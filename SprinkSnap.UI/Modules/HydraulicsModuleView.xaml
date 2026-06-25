@@ -97,6 +97,12 @@
                 </Border>
                 <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                     <StackPanel>
+                        <TextBlock Text="Pipe length source" Foreground="#6B7280" />
+                        <TextBlock Text="{Binding PipeLengthDataSource}" FontSize="22" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+                <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                    <StackPanel>
                         <TextBlock Text="Remote head" Foreground="#6B7280" />
                         <TextBlock Text="{Binding RemoteSprinklerLabel}" FontSize="22" FontWeight="SemiBold" />
                     </StackPanel>

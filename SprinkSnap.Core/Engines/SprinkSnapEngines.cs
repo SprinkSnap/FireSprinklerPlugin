@@ -103,7 +103,8 @@ public sealed class HydraulicEngine : IHydraulicEngine
         IEnumerable<RoomInfo> rooms,
         WaterSupplyInput waterSupply,
         SprinklerPlacementSummary placementSummary = null,
-        SchematicPipeRoutingSummary schematicPipeRouting = null)
+        SchematicPipeRoutingSummary schematicPipeRouting = null,
+        PipePlacementSummary pipePlacementSummary = null)
     {
         List<RoomInfo> roomList = rooms?.ToList() ?? new List<RoomInfo>();
         HydraulicCalculationResult result = new HydraulicCalculationResult();
@@ -152,9 +153,12 @@ public sealed class HydraulicEngine : IHydraulicEngine
             equivalentKFactor,
             BranchDiameterInches,
             MainDiameterInches,
-            schematicPipeRouting);
+            schematicPipeRouting,
+            pipePlacementSummary);
 
         result.UsesLayoutLinkedHydraulics = layoutPath.UsesLayoutGeometry;
+        result.UsesPlacedPipeLengths = layoutPath.UsesPlacedPipeLengths;
+        result.PipeLengthDataSource = layoutPath.PipeLengthDataSource ?? string.Empty;
         result.BranchLengthFeet = layoutPath.BranchLengthFeet;
         result.MainLengthFeet = layoutPath.MainLengthFeet;
         result.TotalPipeLengthFeet = layoutPath.TotalPipeLengthFeet;
@@ -192,6 +196,17 @@ public sealed class HydraulicEngine : IHydraulicEngine
         if (placementSummary != null && placementSummary.PlacedCount > 0)
         {
             result.Warnings.Add("Hydraulic demand uses " + result.OperatingSprinklerCount + " operating sprinkler(s) with placed Revit heads considered.");
+        }
+        else if (layoutPath.UsesPlacedPipeLengths)
+        {
+            result.Warnings.Add(
+                "Critical path uses placed Revit pipe lengths for most remote head "
+                + (string.IsNullOrWhiteSpace(result.RemoteSprinklerLabel) ? string.Empty : result.RemoteSprinklerLabel + " ")
+                + "with "
+                + result.BranchLengthFeet.ToString("N0")
+                + " ft branch and "
+                + result.MainLengthFeet.ToString("N0")
+                + " ft main.");
         }
         else if (layoutPath.UsesLayoutGeometry)
         {

@@ -378,7 +378,8 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             context.ProjectState.Rooms,
             input,
             context.ProjectState.PlacementSummary,
-            context.ProjectState.SchematicPipeRouting);
+            context.ProjectState.SchematicPipeRouting,
+            context.ProjectState.PipePlacementSummary);
         WaterSupplyValidationResult result = waterSupplyEngine.Validate(input, demand);
 
         context.ProjectState.HydraulicResult = demand;
@@ -469,6 +470,12 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public bool UsesLayoutLinkedHydraulics => result.UsesLayoutLinkedHydraulics;
 
+    public bool UsesPlacedPipeLengths => result.UsesPlacedPipeLengths;
+
+    public string PipeLengthDataSource => string.IsNullOrWhiteSpace(result.PipeLengthDataSource)
+        ? "Geometry"
+        : result.PipeLengthDataSource;
+
     public double BranchLengthFeet => result.BranchLengthFeet;
 
     public double MainLengthFeet => result.MainLengthFeet;
@@ -507,7 +514,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
             context.ProjectState.Rooms,
             context.ProjectState.WaterSupply,
             context.ProjectState.PlacementSummary,
-            context.ProjectState.SchematicPipeRouting);
+            context.ProjectState.SchematicPipeRouting,
+            context.ProjectState.PipePlacementSummary);
         context.ProjectState.HydraulicResult = result;
         context.ProjectState.SessionProgress.HydraulicsComplete = result.TotalFlowGpm > 0;
         context.RequestPersistToRevit();
@@ -536,6 +544,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(DemandPressurePsi));
         OnPropertyChanged(nameof(ShowSupplyChart));
         OnPropertyChanged(nameof(UsesLayoutLinkedHydraulics));
+        OnPropertyChanged(nameof(UsesPlacedPipeLengths));
+        OnPropertyChanged(nameof(PipeLengthDataSource));
         OnPropertyChanged(nameof(BranchLengthFeet));
         OnPropertyChanged(nameof(MainLengthFeet));
         OnPropertyChanged(nameof(TotalPipeLengthFeet));
@@ -799,7 +809,8 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
                 context.ProjectState.Rooms,
                 context.ProjectState.WaterSupply,
                 context.ProjectState.PlacementSummary,
-                context.ProjectState.SchematicPipeRouting);
+                context.ProjectState.SchematicPipeRouting,
+                context.ProjectState.PipePlacementSummary);
         context.ProjectState.HydraulicResult = hydraulicResult;
 
         IReadOnlyList<MaterialTakeoffItem> materialTakeoff = takeoffEngine.Generate(

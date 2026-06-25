@@ -85,7 +85,7 @@ public static class RevitPipeMeasurementService
 
         foreach (Element element in fittings.Concat(accessories))
         {
-            if (!TryReadSprinkSnapFitting(element, out string roomNumber, out _))
+            if (!TryReadSprinkSnapFitting(element, out string roomNumber, out string jointType, out double diameterInches))
             {
                 continue;
             }
@@ -95,6 +95,13 @@ public static class RevitPipeMeasurementService
                 roomsByNumber,
                 roomNumber);
             roomResult.PlacedFittingElementIds.Add(element.Id.IntegerValue);
+            roomResult.PlacedFittings.Add(new PipePlacementFittingResult
+            {
+                JointType = jointType,
+                DiameterInches = diameterInches,
+                PlacedElementId = element.Id.IntegerValue,
+                Description = ReadParameterValue(element, "SS_PlacementBasis")
+            });
             roomResult.PlacedFittingCount++;
         }
 
@@ -188,10 +195,15 @@ public static class RevitPipeMeasurementService
         return !string.IsNullOrWhiteSpace(roomNumber);
     }
 
-    private static bool TryReadSprinkSnapFitting(Element element, out string roomNumber, out string segmentType)
+    private static bool TryReadSprinkSnapFitting(
+        Element element,
+        out string roomNumber,
+        out string jointType,
+        out double diameterInches)
     {
         roomNumber = ReadParameterValue(element, "SS_RoomNumber");
-        segmentType = ReadParameterValue(element, "SS_SegmentType");
+        jointType = ReadParameterValue(element, "SS_SegmentType");
+        diameterInches = 0.0;
 
         string comments = ReadParameterValue(element, "Comments");
         if (!comments.Contains("SprinkSnap Schematic Fitting", StringComparison.OrdinalIgnoreCase))
@@ -204,12 +216,17 @@ public static class RevitPipeMeasurementService
             roomNumber = TryParseRoomNumberFromComments(comments);
         }
 
-        if (string.IsNullOrWhiteSpace(segmentType))
+        if (string.IsNullOrWhiteSpace(jointType))
         {
-            segmentType = TryParseSegmentTypeFromComments(comments);
+            jointType = TryParseSegmentTypeFromComments(comments);
         }
 
-        return !string.IsNullOrWhiteSpace(roomNumber);
+        if (!TryParseDiameterFromComments(comments, out diameterInches))
+        {
+            diameterInches = 0.0;
+        }
+
+        return !string.IsNullOrWhiteSpace(roomNumber) && !string.IsNullOrWhiteSpace(jointType);
     }
 
     private static string TryParseRoomNumberFromComments(string comments)
@@ -229,13 +246,36 @@ public static class RevitPipeMeasurementService
 
     private static string TryParseSegmentTypeFromComments(string comments)
     {
-        int lastPipe = comments.LastIndexOf('|');
-        if (lastPipe < 0 || lastPipe >= comments.Length - 1)
+        string[] parts = comments.Split('|');
+        if (parts.Length < 2)
         {
             return string.Empty;
         }
 
-        return comments.Substring(lastPipe + 1).Trim();
+        if (parts.Length >= 4 && TryParseDiameterToken(parts[parts.Length - 1], out _))
+        {
+            return parts[parts.Length - 2].Trim();
+        }
+
+        return parts[parts.Length - 1].Trim();
+    }
+
+    private static bool TryParseDiameterFromComments(string comments, out double diameterInches)
+    {
+        diameterInches = 0.0;
+        string[] parts = comments.Split('|');
+        if (parts.Length < 4)
+        {
+            return false;
+        }
+
+        return TryParseDiameterToken(parts[parts.Length - 1], out diameterInches);
+    }
+
+    private static bool TryParseDiameterToken(string token, out double diameterInches)
+    {
+        string cleaned = token.Trim().TrimEnd('"').Trim();
+        return double.TryParse(cleaned, out diameterInches) && diameterInches > 0;
     }
 
     private static string ReadParameterValue(Element element, string parameterName)

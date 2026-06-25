@@ -26,6 +26,8 @@ public sealed class RoomFittingTakeoff
     public int ValveCount { get; set; }
 
     public bool UsesPlacedPipes { get; set; }
+
+    public bool UsesPlacedFittings { get; set; }
 }
 
 public static class FittingTakeoffCalculator
@@ -55,8 +57,9 @@ public static class FittingTakeoffCalculator
                 string.Equals(segment.SegmentType, PipeSegmentTypes.Riser, StringComparison.OrdinalIgnoreCase));
 
             placedRooms.TryGetValue(roomGroup.Key, out PipePlacementRoomResult placedRoom);
-            bool usesPlaced = (placedRoom?.PlacedSegmentCount ?? 0) > 0
-                || (placedRoom?.PlacedFittingCount ?? 0) > 0;
+            bool usesPlacedFittings = PlacedFittingTakeoffCalculator.UsesPlacedFittingCounts(placedRoom);
+            bool usesPlacedPipes = usesPlacedFittings
+                || (placedRoom?.PlacedSegmentCount ?? 0) > 0;
 
             RoomFittingTakeoff takeoff = new RoomFittingTakeoff
             {
@@ -64,19 +67,28 @@ public static class FittingTakeoffCalculator
                 RoomNumber = first.RoomNumber,
                 RoomName = first.RoomName,
                 LevelName = first.LevelName,
-                Tee125Count = joints.Count(joint =>
-                    string.Equals(joint.JointType, PipeJointTypes.Tee, StringComparison.OrdinalIgnoreCase)
-                    && Math.Abs(joint.DiameterInches - 1.25) < 0.01),
-                Elbow125Count = joints.Count(joint =>
-                    string.Equals(joint.JointType, PipeJointTypes.Elbow, StringComparison.OrdinalIgnoreCase)
-                    && Math.Abs(joint.DiameterInches - 1.25) < 0.01),
-                Elbow4InchCount = joints.Count(joint =>
-                    string.Equals(joint.JointType, PipeJointTypes.Elbow, StringComparison.OrdinalIgnoreCase)
-                    && Math.Abs(joint.DiameterInches - 4.0) < 0.01),
-                RiserAssemblyCount = hasRiser ? 1 : 0,
-                ValveCount = joints.Count(joint =>
-                    string.Equals(joint.JointType, PipeJointTypes.Valve, StringComparison.OrdinalIgnoreCase)),
-                UsesPlacedPipes = usesPlaced
+                Tee125Count = usesPlacedFittings
+                    ? PlacedFittingTakeoffCalculator.CountFittings(placedRoom, PipeJointTypes.Tee, 1.25)
+                    : joints.Count(joint =>
+                        string.Equals(joint.JointType, PipeJointTypes.Tee, StringComparison.OrdinalIgnoreCase)
+                        && Math.Abs(joint.DiameterInches - 1.25) < 0.01),
+                Elbow125Count = usesPlacedFittings
+                    ? PlacedFittingTakeoffCalculator.CountFittings(placedRoom, PipeJointTypes.Elbow, 1.25)
+                    : joints.Count(joint =>
+                        string.Equals(joint.JointType, PipeJointTypes.Elbow, StringComparison.OrdinalIgnoreCase)
+                        && Math.Abs(joint.DiameterInches - 1.25) < 0.01),
+                Elbow4InchCount = usesPlacedFittings
+                    ? PlacedFittingTakeoffCalculator.CountFittings(placedRoom, PipeJointTypes.Elbow, 4.0)
+                    : joints.Count(joint =>
+                        string.Equals(joint.JointType, PipeJointTypes.Elbow, StringComparison.OrdinalIgnoreCase)
+                        && Math.Abs(joint.DiameterInches - 4.0) < 0.01),
+                RiserAssemblyCount = PlacedFittingTakeoffCalculator.CountRiserAssemblies(placedRoom, hasRiser),
+                ValveCount = usesPlacedFittings
+                    ? PlacedFittingTakeoffCalculator.CountValves(placedRoom)
+                    : joints.Count(joint =>
+                        string.Equals(joint.JointType, PipeJointTypes.Valve, StringComparison.OrdinalIgnoreCase)),
+                UsesPlacedPipes = usesPlacedPipes,
+                UsesPlacedFittings = usesPlacedFittings
             };
 
             if (takeoff.Elbow125Count > 0

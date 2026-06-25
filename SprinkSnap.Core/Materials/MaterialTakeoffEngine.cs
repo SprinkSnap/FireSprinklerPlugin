@@ -242,7 +242,7 @@ public sealed class MaterialTakeoffEngine : Engines.IMaterialTakeoffEngine
 
         foreach (RoomFittingTakeoff takeoff in fittingTakeoffs)
         {
-            string source = takeoff.UsesPlacedPipes ? "Placed" : "Schematic";
+            string source = takeoff.UsesPlacedFittings ? "Placed" : "Schematic";
             AddFittingRow(detailRows, takeoff, "Fitting", "1.25\" Elbow", takeoff.Elbow125Count, source);
             AddFittingRow(detailRows, takeoff, "Fitting", "1.25\" Tee", takeoff.Tee125Count, source);
             AddFittingRow(detailRows, takeoff, "Fitting", "4\" Elbow", takeoff.Elbow4InchCount, source);

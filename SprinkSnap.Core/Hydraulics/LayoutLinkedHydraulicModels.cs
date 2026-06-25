@@ -25,6 +25,10 @@ public sealed class LayoutLinkedHydraulicPath
 {
     public bool UsesLayoutGeometry { get; set; }
 
+    public bool UsesPlacedPipeLengths { get; set; }
+
+    public string PipeLengthDataSource { get; set; } = string.Empty;
+
     public Point3D SourcePoint { get; set; } = new Point3D();
 
     public LayoutSprinklerPoint MostRemoteSprinkler { get; set; }

@@ -42,7 +42,8 @@ public interface IHydraulicEngine
         IEnumerable<RoomInfo> rooms,
         WaterSupplyInput waterSupply,
         SprinklerPlacementSummary placementSummary = null,
-        SchematicPipeRoutingSummary schematicPipeRouting = null);
+        SchematicPipeRoutingSummary schematicPipeRouting = null,
+        PipePlacementSummary pipePlacementSummary = null);
 }
 
 public interface IMaterialTakeoffEngine
