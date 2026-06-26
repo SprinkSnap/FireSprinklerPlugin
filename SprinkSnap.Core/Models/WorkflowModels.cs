@@ -246,6 +246,12 @@ public sealed class HydraulicCalculationResult
 
     public double MaxCoverageSquareFeet { get; set; }
 
+    public double ControllingCeilingHeightFeet { get; set; }
+
+    public bool UsesHighCeilingAdjustment { get; set; }
+
+    public string HighCeilingAdjustmentSummary { get; set; } = string.Empty;
+
     public double DemandFlowGpm { get; set; }
 
     public double DemandPressurePsi { get; set; }

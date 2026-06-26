@@ -14,6 +14,10 @@ public sealed class Nfpa13HydraulicDesignCriteria
     public double HoseStreamAllowanceGpm { get; set; }
 
     public string NfpaReference { get; set; } = string.Empty;
+
+    public bool AppliesHighCeilingAdjustment { get; set; }
+
+    public string HighCeilingAdjustmentSummary { get; set; } = string.Empty;
 }
 
 public static class Nfpa13HydraulicDesignTable

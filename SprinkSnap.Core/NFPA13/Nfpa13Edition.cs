@@ -75,5 +75,7 @@ public static class Nfpa13Edition
             + Chapter("19");
 
         public static readonly string HydraulicReportChapter = Chapter("19") + " and " + Chapter("28");
+
+        public static readonly string HighCeilingDesignCriteria = Section("19.2.3.2.5.2");
     }
 }

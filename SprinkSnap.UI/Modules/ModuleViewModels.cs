@@ -655,6 +655,21 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public string NfpaReference => result.NfpaReference;
 
+    public double ControllingCeilingHeightFeet => result.ControllingCeilingHeightFeet;
+
+    public bool UsesHighCeilingAdjustment => result.UsesHighCeilingAdjustment;
+
+    public string HighCeilingAdjustmentSummary => result.HighCeilingAdjustmentSummary ?? string.Empty;
+
+    public bool MissingControllingCeilingHeight =>
+        Nfpa13HighCeilingDesignCriteriaAdjuster.RequiresHighCeilingEvaluation(result.ControllingHazardClassification)
+        && result.ControllingCeilingHeightFeet <= 0;
+
+    public string MissingControllingCeilingHeightMessage =>
+        "Controlling ceiling height is missing for "
+        + result.ControllingHazardClassification
+        + ". NFPA 13 (2025) Section 19.2.3.2.5.2 high-ceiling adjustments were not applied — verify Analyze Model ceiling data.";
+
     public string StatusMessage
     {
         get => statusMessage;
@@ -806,6 +821,11 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(RemoteAreaSelectionStatus));
         OnPropertyChanged(nameof(CriticalPath));
         OnPropertyChanged(nameof(NfpaReference));
+        OnPropertyChanged(nameof(ControllingCeilingHeightFeet));
+        OnPropertyChanged(nameof(UsesHighCeilingAdjustment));
+        OnPropertyChanged(nameof(HighCeilingAdjustmentSummary));
+        OnPropertyChanged(nameof(MissingControllingCeilingHeight));
+        OnPropertyChanged(nameof(MissingControllingCeilingHeightMessage));
         OnPropertyChanged(nameof(WarningSummary));
         OnPropertyChanged(nameof(UsesUserSupplyAnchor));
         OnPropertyChanged(nameof(UserSupplyAnchorLabel));

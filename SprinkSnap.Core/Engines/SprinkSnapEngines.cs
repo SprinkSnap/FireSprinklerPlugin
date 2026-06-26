@@ -130,6 +130,23 @@ public sealed class HydraulicEngine : IHydraulicEngine
         result.RemoteAreaSquareFeet = controllingCriteria.RemoteAreaSquareFeet;
         result.HoseStreamAllowanceGpm = controllingCriteria.HoseStreamAllowanceGpm;
         result.NfpaReference = controllingCriteria.NfpaReference;
+        result.UsesHighCeilingAdjustment = controllingCriteria.AppliesHighCeilingAdjustment;
+        result.HighCeilingAdjustmentSummary = controllingCriteria.HighCeilingAdjustmentSummary ?? string.Empty;
+        result.ControllingCeilingHeightFeet = ResolveControllingCeilingHeight(controllingRooms);
+
+        if (Nfpa13HighCeilingDesignCriteriaAdjuster.RequiresHighCeilingEvaluation(controllingCriteria.HazardClassification)
+            && result.ControllingCeilingHeightFeet <= 0)
+        {
+            result.Warnings.Add(
+                "Controlling ceiling height is not available. "
+                + Nfpa13Edition.References.HighCeilingDesignCriteria
+                + " adjustments were not applied — verify room ceiling heights.");
+        }
+        else if (result.UsesHighCeilingAdjustment
+            && !string.IsNullOrWhiteSpace(result.HighCeilingAdjustmentSummary))
+        {
+            result.Warnings.Add(result.HighCeilingAdjustmentSummary + " (" + Nfpa13Edition.References.HighCeilingDesignCriteria + ").");
+        }
 
         SprinklerFamilyInfo representativeFamily = controllingRooms
             .Select(RemoteAreaHydraulicCalculator.ResolveRepresentativeFamily)
@@ -324,7 +341,16 @@ public sealed class HydraulicEngine : IHydraulicEngine
         foreach (IGrouping<string, RoomInfo> hazardGroup in rooms.GroupBy(room =>
                      Nfpa13HydraulicDesignTable.NormalizeHazard(room.ApprovedHazardClassification)))
         {
-            Nfpa13HydraulicDesignCriteria criteria = Nfpa13HydraulicDesignTable.GetCriteria(hazardGroup.Key);
+            Nfpa13HydraulicDesignCriteria baseCriteria = Nfpa13HydraulicDesignTable.GetCriteria(hazardGroup.Key);
+            double ceilingHeightFeet = ResolveGroupCeilingHeight(hazardGroup);
+            double representativeKFactor = ResolveGroupKFactor(hazardGroup);
+            bool usesExtendedCoverageK252 = ResolveGroupUsesExtendedCoverageK252(hazardGroup);
+            Nfpa13HydraulicDesignCriteria criteria = Nfpa13HighCeilingDesignCriteriaAdjuster.Apply(
+                hazardGroup.Key,
+                baseCriteria,
+                ceilingHeightFeet,
+                representativeKFactor,
+                usesExtendedCoverageK252);
             double demand = criteria.DesignDensityGpmPerSqFt * criteria.RemoteAreaSquareFeet + criteria.HoseStreamAllowanceGpm;
             if (demand > highestDemand)
             {
@@ -334,6 +360,61 @@ public sealed class HydraulicEngine : IHydraulicEngine
         }
 
         return controlling ?? Nfpa13HydraulicDesignTable.GetCriteria(HazardClassification.LightHazard);
+    }
+
+    private static double ResolveControllingCeilingHeight(IEnumerable<RoomInfo> controllingRooms)
+    {
+        return ResolveGroupCeilingHeight(controllingRooms ?? Enumerable.Empty<RoomInfo>());
+    }
+
+    private static double ResolveGroupCeilingHeight(IEnumerable<RoomInfo> rooms)
+    {
+        List<double> ceilingHeights = rooms
+            .Select(room => room.CeilingHeightFeet)
+            .Where(height => height > 0)
+            .ToList();
+
+        return ceilingHeights.Count > 0 ? ceilingHeights.Max() : 0.0;
+    }
+
+    private static double ResolveGroupKFactor(IEnumerable<RoomInfo> rooms)
+    {
+        List<double> kFactors = rooms
+            .Select(ResolveRoomKFactor)
+            .Where(kFactor => kFactor > 0)
+            .ToList();
+
+        return kFactors.Count > 0 ? kFactors.Max() : DefaultKFactor;
+    }
+
+    private static bool ResolveGroupUsesExtendedCoverageK252(IEnumerable<RoomInfo> rooms)
+    {
+        foreach (RoomInfo room in rooms)
+        {
+            SprinklerFamilyInfo family = ResolveRoomSprinklerFamily(room);
+            if (Nfpa13HighCeilingDesignCriteriaAdjuster.UsesExtendedCoverageK252OrGreater(family))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static SprinklerFamilyInfo ResolveRoomSprinklerFamily(RoomInfo room)
+    {
+        string sprinklerName = string.IsNullOrWhiteSpace(room.SelectedSprinklerFamilyName)
+            ? room.AutoSelectedSprinklerName
+            : room.SelectedSprinklerFamilyName;
+
+        if (string.IsNullOrWhiteSpace(sprinklerName))
+        {
+            return null;
+        }
+
+        return new SprinklerFamilySelector()
+            .GetAvailableFamilies()
+            .FirstOrDefault(item => string.Equals(item.DisplayName, sprinklerName, StringComparison.OrdinalIgnoreCase));
     }
 
     private static double ResolveEquivalentKFactor(IEnumerable<RoomInfo> rooms, string controllingHazardDisplay)
@@ -352,19 +433,7 @@ public sealed class HydraulicEngine : IHydraulicEngine
 
     private static double ResolveRoomKFactor(RoomInfo room)
     {
-        string sprinklerName = string.IsNullOrWhiteSpace(room.SelectedSprinklerFamilyName)
-            ? room.AutoSelectedSprinklerName
-            : room.SelectedSprinklerFamilyName;
-
-        if (string.IsNullOrWhiteSpace(sprinklerName))
-        {
-            return 0.0;
-        }
-
-        SprinklerFamilyInfo family = new SprinklerFamilySelector()
-            .GetAvailableFamilies()
-            .FirstOrDefault(item => string.Equals(item.DisplayName, sprinklerName, StringComparison.OrdinalIgnoreCase));
-
+        SprinklerFamilyInfo family = ResolveRoomSprinklerFamily(room);
         return family?.KFactor > 0 ? family.KFactor : 0.0;
     }
 }
