@@ -866,6 +866,12 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
     private void OnWorkflowChanged(object sender, EventArgs e)
     {
         RefreshDownstreamStaleBindings();
+        if (DownstreamOutputsStaleService.BlocksMaterialsRefresh(context.ProjectState))
+        {
+            ApplyBlockedTakeoffState();
+            return;
+        }
+
         if (DownstreamOutputsStaleService.IsMaterialsTakeoffStale(context.ProjectState))
         {
             ApplyStaleTakeoffState();
@@ -881,6 +887,12 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
 
     private void InitializeTakeoffDisplay()
     {
+        if (DownstreamOutputsStaleService.BlocksMaterialsRefresh(context.ProjectState))
+        {
+            ApplyBlockedTakeoffState();
+            return;
+        }
+
         if (context.ProjectState.SessionProgress.MaterialsComplete)
         {
             GenerateTakeoff(null, markComplete: true);
@@ -896,6 +908,12 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
         StatusMessage = "Refresh takeoff to generate sprinkler, pipe, fitting, and valve BOM rows.";
     }
 
+    private void ApplyBlockedTakeoffState()
+    {
+        Items.Clear();
+        StatusMessage = DownstreamOutputsStaleService.GetMaterialsRefreshBlockMessage(context.ProjectState);
+    }
+
     private void ApplyStaleTakeoffState()
     {
         Items.Clear();
@@ -904,6 +922,13 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
 
     private void Refresh(bool remeasureFromRevit = false)
     {
+        string refreshBlockMessage = DownstreamOutputsStaleService.GetMaterialsRefreshBlockMessage(context.ProjectState);
+        if (!string.IsNullOrWhiteSpace(refreshBlockMessage))
+        {
+            StatusMessage = refreshBlockMessage;
+            return;
+        }
+
         if (remeasureFromRevit && !context.IsPreviewMode && context.RequestRemeasurePlacedPipes != null)
         {
             StatusMessage = "Re-measuring placed pipes from Revit geometry...";
@@ -975,7 +1000,8 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
 
         if (markComplete)
         {
-            context.ProjectState.SessionProgress.MaterialsComplete = detailCount > 0;
+            context.ProjectState.SessionProgress.MaterialsComplete = detailCount > 0
+                && context.ProjectState.SessionProgress.HydraulicsComplete;
         }
 
         context.RequestWorkflowRefresh();
@@ -984,9 +1010,10 @@ public sealed class MaterialsModuleViewModel : ModuleViewModelBase
 
     private void ExportExcel()
     {
-        if (DownstreamOutputsStaleService.RequiresMaterialsRefreshBeforeExport(context.ProjectState))
+        string exportBlockMessage = DownstreamOutputsStaleService.GetMaterialsExportBlockMessage(context.ProjectState);
+        if (!string.IsNullOrWhiteSpace(exportBlockMessage))
         {
-            StatusMessage = DownstreamOutputsStaleService.MaterialsRefreshRequiredMessage;
+            StatusMessage = exportBlockMessage;
             return;
         }
 
@@ -1138,10 +1165,14 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
             return;
         }
 
-        if (IncludeMaterialTakeoff
-            && DownstreamOutputsStaleService.RequiresMaterialsRefreshBeforeExport(context.ProjectState))
+        string exportBlockMessage = DownstreamOutputsStaleService.GetReportExportBlockMessage(
+            context.ProjectState,
+            IncludeHydraulicReport,
+            IncludeNodeDiagram,
+            IncludeMaterialTakeoff);
+        if (!string.IsNullOrWhiteSpace(exportBlockMessage))
         {
-            StatusMessage = DownstreamOutputsStaleService.MaterialsRefreshRequiredMessage;
+            StatusMessage = exportBlockMessage;
             return;
         }
 
@@ -1156,26 +1187,35 @@ public sealed class ReportsModuleViewModel : ModuleViewModelBase
 
         context.ProjectState.ReportExport = request;
 
-        HydraulicCalculationResult hydraulicResult = context.ProjectState.HydraulicResult?.TotalFlowGpm > 0
-            ? context.ProjectState.HydraulicResult
-            : hydraulicEngine.Calculate(
+        bool needsHydraulicResult = IncludeHydraulicReport
+            || IncludeNodeDiagram
+            || IncludeMaterialTakeoff;
+        HydraulicCalculationResult hydraulicResult = null;
+        if (needsHydraulicResult)
+        {
+            hydraulicResult = context.ProjectState.HydraulicResult?.TotalFlowGpm > 0
+                ? context.ProjectState.HydraulicResult
+                : hydraulicEngine.Calculate(
+                    context.ProjectState.Rooms,
+                    context.ProjectState.WaterSupply,
+                    context.ProjectState.PlacementSummary,
+                    context.ProjectState.SchematicPipeRouting,
+                    context.ProjectState.PipePlacementSummary,
+                    context.ProjectState.HydraulicSupplyAnchor,
+                    context.ProjectState.Preferences);
+            context.ProjectState.HydraulicResult = hydraulicResult;
+        }
+
+        IReadOnlyList<MaterialTakeoffItem> materialTakeoff = IncludeMaterialTakeoff
+            ? takeoffEngine.Generate(
                 context.ProjectState.Rooms,
-                context.ProjectState.WaterSupply,
                 context.ProjectState.PlacementSummary,
                 context.ProjectState.SchematicPipeRouting,
-                context.ProjectState.PipePlacementSummary,
-                context.ProjectState.HydraulicSupplyAnchor,
-                context.ProjectState.Preferences);
-        context.ProjectState.HydraulicResult = hydraulicResult;
-
-        IReadOnlyList<MaterialTakeoffItem> materialTakeoff = takeoffEngine.Generate(
-            context.ProjectState.Rooms,
-            context.ProjectState.PlacementSummary,
-            context.ProjectState.SchematicPipeRouting,
-            context.ProjectState.PipePlacementSummary);
+                context.ProjectState.PipePlacementSummary)
+            : Array.Empty<MaterialTakeoffItem>();
         ReportExportResult exportResult = reportEngine.ExportAll(
             context.ProjectState,
-            hydraulicResult,
+            hydraulicResult ?? new HydraulicCalculationResult(),
             materialTakeoff,
             request);
 

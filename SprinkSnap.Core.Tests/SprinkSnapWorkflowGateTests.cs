@@ -118,6 +118,19 @@ public sealed class SprinkSnapWorkflowGateTests
         Assert.Equal("Refresh materials", access.StatusLabel);
     }
 
+    [Fact]
+    public void Evaluate_Materials_ShowsWarning_WhenHydraulicsNotRun()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.SessionProgress.HydraulicsComplete = false;
+
+        WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.Materials);
+
+        Assert.True(access.IsUnlocked);
+        Assert.Equal(WorkflowStepStatus.Warning, access.Status);
+        Assert.Equal("Run hydraulics", access.StatusLabel);
+    }
+
     private static SprinkSnapProjectState CreateReadyForPlacementState()
     {
         return new SprinkSnapProjectState
