@@ -16,6 +16,10 @@ public static class HydraulicReportSummaryBuilder
         {
             new KeyValuePair<string, string>("Design density", hydraulicResult.DesignDensityGpmPerSqFt.ToString("N2") + " gpm/sq ft"),
             new KeyValuePair<string, string>("Remote area", hydraulicResult.RemoteAreaSquareFeet.ToString("N0") + " sq ft"),
+            new KeyValuePair<string, string>("Controlling ceiling height", hydraulicResult.ControllingCeilingHeightFeet > 0
+                ? hydraulicResult.ControllingCeilingHeightFeet.ToString("N1") + " ft"
+                : "Not available"),
+            new KeyValuePair<string, string>("High-ceiling adjustment", hydraulicResult.UsesHighCeilingAdjustment ? "Yes" : "No"),
             new KeyValuePair<string, string>("Operating sprinklers", hydraulicResult.OperatingSprinklerCount.ToString()),
             new KeyValuePair<string, string>("Flow per operating sprinkler", hydraulicResult.FlowPerOperatingSprinklerGpm.ToString("N1") + " GPM"),
             new KeyValuePair<string, string>("Max coverage per head", hydraulicResult.MaxCoverageSquareFeet.ToString("N0") + " sq ft"),

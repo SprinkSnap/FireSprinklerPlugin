@@ -8,7 +8,7 @@
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <TextBlock Text="Water supply curve (blue) with calculated demand point (red)"
+            <TextBlock Text="NFPA 13 (2025) N^1.85 hydraulic graph — supply curve (blue), system demand curve (red)"
                        Foreground="#6B7280"
                        Margin="0,0,0,8" />
             <Canvas x:Name="ChartCanvas" Grid.Row="1" MinHeight="220" />
@@ -17,7 +17,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="X-axis: Flow (GPM)" Foreground="#6B7280" FontSize="11" />
+                <TextBlock Text="X-axis: Flow^1.85 (GPM^1.85)" Foreground="#6B7280" FontSize="11" />
                 <TextBlock Grid.Column="1" Text="Y-axis: Pressure (PSI)" Foreground="#6B7280" FontSize="11" HorizontalAlignment="Right" />
             </Grid>
         </Grid>

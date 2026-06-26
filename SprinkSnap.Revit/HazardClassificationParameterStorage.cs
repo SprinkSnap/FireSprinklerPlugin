@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 
 namespace FireSprinklerPlugin.SprinkSnap.Revit;
 
@@ -206,7 +207,7 @@ public sealed class HazardClassificationParameterStorage : IHazardClassification
             ExternalDefinitionCreationOptions creationOptions =
                 new ExternalDefinitionCreationOptions("SS_HazardClassification", SpecTypeId.String.Text)
                 {
-                    Description = "Designer-approved SprinkSnap NFPA 13 hazard classification.",
+                    Description = "Designer-approved SprinkSnap " + Nfpa13Edition.ShortLabel + " hazard classification.",
                     UserModifiable = true,
                     Visible = true
                 };

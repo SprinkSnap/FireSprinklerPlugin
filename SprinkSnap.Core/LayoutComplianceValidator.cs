@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core;
 
@@ -39,7 +40,7 @@ public sealed class LayoutComplianceValidator : ILayoutComplianceValidator
 
         if (!HazardClassification.IsSupported(room.ApprovedHazardClassification))
         {
-            AddFailure(result, "No approved NFPA 13 hazard classification is available.");
+            AddFailure(result, "No approved " + Nfpa13Edition.ShortLabel + " hazard classification is available.");
         }
 
         if (!family.SupportedHazardClassifications.Contains(room.ApprovedHazardClassification))

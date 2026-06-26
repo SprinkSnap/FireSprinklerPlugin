@@ -18,7 +18,7 @@
                 </StackPanel>
                 <StackPanel>
                     <TextBlock Text="Generate Design" Foreground="White" FontSize="22" FontWeight="SemiBold" />
-                    <TextBlock Text="Generate NFPA 13 compliant sprinkler layouts with schematic branch lines, cross mains, and risers. Confident rooms auto-solve; exceptions stay visible."
+                    <TextBlock Text="Generate NFPA 13 (2025) compliant sprinkler layouts with schematic branch lines, cross mains, and risers. Confident rooms auto-solve; exceptions stay visible."
                                Foreground="#CBD5E1" TextWrapping="Wrap" Margin="0,6,0,0" />
                 </StackPanel>
             </DockPanel>

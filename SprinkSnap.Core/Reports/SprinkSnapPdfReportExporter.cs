@@ -5,6 +5,7 @@ using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -157,7 +158,9 @@ public static class SprinkSnapPdfReportExporter
                         }
                     });
                 });
-                page.Footer().Element(footer => ComposeFooter(footer, "NFPA 13 Chapters 5, 10, and 19 — designer review required."));
+                page.Footer().Element(footer => ComposeFooter(
+                    footer,
+                    Nfpa13Edition.References.DesignReportChapters + " — designer review required."));
             });
         }).GeneratePdf(outputPath);
     }
@@ -202,7 +205,9 @@ public static class SprinkSnapPdfReportExporter
                         }
                     }
                 });
-                page.Footer().Element(footer => ComposeFooter(footer, "NFPA 13 Chapter 19 — hydraulic calculation summary for designer review."));
+                page.Footer().Element(footer => ComposeFooter(
+                    footer,
+                    Nfpa13Edition.References.HydraulicReportChapter + " — hydraulic calculation summary for designer review."));
             });
         }).GeneratePdf(outputPath);
     }

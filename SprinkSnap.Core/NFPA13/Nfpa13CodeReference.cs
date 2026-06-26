@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
+using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 
 public sealed class Nfpa13CodeReference
 {
+    public string EditionYear { get; set; } = Nfpa13Edition.Year;
+
     public string Topic { get; set; } = string.Empty;
 
     public string Section { get; set; } = string.Empty;
@@ -42,102 +45,149 @@ public static class Nfpa13CodeReferenceLibrary
 
     public static Nfpa13CodeReference GetHazardReference(string hazardClassification)
     {
-        switch (hazardClassification)
+        string normalized = Nfpa13HydraulicDesignTable.NormalizeHazard(hazardClassification);
+        switch (normalized)
         {
-            case "Light Hazard":
-                return new Nfpa13CodeReference
-                {
-                    Topic = "Hazard Classification",
-                    Section = "NFPA 13 Section 5.3",
-                    Title = "Light Hazard Occupancies",
-                    Summary = "Low quantity and combustibility of contents with low heat release rates.",
-                    DesignerNote = "Verify architect occupancy labels and future tenant fit-out before final approval."
-                };
-            case "Ordinary Hazard Group 1":
-                return new Nfpa13CodeReference
-                {
-                    Topic = "Hazard Classification",
-                    Section = "NFPA 13 Section 5.4.1",
-                    Title = "Ordinary Hazard Group 1",
-                    Summary = "Moderate quantity and combustibility with moderate stockpile heights.",
-                    DesignerNote = "Confirm storage is not above OH1 limits before accepting classification."
-                };
-            case "Ordinary Hazard Group 2":
-                return new Nfpa13CodeReference
-                {
-                    Topic = "Hazard Classification",
-                    Section = "NFPA 13 Section 5.4.2",
-                    Title = "Ordinary Hazard Group 2",
-                    Summary = "Higher combustibility or moderate quantities with higher heat release rates.",
-                    DesignerNote = "Review ceiling height, obstructions, and commodity classification in storage areas."
-                };
-            case "Extra Hazard Group 1":
-                return new Nfpa13CodeReference
-                {
-                    Topic = "Hazard Classification",
-                    Section = "NFPA 13 Section 5.5.1",
-                    Title = "Extra Hazard Group 1",
-                    Summary = "High combustibility or high heat release industrial processes.",
-                    DesignerNote = "Coordinate with process equipment obstructions and in-rack protection needs."
-                };
-            case "Extra Hazard Group 2":
-                return new Nfpa13CodeReference
-                {
-                    Topic = "Hazard Classification",
-                    Section = "NFPA 13 Section 5.5.2",
-                    Title = "Extra Hazard Group 2",
-                    Summary = "Very high combustibility with substantial quantities and rapid heat release.",
-                    DesignerNote = "Expect tighter spacing, higher demand, and more frequent designer exceptions."
-                };
+            case HazardClassification.LightHazard:
+                return CreateHazardReference(
+                    "Hazard Classification",
+                    Nfpa13Edition.References.LightHazardOccupancy,
+                    "Light Hazard Occupancies",
+                    "Low quantity and combustibility of contents with low heat release rates.",
+                    "Verify architect occupancy labels and future tenant fit-out before final approval.");
+            case HazardClassification.OrdinaryHazardGroup1:
+                return CreateHazardReference(
+                    "Hazard Classification",
+                    Nfpa13Edition.References.OrdinaryHazardGroup1,
+                    "Ordinary Hazard Group 1",
+                    "Moderate quantity and combustibility with moderate stockpile heights up to 8 ft (2.4 m).",
+                    "Confirm storage is not above OH1 limits before accepting classification.");
+            case HazardClassification.OrdinaryHazardGroup2:
+                return CreateHazardReference(
+                    "Hazard Classification",
+                    Nfpa13Edition.References.OrdinaryHazardGroup2,
+                    "Ordinary Hazard Group 2",
+                    "Higher combustibility or moderate quantities with higher heat release rates.",
+                    "Review ceiling height, obstructions, and commodity classification in storage areas.");
+            case HazardClassification.ExtraHazardGroup1:
+                return CreateHazardReference(
+                    "Hazard Classification",
+                    Nfpa13Edition.References.ExtraHazardGroup1,
+                    "Extra Hazard Group 1",
+                    "High combustibility or high heat release industrial processes.",
+                    "Coordinate with process equipment obstructions and in-rack protection needs.");
+            case HazardClassification.ExtraHazardGroup2:
+                return CreateHazardReference(
+                    "Hazard Classification",
+                    Nfpa13Edition.References.ExtraHazardGroup2,
+                    "Extra Hazard Group 2",
+                    "Very high combustibility with substantial quantities and rapid heat release.",
+                    "Expect tighter spacing, higher demand, and more frequent designer exceptions.");
             default:
-                return new Nfpa13CodeReference
-                {
-                    Topic = "General",
-                    Section = "NFPA 13 Chapter 5",
-                    Title = "Occupancy Hazard Classification",
-                    Summary = "Designer must classify each area based on contents, combustibility, and storage height.",
-                    DesignerNote = "SprinkSnap suggests only — designer approval is mandatory."
-                };
+                return CreateHazardReference(
+                    "General",
+                    Nfpa13Edition.References.HazardClassification,
+                    "Occupancy Hazard Classification",
+                    "Designer must classify each area based on contents, combustibility, and storage height.",
+                    "SprinkSnap suggests only — designer approval is mandatory.");
         }
+    }
+
+    public static Nfpa13CodeReference GetSpacingReference()
+    {
+        return CreateReference(
+            "Spacing",
+            Nfpa13Edition.References.StandardSpraySpacingTable,
+            "Standard Spray Spacing",
+            "Maximum spacing and area of coverage depend on hazard and sprinkler listing.",
+            "SprinkSnap validates listing constraints before placement.");
+    }
+
+    public static Nfpa13CodeReference GetObstructionReference()
+    {
+        return CreateReference(
+            "Obstructions",
+            Nfpa13Edition.References.ObstructionsToDischarge + " and "
+            + Nfpa13Edition.References.StandardSprayObstructions,
+            "Obstruction to Sprinkler Discharge",
+            "Sprinklers must be located to avoid obstructions to discharge pattern development.",
+            "Use Clash Detection after layout generation to resolve conflicts.");
+    }
+
+    public static Nfpa13CodeReference GetHydraulicsReference()
+    {
+        return CreateReference(
+            "Hydraulics",
+            Nfpa13Edition.References.HydraulicCalculationProcedures,
+            "Hydraulic Calculation Procedures",
+            "System demand must be calculated using Hazen-Williams with adequate safety margin. "
+            + "Plot supply and demand on N^1.85 graph paper per "
+            + Nfpa13Edition.References.HydraulicGraphSheet
+            + ".",
+            "Compare available water supply curve to calculated demand.");
+    }
+
+    public static Nfpa13CodeReference GetWaterSupplyReference()
+    {
+        return CreateReference(
+            "Water Supply",
+            Nfpa13Edition.References.WaterSupplyInformation,
+            "Water Supply Information",
+            "Design must be based on reliable water supply data including static and residual pressure, "
+            + "flow at residual, and the date and time of the hydrant test.",
+            "Enter hydrant test data before final hydraulic sign-off.");
+    }
+
+    public static Nfpa13CodeReference GetDesignCriteriaReference()
+    {
+        return CreateReference(
+            "Hydraulic Design",
+            Nfpa13Edition.References.DesignCriteriaTable + " / "
+            + Nfpa13Edition.References.SinglePointDesignCriteria,
+            "Single-Point Density/Area Design Criteria",
+            "New and existing systems use single-point density and remote area values from Table 19.2.3.1.1 "
+            + "per Section 19.2.3.1.1.",
+            "Density/area curves were removed in the 2025 edition.");
     }
 
     public static IReadOnlyList<Nfpa13CodeReference> GetAllReferences()
     {
         return new List<Nfpa13CodeReference>
         {
-            new Nfpa13CodeReference
-            {
-                Topic = "Spacing",
-                Section = "NFPA 13 Table 10.2.4.2.1(a)",
-                Title = "Standard Spray Spacing",
-                Summary = "Maximum spacing and area of coverage depend on hazard and sprinkler listing.",
-                DesignerNote = "SprinkSnap validates listing constraints before placement."
-            },
-            new Nfpa13CodeReference
-            {
-                Topic = "Obstructions",
-                Section = "NFPA 13 Section 10.2.6",
-                Title = "Obstruction to Sprinkler Discharge",
-                Summary = "Sprinklers must be located to avoid obstructions to discharge pattern development.",
-                DesignerNote = "Use Clash Detection after layout generation to resolve conflicts."
-            },
-            new Nfpa13CodeReference
-            {
-                Topic = "Hydraulics",
-                Section = "NFPA 13 Chapter 28",
-                Title = "Hydraulic Calculation Procedures",
-                Summary = "System demand must be calculated using Hazen-Williams with adequate safety margin.",
-                DesignerNote = "Compare available water supply curve to calculated demand."
-            },
-            new Nfpa13CodeReference
-            {
-                Topic = "Water Supply",
-                Section = "NFPA 13 Section 24.2",
-                Title = "Water Supply Information",
-                Summary = "Design must be based on reliable water supply data including static and residual pressure.",
-                DesignerNote = "Enter hydrant test data before final hydraulic sign-off."
-            },
-            GetHazardReference("Light Hazard")
+            GetSpacingReference(),
+            GetObstructionReference(),
+            GetHydraulicsReference(),
+            GetWaterSupplyReference(),
+            GetDesignCriteriaReference(),
+            GetHazardReference(HazardClassification.LightHazard)
+        };
+    }
+
+    private static Nfpa13CodeReference CreateHazardReference(
+        string topic,
+        string section,
+        string title,
+        string summary,
+        string designerNote)
+    {
+        return CreateReference(topic, section, title, summary, designerNote);
+    }
+
+    private static Nfpa13CodeReference CreateReference(
+        string topic,
+        string section,
+        string title,
+        string summary,
+        string designerNote)
+    {
+        return new Nfpa13CodeReference
+        {
+            EditionYear = Nfpa13Edition.Year,
+            Topic = topic,
+            Section = section,
+            Title = title,
+            Summary = summary,
+            DesignerNote = designerNote
         };
     }
 }

@@ -23,6 +23,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Reports;
 using FireSprinklerPlugin.SprinkSnap.Core.WaterSupply;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Modules;
@@ -234,6 +235,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
     private string importedSourcePath = string.Empty;
     private string validationSummary = "Enter hydrant test data and click Validate Supply, or import a CSV file.";
     private IList<WaterSupplyCurvePoint> supplyCurve = new List<WaterSupplyCurvePoint>();
+    private IList<WaterSupplyCurvePoint> demandCurve = new List<WaterSupplyCurvePoint>();
     private double demandFlowGpm;
     private double demandPressurePsi;
 
@@ -331,6 +333,8 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 
     public IList<WaterSupplyCurvePoint> SupplyCurve => supplyCurve;
 
+    public IList<WaterSupplyCurvePoint> DemandCurve => demandCurve;
+
     public double DemandFlowGpm => demandFlowGpm;
 
     public double DemandPressurePsi => demandPressurePsi;
@@ -354,6 +358,9 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         if (context.ProjectState.WaterSupplyValidation?.Curve?.Count > 0)
         {
             supplyCurve = context.ProjectState.WaterSupplyValidation.Curve.ToList();
+            demandCurve = context.ProjectState.WaterSupplyValidation.DemandCurve?.ToList()
+                ?? context.ProjectState.HydraulicResult?.DemandCurve?.ToList()
+                ?? new List<WaterSupplyCurvePoint>();
             if (context.ProjectState.HydraulicResult?.TotalFlowGpm > 0)
             {
                 demandFlowGpm = context.ProjectState.HydraulicResult.DemandFlowGpm;
@@ -361,6 +368,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             }
 
             OnPropertyChanged(nameof(SupplyCurve));
+            OnPropertyChanged(nameof(DemandCurve));
             OnPropertyChanged(nameof(ShowSupplyChart));
             OnPropertyChanged(nameof(DemandFlowGpm));
             OnPropertyChanged(nameof(DemandPressurePsi));
@@ -463,6 +471,9 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 
         context.ProjectState.WaterSupplyValidation = result;
         supplyCurve = result.Curve?.ToList() ?? new List<WaterSupplyCurvePoint>();
+        demandCurve = result.DemandCurve?.Count > 0
+            ? result.DemandCurve.ToList()
+            : demand.DemandCurve?.ToList() ?? new List<WaterSupplyCurvePoint>();
         demandFlowGpm = demand.DemandFlowGpm;
         demandPressurePsi = demand.DemandPressurePsi;
 
@@ -487,6 +498,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         AppendHydraulicWorkflowGuidance(demand);
 
         OnPropertyChanged(nameof(SupplyCurve));
+        OnPropertyChanged(nameof(DemandCurve));
         OnPropertyChanged(nameof(ShowSupplyChart));
         OnPropertyChanged(nameof(DemandFlowGpm));
         OnPropertyChanged(nameof(DemandPressurePsi));
@@ -524,7 +536,7 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
     private readonly IHydraulicEngine hydraulicEngine = new HydraulicEngine();
     private readonly HydraulicCalculationPipelineRunner pipelineRunner = new HydraulicCalculationPipelineRunner();
     private HydraulicCalculationResult result = new HydraulicCalculationResult();
-    private string statusMessage = "Run NFPA 13 remote-area hydraulics after clash resolution and water supply entry.";
+    private string statusMessage = "Run " + Nfpa13Edition.ShortLabel + " remote-area hydraulics after clash resolution and water supply entry.";
 
     public HydraulicsModuleViewModel(SprinkSnapShellContext context)
     {
@@ -585,6 +597,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public IList<WaterSupplyCurvePoint> SupplyCurve => result.SupplyCurve;
 
+    public IList<WaterSupplyCurvePoint> DemandCurve => result.DemandCurve;
+
     public double DemandFlowGpm => result.DemandFlowGpm;
 
     public double DemandPressurePsi => result.DemandPressurePsi;
@@ -640,6 +654,21 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
     public IList<HydraulicNode> CriticalPath => result.CriticalPath ?? new List<HydraulicNode>();
 
     public string NfpaReference => result.NfpaReference;
+
+    public double ControllingCeilingHeightFeet => result.ControllingCeilingHeightFeet;
+
+    public bool UsesHighCeilingAdjustment => result.UsesHighCeilingAdjustment;
+
+    public string HighCeilingAdjustmentSummary => result.HighCeilingAdjustmentSummary ?? string.Empty;
+
+    public bool MissingControllingCeilingHeight =>
+        Nfpa13HighCeilingDesignCriteriaAdjuster.RequiresHighCeilingEvaluation(result.ControllingHazardClassification)
+        && result.ControllingCeilingHeightFeet <= 0;
+
+    public string MissingControllingCeilingHeightMessage =>
+        "Controlling ceiling height is missing for "
+        + result.ControllingHazardClassification
+        + ". NFPA 13 (2025) Section 19.2.3.2.5.2 high-ceiling adjustments were not applied — verify Analyze Model ceiling data.";
 
     public string StatusMessage
     {
@@ -764,6 +793,7 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(OperatingSprinklerCount));
         OnPropertyChanged(nameof(FlowPerOperatingSprinklerGpm));
         OnPropertyChanged(nameof(SupplyCurve));
+        OnPropertyChanged(nameof(DemandCurve));
         OnPropertyChanged(nameof(DemandFlowGpm));
         OnPropertyChanged(nameof(DemandPressurePsi));
         OnPropertyChanged(nameof(ShowSupplyChart));
@@ -791,6 +821,11 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(RemoteAreaSelectionStatus));
         OnPropertyChanged(nameof(CriticalPath));
         OnPropertyChanged(nameof(NfpaReference));
+        OnPropertyChanged(nameof(ControllingCeilingHeightFeet));
+        OnPropertyChanged(nameof(UsesHighCeilingAdjustment));
+        OnPropertyChanged(nameof(HighCeilingAdjustmentSummary));
+        OnPropertyChanged(nameof(MissingControllingCeilingHeight));
+        OnPropertyChanged(nameof(MissingControllingCeilingHeightMessage));
         OnPropertyChanged(nameof(WarningSummary));
         OnPropertyChanged(nameof(UsesUserSupplyAnchor));
         OnPropertyChanged(nameof(UserSupplyAnchorLabel));

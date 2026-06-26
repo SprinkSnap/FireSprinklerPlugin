@@ -32,11 +32,11 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         ModulePanels = new ObservableCollection<SprinkSnapModulePanel>
         {
             CreatePanel("Analyze Model", SprinkSnapWorkflowStep.AnalyzeModel, "Extract rooms, spaces, ceilings, levels, linked models, phases, obstructions, and existing sprinklers.", "Analyze Revit Model"),
-            CreatePanel("Hazard Review", SprinkSnapWorkflowStep.HazardReview, "Review AI-suggested NFPA 13 hazard classifications with confidence, reasoning, and designer override.", "Open Hazard Review"),
+            CreatePanel("Hazard Review", SprinkSnapWorkflowStep.HazardReview, "Review AI-suggested " + Nfpa13Edition.ShortLabel + " hazard classifications with confidence, reasoning, and designer override.", "Open Hazard Review"),
             CreatePanel("Sprinkler Review", SprinkSnapWorkflowStep.SprinklerReview, "Select project manufacturer standards, review recommended heads, and override compatible room heads.", "Review Sprinklers"),
             CreatePanel("Water Supply", SprinkSnapWorkflowStep.WaterSupply, "Enter hydrant test data, static pressure, residual pressure, and flow at residual.", "Enter Water Supply"),
             CreatePanel("Generate Design", SprinkSnapWorkflowStep.GenerateDesign, "Generate sprinkler layout candidates after analysis, hazard approvals, sprinkler selections, and water supply are complete.", "Generate Sprinkler Design"),
-            CreatePanel("Clash Detection", SprinkSnapWorkflowStep.ClashDetection, "Detect sprinkler conflicts with ducts, beams, lights, and geometry — then update layout per NFPA 13 Section 10.2.6.", "Run Clash Detection"),
+            CreatePanel("Clash Detection", SprinkSnapWorkflowStep.ClashDetection, "Detect sprinkler conflicts with ducts, beams, lights, and geometry — then update layout per " + Nfpa13Edition.References.ObstructionsToDischarge + ".", "Run Clash Detection"),
             CreatePanel("Place Sprinklers", SprinkSnapWorkflowStep.PlaceSprinklers, "Create Revit sprinkler family instances from approved layout candidates after clash resolution.", "Place in Revit"),
             CreatePanel("Hydraulics", SprinkSnapWorkflowStep.Hydraulics, "Build the hydraulic network, calculate demand, critical path, pressure loss, and safety margin.", "Run Hydraulics"),
             CreatePanel("Materials", SprinkSnapWorkflowStep.Materials, "Generate sprinkler, pipe, fitting, valve, and riser material takeoff quantities.", "Open Takeoff"),
@@ -597,7 +597,7 @@ public sealed class SprinkSnapModulePanel : INotifyPropertyChanged
                 return new ObservableCollection<string>
                 {
                     "Detect conflicts with ducts, beams, lights, cable trays, and pipes.",
-                    "Reference NFPA 13 Section 10.2.6 obstruction rules for each clash.",
+                    "Reference " + Nfpa13Edition.References.ObstructionsToDischarge + " obstruction rules for each clash.",
                     "Automatically reposition sprinklers and update layout before hydraulics."
                 };
             case "Place Sprinklers":

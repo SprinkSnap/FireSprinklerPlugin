@@ -14,6 +14,10 @@ public sealed class Nfpa13HydraulicDesignCriteria
     public double HoseStreamAllowanceGpm { get; set; }
 
     public string NfpaReference { get; set; } = string.Empty;
+
+    public bool AppliesHighCeilingAdjustment { get; set; }
+
+    public string HighCeilingAdjustmentSummary { get; set; } = string.Empty;
 }
 
 public static class Nfpa13HydraulicDesignTable
@@ -24,15 +28,15 @@ public static class Nfpa13HydraulicDesignTable
         switch (normalized)
         {
             case HazardClassification.OrdinaryHazardGroup1:
-                return Create("Ordinary Hazard Group 1", 0.15, 1500, 250, "NFPA 13 Table 19.3.1.1 / 19.2.3.1.2");
+                return Create("Ordinary Hazard Group 1", 0.15, 1500, 250, BuildDesignCriteriaReference());
             case HazardClassification.OrdinaryHazardGroup2:
-                return Create("Ordinary Hazard Group 2", 0.20, 1500, 250, "NFPA 13 Table 19.3.1.1 / 19.2.3.1.2");
+                return Create("Ordinary Hazard Group 2", 0.20, 1500, 250, BuildDesignCriteriaReference());
             case HazardClassification.ExtraHazardGroup1:
-                return Create("Extra Hazard Group 1", 0.30, 2500, 500, "NFPA 13 Table 19.3.1.1 / 19.2.3.1.2");
+                return Create("Extra Hazard Group 1", 0.30, 2500, 500, BuildDesignCriteriaReference());
             case HazardClassification.ExtraHazardGroup2:
-                return Create("Extra Hazard Group 2", 0.40, 2500, 500, "NFPA 13 Table 19.3.1.1 / 19.2.3.1.2");
+                return Create("Extra Hazard Group 2", 0.40, 2500, 500, BuildDesignCriteriaReference());
             default:
-                return Create("Light Hazard", 0.10, 1500, 100, "NFPA 13 Table 19.3.1.1 / 19.2.3.1.2");
+                return Create("Light Hazard", 0.10, 1500, 100, BuildDesignCriteriaReference());
         }
     }
 
@@ -78,6 +82,13 @@ public static class Nfpa13HydraulicDesignTable
         }
 
         return hazardClassification;
+    }
+
+    private static string BuildDesignCriteriaReference()
+    {
+        return Nfpa13Edition.References.DesignCriteriaTable
+            + " / "
+            + Nfpa13Edition.References.SinglePointDesignCriteria;
     }
 
     private static Nfpa13HydraulicDesignCriteria Create(

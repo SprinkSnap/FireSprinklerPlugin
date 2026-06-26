@@ -23,7 +23,8 @@ public sealed class Nfpa13HydraulicDesignTableTests
         Assert.Equal(expectedDensity, criteria.DesignDensityGpmPerSqFt);
         Assert.Equal(expectedRemoteArea, criteria.RemoteAreaSquareFeet);
         Assert.Equal(expectedHoseStream, criteria.HoseStreamAllowanceGpm);
-        Assert.Contains("NFPA 13", criteria.NfpaReference);
+        Assert.Contains(Nfpa13Edition.Year, criteria.NfpaReference);
+        Assert.Contains("19.2.3.1.1", criteria.NfpaReference);
     }
 
     [Theory]

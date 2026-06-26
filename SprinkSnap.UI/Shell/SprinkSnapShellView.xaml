@@ -355,7 +355,7 @@
                     <TabItem Header="AI Assistant">
                         <shell:AiAssistantPanelView DataContext="{Binding AiAssistant}" Margin="0,8,0,0" />
                     </TabItem>
-                    <TabItem Header="NFPA 13">
+                    <TabItem Header="NFPA 13 (2025)">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
                             <StackPanel>
                                 <Border Background="#EFF6FF"

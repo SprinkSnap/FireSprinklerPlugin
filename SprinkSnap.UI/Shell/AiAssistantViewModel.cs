@@ -22,7 +22,9 @@ public sealed class AiAssistantViewModel : INotifyPropertyChanged
         {
             new AiChatMessage(
                 "assistant",
-                "I'm your SprinkSnap design assistant. Ask about NFPA 13 hazards, spacing, clashes, hydraulics, or your current workflow step. I suggest — you approve.")
+                "I'm your SprinkSnap design assistant. Ask about "
+                + Nfpa13Edition.ShortLabel
+                + " hazards, spacing, clashes, hydraulics, or your current workflow step. I suggest — you approve.")
         };
         SendCommand = new ShellRelayCommand(_ => SendMessage(), _ => !string.IsNullOrWhiteSpace(InputText));
         AskAboutWorkflowCommand = new ShellRelayCommand(_ => AskAboutWorkflow());
@@ -70,7 +72,7 @@ public sealed class AiAssistantViewModel : INotifyPropertyChanged
 
     private void AskAboutNfpa()
     {
-        InputText = "Explain NFPA 13 obstruction rules for sprinkler layout.";
+        InputText = "Explain " + Nfpa13Edition.ShortLabel + " obstruction rules for sprinkler layout.";
         SendMessage();
     }
 
@@ -89,7 +91,7 @@ public sealed class AiAssistantViewModel : INotifyPropertyChanged
             if (!SprinkSnapWorkflowGate.IsHazardReviewComplete(state))
             {
                 int pending = state.Rooms.Count(room => !room.DesignerApproved);
-                return "Open Hazard Review and approve NFPA 13 hazard classifications. "
+                return "Open Hazard Review and approve " + Nfpa13Edition.ShortLabel + " hazard classifications. "
                     + pending
                     + " room(s) still need designer approval.";
             }
@@ -106,7 +108,7 @@ public sealed class AiAssistantViewModel : INotifyPropertyChanged
 
             if (!SprinkSnapWorkflowGate.IsDesignGenerated(state))
             {
-                return "Use Generate Design to create NFPA 13 layout candidates. Review exceptions before clash detection.";
+                return "Use Generate Design to create " + Nfpa13Edition.ShortLabel + " layout candidates. Review exceptions before clash detection.";
             }
 
             if (!SprinkSnapWorkflowGate.IsClashDetectionComplete(state))
@@ -134,25 +136,34 @@ public sealed class AiAssistantViewModel : INotifyPropertyChanged
 
         if (normalized.Contains("clash") || normalized.Contains("obstruction") || normalized.Contains("duct"))
         {
-            return "NFPA 13 Section 10.2.6 requires sprinklers to be located so discharge patterns are not obstructed. "
+            Nfpa13CodeReference reference = Nfpa13CodeReferenceLibrary.GetObstructionReference();
+            return reference.Section
+                + " requires sprinklers to be located so discharge patterns are not obstructed. "
                 + "After Generate Design, use Clash Detection to flag conflicts and automatically reposition heads where possible.";
         }
 
         if (normalized.Contains("spacing") || normalized.Contains("coverage"))
         {
-            return "Spacing limits come from NFPA 13 Table 10.2.4.2.1(a) and the sprinkler listing. "
+            Nfpa13CodeReference reference = Nfpa13CodeReferenceLibrary.GetSpacingReference();
+            return "Spacing limits come from "
+                + reference.Section
+                + " and the sprinkler listing. "
                 + "SprinkSnap validates listing constraints during layout generation and clash resolution.";
         }
 
         if (normalized.Contains("hydraulic") || normalized.Contains("pressure") || normalized.Contains("flow"))
         {
-            return "NFPA 13 Chapter 28 governs hydraulic calculations. Compare calculated system demand to the available "
+            Nfpa13CodeReference reference = Nfpa13CodeReferenceLibrary.GetHydraulicsReference();
+            return reference.Section
+                + " governs hydraulic calculations. Compare calculated system demand to the available "
                 + "water supply curve with adequate safety margin before final sign-off.";
         }
 
         if (normalized.Contains("water supply") || normalized.Contains("hydrant"))
         {
-            return "NFPA 13 Section 24.2 requires reliable water supply data including static pressure, residual pressure, "
+            Nfpa13CodeReference reference = Nfpa13CodeReferenceLibrary.GetWaterSupplyReference();
+            return reference.Section
+                + " requires reliable water supply data including static pressure, residual pressure, "
                 + "and flow at residual. Enter test data in the Water Supply module before hydraulics.";
         }
 

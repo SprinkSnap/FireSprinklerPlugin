@@ -8,7 +8,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="4" MaxWidth="820">
             <TextBlock Text="Hydraulics" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
-            <TextBlock Text="Calculate NFPA 13 remote-area demand using a segment-graph critical path from placed Revit pipe topology when available, shared project trunk mains, per-head Q = K√P, and Hazen-Williams friction per pipe segment. In Revit, placed pipe lengths are re-measured from current geometry before each run."
+            <TextBlock Text="Calculate NFPA 13 (2025) remote-area demand using a segment-graph critical path from placed Revit pipe topology when available, shared project trunk mains, per-head Q = K√P, and Hazen-Williams friction per pipe segment. In Revit, placed pipe lengths are re-measured from current geometry before each run."
                        TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,8" />
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,16" />
 
@@ -43,7 +43,17 @@
                     <TextBlock Text="Controlling hazard" Foreground="#6B7280" />
                     <TextBlock Text="{Binding ControllingHazard}" FontSize="20" FontWeight="SemiBold" />
                     <TextBlock Text="{Binding NfpaReference}" Foreground="#6B7280" Margin="0,6,0,0" />
+                    <TextBlock Text="{Binding HighCeilingAdjustmentSummary}"
+                               Foreground="#92400E"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0"
+                               Visibility="{Binding UsesHighCeilingAdjustment, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 </StackPanel>
+            </Border>
+
+            <Border Background="#FFFBEB" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16"
+                    Visibility="{Binding MissingControllingCeilingHeight, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="{Binding MissingControllingCeilingHeightMessage}" TextWrapping="Wrap" Foreground="#92400E" />
             </Border>
 
             <UniformGrid Columns="3" Margin="0,0,0,8">
@@ -204,6 +214,7 @@
             </UniformGrid>
 
             <controls:WaterSupplyCurveChart SupplyCurve="{Binding SupplyCurve}"
+                                          DemandCurve="{Binding DemandCurve}"
                                           DemandFlowGpm="{Binding DemandFlowGpm}"
                                           DemandPressurePsi="{Binding DemandPressurePsi}"
                                           Visibility="{Binding ShowSupplyChart, Converter={StaticResource BooleanToVisibilityConverter}}"

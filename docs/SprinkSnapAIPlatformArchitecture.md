@@ -2,7 +2,7 @@
 
 ## Product goal
 
-SPRINKSNAP AI is a single Autodesk Revit 2027 add-in for AI-assisted NFPA 13 sprinkler design.
+SPRINKSNAP AI is a single Autodesk Revit 2027 add-in for AI-assisted NFPA 13 (2025) sprinkler design.
 It automates model analysis, hazard suggestions, sprinkler recommendations, layout preparation,
 hydraulic calculations, material takeoff, and reports while requiring designer approval for
 engineering decisions.

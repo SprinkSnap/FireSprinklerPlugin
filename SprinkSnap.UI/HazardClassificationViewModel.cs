@@ -176,13 +176,13 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
 
     public string ActiveCodeReferenceSection
     {
-        get => activeCodeReference?.Section ?? "NFPA 13 Chapter 5";
+        get => activeCodeReference?.Section ?? Nfpa13Edition.References.HazardClassification;
         set { }
     }
 
     public string ActiveCodeReferenceSummary
     {
-        get => activeCodeReference?.Summary ?? "Select a room hazard to view the applicable NFPA 13 reference.";
+        get => activeCodeReference?.Summary ?? "Select a room hazard to view the applicable " + Nfpa13Edition.ShortLabel + " reference.";
         set { }
     }
 

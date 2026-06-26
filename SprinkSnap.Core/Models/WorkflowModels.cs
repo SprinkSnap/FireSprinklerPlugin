@@ -184,6 +184,8 @@ public sealed class WaterSupplyValidationResult
 
     public IList<WaterSupplyCurvePoint> Curve { get; set; } = new List<WaterSupplyCurvePoint>();
 
+    public IList<WaterSupplyCurvePoint> DemandCurve { get; set; } = new List<WaterSupplyCurvePoint>();
+
     public IList<string> Warnings { get; set; } = new List<string>();
 }
 
@@ -230,6 +232,8 @@ public sealed class HydraulicCalculationResult
 
     public double SystemDemandPsi { get; set; }
 
+    public double SprinklerDemandPressurePsi { get; set; }
+
     public double AvailablePressurePsi { get; set; }
 
     public double SafetyMarginPsi { get; set; }
@@ -242,11 +246,19 @@ public sealed class HydraulicCalculationResult
 
     public double MaxCoverageSquareFeet { get; set; }
 
+    public double ControllingCeilingHeightFeet { get; set; }
+
+    public bool UsesHighCeilingAdjustment { get; set; }
+
+    public string HighCeilingAdjustmentSummary { get; set; } = string.Empty;
+
     public double DemandFlowGpm { get; set; }
 
     public double DemandPressurePsi { get; set; }
 
     public IList<WaterSupplyCurvePoint> SupplyCurve { get; set; } = new List<WaterSupplyCurvePoint>();
+
+    public IList<WaterSupplyCurvePoint> DemandCurve { get; set; } = new List<WaterSupplyCurvePoint>();
 
     public bool UsesLayoutLinkedHydraulics { get; set; }
 
