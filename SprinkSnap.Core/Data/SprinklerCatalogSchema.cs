@@ -78,6 +78,10 @@ public sealed class SprinkSnapProjectPreferences
 
     public double DefaultMainDiameterInches { get; set; } = 4.0;
 
+    public double BranchVelocityLimitFeetPerSecond { get; set; } = 15.0;
+
+    public double MainVelocityLimitFeetPerSecond { get; set; } = 20.0;
+
     public bool AllowAlternateManufacturers { get; set; } = true;
 
     public string CatalogPath { get; set; } = string.Empty;

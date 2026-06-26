@@ -343,6 +343,8 @@ public static class SprinkSnapSessionPersistenceService
             DefaultKFactor = preferences.DefaultKFactor,
             DefaultBranchDiameterInches = preferences.DefaultBranchDiameterInches,
             DefaultMainDiameterInches = preferences.DefaultMainDiameterInches,
+            BranchVelocityLimitFeetPerSecond = preferences.BranchVelocityLimitFeetPerSecond,
+            MainVelocityLimitFeetPerSecond = preferences.MainVelocityLimitFeetPerSecond,
             AllowAlternateManufacturers = preferences.AllowAlternateManufacturers,
             CatalogPath = preferences.CatalogPath
         };

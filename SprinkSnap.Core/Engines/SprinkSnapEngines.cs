@@ -160,7 +160,8 @@ public sealed class HydraulicEngine : IHydraulicEngine
             pipePlacementSummary,
             supplyAnchor,
             controllingCriteria.RemoteAreaSquareFeet,
-            result.MaxCoverageSquareFeet);
+            result.MaxCoverageSquareFeet,
+            preferences);
 
         result.UsesLayoutLinkedHydraulics = layoutPath.UsesLayoutGeometry;
         result.UsesSegmentGraphHydraulics = layoutPath.UsesSegmentGraphHydraulics;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
@@ -25,7 +26,8 @@ public static class LayoutLinkedHydraulicCalculator
         PipePlacementSummary pipePlacementSummary = null,
         HydraulicSupplyAnchor supplyAnchor = null,
         double remoteAreaSquareFeet = 0,
-        double maxCoverageSquareFeet = 0)
+        double maxCoverageSquareFeet = 0,
+        SprinkSnapProjectPreferences preferences = null)
     {
         List<RoomInfo> roomList = controllingRooms?.ToList() ?? new List<RoomInfo>();
         HydraulicSupplyAnchorService.PrepareRouting(
@@ -125,7 +127,8 @@ public static class LayoutLinkedHydraulicCalculator
                 remotePressurePsi,
                 schematicPipeRouting,
                 pipePlacementSummary,
-                supplyAnchor);
+                supplyAnchor,
+                preferences);
         }
         else
         {
@@ -147,7 +150,8 @@ public static class LayoutLinkedHydraulicCalculator
                 path,
                 totalSprinklerFlow,
                 hoseStreamAllowanceGpm,
-                remotePressurePsi);
+                remotePressurePsi,
+                preferences);
         }
 
         if (path.UsesAppliedPipeSizing && schematicPipeRouting != null)
@@ -201,7 +205,8 @@ public static class LayoutLinkedHydraulicCalculator
         double remotePressurePsi,
         SchematicPipeRoutingSummary schematicPipeRouting,
         PipePlacementSummary pipePlacementSummary,
-        HydraulicSupplyAnchor supplyAnchor)
+        HydraulicSupplyAnchor supplyAnchor,
+        SprinkSnapProjectPreferences preferences)
     {
         HydraulicSegmentGraphBuilder.AssignSegmentFlows(
             path,
@@ -221,12 +226,12 @@ public static class LayoutLinkedHydraulicCalculator
         for (int sizingIteration = 0; sizingIteration < HydraulicPipeSizingService.MaxSizingIterations; sizingIteration++)
         {
             SolveSegmentChainFriction(path, fittings, remotePressurePsi);
-            if (!HydraulicPipeSizingService.SegmentChainHasVelocityViolations(path.SegmentChain))
+            if (!HydraulicPipeSizingService.SegmentChainHasVelocityViolations(path.SegmentChain, preferences))
             {
                 break;
             }
 
-            int appliedSegments = HydraulicPipeSizingService.ApplyVelocityDrivenUpsizing(path.SegmentChain);
+            int appliedSegments = HydraulicPipeSizingService.ApplyVelocityDrivenUpsizing(path.SegmentChain, preferences);
             if (appliedSegments == 0)
             {
                 break;
@@ -253,9 +258,9 @@ public static class LayoutLinkedHydraulicCalculator
             hoseStreamAllowanceGpm,
             remotePressurePsi,
             fittings);
-        HydraulicVelocityValidator.ValidateSegmentChain(path);
-        HydraulicPipeSizingService.ApplySegmentChainSuggestions(path);
-        ApplySegmentVelocityToCriticalPath(path);
+        HydraulicVelocityValidator.ValidateSegmentChain(path, preferences);
+        HydraulicPipeSizingService.ApplySegmentChainSuggestions(path, preferences);
+        ApplySegmentVelocityToCriticalPath(path, preferences);
     }
 
     private static void SolveSegmentChainFriction(
@@ -326,18 +331,23 @@ public static class LayoutLinkedHydraulicCalculator
         LayoutLinkedHydraulicPath path,
         double totalSprinklerFlowGpm,
         double hoseStreamAllowanceGpm,
-        double remotePressurePsi)
+        double remotePressurePsi,
+        SprinkSnapProjectPreferences preferences)
     {
         int totalAppliedSegments = 0;
         for (int sizingIteration = 0; sizingIteration < HydraulicPipeSizingService.MaxSizingIterations; sizingIteration++)
         {
-            HydraulicVelocityValidator.ValidateFallbackCriticalPath(path, totalSprinklerFlowGpm, hoseStreamAllowanceGpm);
+            HydraulicVelocityValidator.ValidateFallbackCriticalPath(
+                path,
+                totalSprinklerFlowGpm,
+                hoseStreamAllowanceGpm,
+                preferences);
             if (path.CriticalPathVelocityViolationCount == 0)
             {
                 break;
             }
 
-            int appliedSegments = HydraulicPipeSizingService.ApplyFallbackPathUpsizing(path);
+            int appliedSegments = HydraulicPipeSizingService.ApplyFallbackPathUpsizing(path, preferences);
             if (appliedSegments == 0)
             {
                 break;
@@ -387,11 +397,17 @@ public static class LayoutLinkedHydraulicCalculator
                 + " fallback critical-path segment(s) and re-solved friction losses.");
         }
 
-        HydraulicVelocityValidator.ValidateFallbackCriticalPath(path, totalSprinklerFlowGpm, hoseStreamAllowanceGpm);
-        HydraulicPipeSizingService.ApplyCriticalPathSuggestions(path);
+        HydraulicVelocityValidator.ValidateFallbackCriticalPath(
+            path,
+            totalSprinklerFlowGpm,
+            hoseStreamAllowanceGpm,
+            preferences);
+        HydraulicPipeSizingService.ApplyCriticalPathSuggestions(path, preferences);
     }
 
-    private static void ApplySegmentVelocityToCriticalPath(LayoutLinkedHydraulicPath path)
+    private static void ApplySegmentVelocityToCriticalPath(
+        LayoutLinkedHydraulicPath path,
+        SprinkSnapProjectPreferences preferences)
     {
         if (path.CriticalPath == null || path.SegmentChain == null)
         {
@@ -431,12 +447,14 @@ public static class LayoutLinkedHydraulicCalculator
             HydraulicVelocityCheck check = HydraulicVelocityValidator.Evaluate(
                 node.FlowGpm,
                 node.DiameterInches,
-                node.SegmentType);
+                node.SegmentType,
+                preferences);
             HydraulicVelocityValidator.ApplyVelocityToNode(node, check);
             node.SuggestedDiameterInches = HydraulicPipeSizingService.SuggestCompliantDiameterInches(
                 node.FlowGpm,
                 node.SegmentType,
-                node.DiameterInches);
+                node.DiameterInches,
+                preferences);
         }
     }
 

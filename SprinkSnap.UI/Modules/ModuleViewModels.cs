@@ -1919,6 +1919,8 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
     private bool allowAlternateManufacturers = true;
     private string defaultBranchDiameterInches = "1.25";
     private string defaultMainDiameterInches = "4.0";
+    private string branchVelocityLimitFeetPerSecond = "15";
+    private string mainVelocityLimitFeetPerSecond = "20";
     private string aiServiceEndpoint = string.Empty;
     private string catalogPath = string.Empty;
     private string catalogSourceKind = string.Empty;
@@ -2041,6 +2043,26 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         }
     }
 
+    public string BranchVelocityLimitFeetPerSecond
+    {
+        get => branchVelocityLimitFeetPerSecond;
+        set
+        {
+            branchVelocityLimitFeetPerSecond = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string MainVelocityLimitFeetPerSecond
+    {
+        get => mainVelocityLimitFeetPerSecond;
+        set
+        {
+            mainVelocityLimitFeetPerSecond = value;
+            OnPropertyChanged();
+        }
+    }
+
     public string AiServiceEndpoint
     {
         get => aiServiceEndpoint;
@@ -2084,6 +2106,12 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
             .ToString("0.##", CultureInfo.CurrentCulture);
         defaultMainDiameterInches = PipeDiameterDefaults
             .ResolveMainDiameterInches(preferences)
+            .ToString("0.##", CultureInfo.CurrentCulture);
+        branchVelocityLimitFeetPerSecond = VelocityLimitDefaults
+            .ResolveBranchVelocityLimitFeetPerSecond(preferences)
+            .ToString("0.##", CultureInfo.CurrentCulture);
+        mainVelocityLimitFeetPerSecond = VelocityLimitDefaults
+            .ResolveMainVelocityLimitFeetPerSecond(preferences)
             .ToString("0.##", CultureInfo.CurrentCulture);
     }
 
@@ -2204,21 +2232,33 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
 
         double? branchDiameterInches = TryParsePositiveDiameter(DefaultBranchDiameterInches);
         double? mainDiameterInches = TryParsePositiveDiameter(DefaultMainDiameterInches);
+        double? branchVelocityLimit = TryParsePositiveDiameter(BranchVelocityLimitFeetPerSecond);
+        double? mainVelocityLimit = TryParsePositiveDiameter(MainVelocityLimitFeetPerSecond);
         if (!branchDiameterInches.HasValue || !mainDiameterInches.HasValue)
         {
             StatusMessage = "Enter positive branch and main pipe diameters in inches before saving settings.";
             return;
         }
 
+        if (!branchVelocityLimit.HasValue || !mainVelocityLimit.HasValue)
+        {
+            StatusMessage = "Enter positive branch and main/riser velocity limits in ft/s before saving settings.";
+            return;
+        }
+
         SprinkSnapProjectPreferences preferences = context.ProjectState.Preferences;
         bool pipeDiametersChanged = Math.Abs(preferences.DefaultBranchDiameterInches - branchDiameterInches.Value) > 0.01
             || Math.Abs(preferences.DefaultMainDiameterInches - mainDiameterInches.Value) > 0.01;
+        bool velocityLimitsChanged = Math.Abs(preferences.BranchVelocityLimitFeetPerSecond - branchVelocityLimit.Value) > 0.01
+            || Math.Abs(preferences.MainVelocityLimitFeetPerSecond - mainVelocityLimit.Value) > 0.01;
 
         context.ProjectState.Preferences.PreferredManufacturer = DefaultManufacturer;
         context.ProjectState.Preferences.AllowAlternateManufacturers = AllowAlternateManufacturers;
         context.ProjectState.Preferences.CatalogPath = CatalogPath ?? string.Empty;
         context.ProjectState.Preferences.DefaultBranchDiameterInches = branchDiameterInches.Value;
         context.ProjectState.Preferences.DefaultMainDiameterInches = mainDiameterInches.Value;
+        context.ProjectState.Preferences.BranchVelocityLimitFeetPerSecond = branchVelocityLimit.Value;
+        context.ProjectState.Preferences.MainVelocityLimitFeetPerSecond = mainVelocityLimit.Value;
 
         HazardClassificationViewModel hazardViewModel = context.GetOrCreateHazardViewModel();
         hazardViewModel.SelectedManufacturer = DefaultManufacturer;
@@ -2258,6 +2298,11 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
             && context.ProjectState.Rooms.Any(room => room.ProposedSprinklers.Count > 0))
         {
             SchematicPipeRoutingService.RefreshProjectRouting(context.ProjectState);
+        }
+
+        if ((pipeDiametersChanged || velocityLimitsChanged)
+            && context.ProjectState.Rooms.Any(room => room.ProposedSprinklers.Count > 0))
+        {
             DownstreamDesignInvalidationService.InvalidateHydraulicResults(
                 context.ProjectState,
                 clearWaterSupplyValidation: false);
@@ -2276,6 +2321,10 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         if (pipeDiametersChanged)
         {
             StatusMessage += " Pipe diameter defaults changed — schematic routing refreshed. Re-run hydraulics and refresh material takeoff.";
+        }
+        else if (velocityLimitsChanged)
+        {
+            StatusMessage += " Velocity limits changed — re-run hydraulics and refresh material takeoff.";
         }
     }
 

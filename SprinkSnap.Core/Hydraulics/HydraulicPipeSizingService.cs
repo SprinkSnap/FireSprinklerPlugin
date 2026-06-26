@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
@@ -33,14 +34,19 @@ public static class HydraulicPipeSizingService
         return StandardDiameterInches;
     }
 
-    public static double CalculateMinimumDiameterInches(double flowGpm, string segmentType)
+    public static double CalculateMinimumDiameterInches(
+        double flowGpm,
+        string segmentType,
+        SprinkSnapProjectPreferences preferences = null)
     {
         if (flowGpm <= 0)
         {
             return 0.0;
         }
 
-        double velocityLimitFeetPerSecond = HydraulicVelocityValidator.ResolveVelocityLimitFeetPerSecond(segmentType);
+        double velocityLimitFeetPerSecond = HydraulicVelocityValidator.ResolveVelocityLimitFeetPerSecond(
+            segmentType,
+            preferences);
         if (velocityLimitFeetPerSecond <= 0)
         {
             return 0.0;
@@ -67,14 +73,17 @@ public static class HydraulicPipeSizingService
         return StandardDiameterInches[StandardDiameterInches.Length - 1];
     }
 
-    public static bool SegmentChainHasVelocityViolations(IEnumerable<HydraulicGraphSegment> segments)
+    public static bool SegmentChainHasVelocityViolations(
+        IEnumerable<HydraulicGraphSegment> segments,
+        SprinkSnapProjectPreferences preferences = null)
     {
         foreach (HydraulicGraphSegment segment in segments ?? Enumerable.Empty<HydraulicGraphSegment>())
         {
             HydraulicVelocityCheck check = HydraulicVelocityValidator.Evaluate(
                 segment.FlowGpm,
                 segment.DiameterInches,
-                segment.SegmentType);
+                segment.SegmentType,
+                preferences);
             if (check.ExceedsLimit)
             {
                 return true;
@@ -84,7 +93,9 @@ public static class HydraulicPipeSizingService
         return false;
     }
 
-    public static int ApplyVelocityDrivenUpsizing(IList<HydraulicGraphSegment> segments)
+    public static int ApplyVelocityDrivenUpsizing(
+        IList<HydraulicGraphSegment> segments,
+        SprinkSnapProjectPreferences preferences = null)
     {
         if (segments == null || segments.Count == 0)
         {
@@ -97,7 +108,8 @@ public static class HydraulicPipeSizingService
             double suggestedDiameterInches = SuggestCompliantDiameterInches(
                 segment.FlowGpm,
                 segment.SegmentType,
-                segment.DiameterInches);
+                segment.DiameterInches,
+                preferences);
             if (suggestedDiameterInches <= 0
                 || suggestedDiameterInches <= segment.DiameterInches + 0.01)
             {
@@ -164,7 +176,9 @@ public static class HydraulicPipeSizingService
         }
     }
 
-    public static int ApplyFallbackPathUpsizing(LayoutLinkedHydraulicPath path)
+    public static int ApplyFallbackPathUpsizing(
+        LayoutLinkedHydraulicPath path,
+        SprinkSnapProjectPreferences preferences = null)
     {
         if (path?.CriticalPath == null || path.CriticalPath.Count == 0)
         {
@@ -188,7 +202,8 @@ public static class HydraulicPipeSizingService
             double suggestedDiameterInches = SuggestCompliantDiameterInches(
                 node.FlowGpm,
                 node.SegmentType,
-                node.DiameterInches);
+                node.DiameterInches,
+                preferences);
             if (suggestedDiameterInches <= 0
                 || suggestedDiameterInches <= node.DiameterInches + 0.01)
             {
@@ -225,9 +240,10 @@ public static class HydraulicPipeSizingService
     public static double SuggestCompliantDiameterInches(
         double flowGpm,
         string segmentType,
-        double currentDiameterInches = 0)
+        double currentDiameterInches = 0,
+        SprinkSnapProjectPreferences preferences = null)
     {
-        double minimumDiameterInches = CalculateMinimumDiameterInches(flowGpm, segmentType);
+        double minimumDiameterInches = CalculateMinimumDiameterInches(flowGpm, segmentType, preferences);
         double compliantDiameterInches = RoundUpToStandardDiameterInches(minimumDiameterInches);
         if (currentDiameterInches <= 0)
         {
@@ -237,7 +253,8 @@ public static class HydraulicPipeSizingService
         HydraulicVelocityCheck currentCheck = HydraulicVelocityValidator.Evaluate(
             flowGpm,
             currentDiameterInches,
-            segmentType);
+            segmentType,
+            preferences);
         if (!currentCheck.ExceedsLimit)
         {
             return 0.0;
@@ -253,7 +270,8 @@ public static class HydraulicPipeSizingService
             HydraulicVelocityCheck candidateCheck = HydraulicVelocityValidator.Evaluate(
                 flowGpm,
                 diameterInches,
-                segmentType);
+                segmentType,
+                preferences);
             if (!candidateCheck.ExceedsLimit)
             {
                 return diameterInches;
@@ -263,7 +281,9 @@ public static class HydraulicPipeSizingService
         return StandardDiameterInches[StandardDiameterInches.Length - 1];
     }
 
-    public static int ApplySegmentChainSuggestions(LayoutLinkedHydraulicPath path)
+    public static int ApplySegmentChainSuggestions(
+        LayoutLinkedHydraulicPath path,
+        SprinkSnapProjectPreferences preferences = null)
     {
         if (path?.SegmentChain == null || path.SegmentChain.Count == 0)
         {
@@ -281,7 +301,8 @@ public static class HydraulicPipeSizingService
             double suggestedDiameterInches = SuggestCompliantDiameterInches(
                 segment.FlowGpm,
                 segment.SegmentType,
-                segment.DiameterInches);
+                segment.DiameterInches,
+                preferences);
             segment.SuggestedDiameterInches = suggestedDiameterInches;
             if (suggestedDiameterInches <= 0
                 || Math.Abs(suggestedDiameterInches - segment.DiameterInches) < 0.01)
@@ -315,7 +336,9 @@ public static class HydraulicPipeSizingService
         return suggestionCount;
     }
 
-    public static int ApplyCriticalPathSuggestions(LayoutLinkedHydraulicPath path)
+    public static int ApplyCriticalPathSuggestions(
+        LayoutLinkedHydraulicPath path,
+        SprinkSnapProjectPreferences preferences = null)
     {
         if (path?.CriticalPath == null || path.CriticalPath.Count == 0)
         {
@@ -344,7 +367,8 @@ public static class HydraulicPipeSizingService
             double suggestedDiameterInches = SuggestCompliantDiameterInches(
                 node.FlowGpm,
                 node.SegmentType,
-                node.DiameterInches);
+                node.DiameterInches,
+                preferences);
             node.SuggestedDiameterInches = suggestedDiameterInches;
             if (suggestedDiameterInches <= 0
                 || Math.Abs(suggestedDiameterInches - node.DiameterInches) < 0.01)
