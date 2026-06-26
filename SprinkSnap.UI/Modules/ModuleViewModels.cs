@@ -618,6 +618,12 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
 
     public bool UsesPostSyncHydraulicReSolve => result.UsesPostSyncHydraulicReSolve;
 
+    public double FittingFrictionPsi => result.FittingFrictionPsi;
+
+    public string SegmentGraphHydraulicsStatus => result.UsesSegmentGraphHydraulics ? "Yes" : "No";
+
+    public string RemoteAreaSelectionStatus => result.UsesRemoteAreaSelection ? "Yes" : "No";
+
     public IList<HydraulicNode> CriticalPath => result.CriticalPath ?? new List<HydraulicNode>();
 
     public string NfpaReference => result.NfpaReference;
@@ -759,6 +765,9 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(UsesRevitFittingDiameterSync));
         OnPropertyChanged(nameof(RevitFittingDiameterSyncCount));
         OnPropertyChanged(nameof(UsesPostSyncHydraulicReSolve));
+        OnPropertyChanged(nameof(FittingFrictionPsi));
+        OnPropertyChanged(nameof(SegmentGraphHydraulicsStatus));
+        OnPropertyChanged(nameof(RemoteAreaSelectionStatus));
         OnPropertyChanged(nameof(CriticalPath));
         OnPropertyChanged(nameof(NfpaReference));
         OnPropertyChanged(nameof(WarningSummary));
