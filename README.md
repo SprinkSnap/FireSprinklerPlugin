@@ -6,7 +6,7 @@ SprinkSnap Revit add-in and WPF preview for fire sprinkler design, hydraulics, a
 
 - [.NET SDK 10.0](https://dotnet.microsoft.com/download) (10.0.301 or newer)
 - Visual Studio 2022 17.14+ (optional, for WPF/Revit development on Windows)
-- Revit 2027 API assemblies (Revit project only): set `REVIT_2027_API` to your Revit install folder
+- Revit 2027 API assemblies (Revit project only): set `REVIT_2027_API` to your Revit install folder, or install Revit 2027 to the default path `C:\Program Files\Autodesk\Revit 2027`
 
 ## Build
 
@@ -18,6 +18,8 @@ dotnet build FireSprinklerPlugin.sln -c Release
 ```
 
 If you see **NETSDK1004** (`project.assets.json` not found), NuGet packages have not been restored yet. Run `dotnet restore` before building.
+
+`SprinkSnap.Revit` compiles only when Revit 2027 API DLLs are found. Other projects build without Revit installed.
 
 ### WPF preview only
 
