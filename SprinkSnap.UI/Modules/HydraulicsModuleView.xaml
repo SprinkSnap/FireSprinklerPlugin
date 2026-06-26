@@ -177,6 +177,26 @@
                 </Border>
                 <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
                     <StackPanel>
+                        <TextBlock Text="Fitting friction" Foreground="#6B7280" />
+                        <TextBlock FontSize="22" FontWeight="SemiBold">
+                            <Run Text="{Binding FittingFrictionPsi, StringFormat=N1}" /><Run Text=" PSI" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+                <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="Segment graph" Foreground="#6B7280" />
+                        <TextBlock Text="{Binding SegmentGraphHydraulicsStatus}" FontSize="22" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+                <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="Remote area selection" Foreground="#6B7280" />
+                        <TextBlock Text="{Binding RemoteAreaSelectionStatus}" FontSize="22" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+                <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                    <StackPanel>
                         <TextBlock Text="Remote head" Foreground="#6B7280" />
                         <TextBlock Text="{Binding RemoteSprinklerLabel}" FontSize="22" FontWeight="SemiBold" />
                     </StackPanel>
