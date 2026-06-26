@@ -82,7 +82,16 @@ public static class DownstreamOutputsStaleService
 
             if (HydraulicWorkflowGuidanceService.IsSchematicOnlyHydraulicsComplete(state))
             {
-                return HydraulicWorkflowGuidanceService.SchematicOnlyHydraulicsMessage;
+                return HydraulicWorkflowGuidanceService.SchematicOnlyHydraulicsMessage
+                    + " "
+                    + HydraulicWorkflowGuidanceService.HydraulicsPlacePipesActionMessage;
+            }
+
+            if (HydraulicWorkflowGuidanceService.ShouldWarnPipeSizingWithoutPlacement(state.HydraulicResult, state))
+            {
+                return HydraulicWorkflowGuidanceService.PipeSizingWithoutPlacementMessage
+                    + " "
+                    + HydraulicWorkflowGuidanceService.HydraulicsPlacePipesActionMessage;
             }
         }
 
@@ -107,7 +116,8 @@ public static class DownstreamOutputsStaleService
         return IsMaterialsTakeoffStale(state)
             || RequiresHydraulicsBeforeMaterials(state)
             || HydraulicWorkflowGuidanceService.ShouldWarnReRunHydraulicsAfterPipePlacement(state)
-            || HydraulicWorkflowGuidanceService.IsSchematicOnlyHydraulicsComplete(state);
+            || HydraulicWorkflowGuidanceService.IsSchematicOnlyHydraulicsComplete(state)
+            || HydraulicWorkflowGuidanceService.ShouldWarnPipeSizingWithoutPlacement(state.HydraulicResult, state);
     }
 
     public static string GetBannerTitle(SprinkSnapProjectState state)
@@ -130,6 +140,11 @@ public static class DownstreamOutputsStaleService
         if (HydraulicWorkflowGuidanceService.IsSchematicOnlyHydraulicsComplete(state))
         {
             return "Schematic-only hydraulics";
+        }
+
+        if (HydraulicWorkflowGuidanceService.ShouldWarnPipeSizingWithoutPlacement(state.HydraulicResult, state))
+        {
+            return "Pipe sizing not in Revit";
         }
 
         return string.Empty;
@@ -155,7 +170,16 @@ public static class DownstreamOutputsStaleService
 
         if (HydraulicWorkflowGuidanceService.IsSchematicOnlyHydraulicsComplete(state))
         {
-            return HydraulicWorkflowGuidanceService.SchematicOnlyHydraulicsMessage;
+            return HydraulicWorkflowGuidanceService.SchematicOnlyHydraulicsMessage
+                + " "
+                + HydraulicWorkflowGuidanceService.HydraulicsPlacePipesActionMessage;
+        }
+
+        if (HydraulicWorkflowGuidanceService.ShouldWarnPipeSizingWithoutPlacement(state.HydraulicResult, state))
+        {
+            return HydraulicWorkflowGuidanceService.PipeSizingWithoutPlacementMessage
+                + " "
+                + HydraulicWorkflowGuidanceService.HydraulicsPlacePipesActionMessage;
         }
 
         return string.Empty;

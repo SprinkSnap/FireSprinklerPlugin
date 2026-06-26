@@ -2,6 +2,7 @@ using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
 using Xunit;
 
@@ -129,6 +130,55 @@ public sealed class SprinkSnapWorkflowGateTests
         Assert.True(access.IsUnlocked);
         Assert.Equal(WorkflowStepStatus.Warning, access.Status);
         Assert.Equal("Run hydraulics", access.StatusLabel);
+    }
+
+    [Fact]
+    public void Evaluate_PlaceSprinklers_ShowsWarning_WhenSchematicRoutingExistsWithoutPlacedPipes()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.SchematicPipeRouting = new SchematicPipeRoutingSummary { TotalSegmentCount = 8 };
+        state.PipePlacementSummary = new PipePlacementSummary();
+
+        WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.PlaceSprinklers);
+
+        Assert.True(access.IsUnlocked);
+        Assert.Equal(WorkflowStepStatus.Warning, access.Status);
+        Assert.Equal("Place pipes", access.StatusLabel);
+    }
+
+    [Fact]
+    public void Evaluate_Hydraulics_ShowsWarning_WhenCompleteWithoutPlacedPipeGeometry()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.SessionProgress.HydraulicsComplete = true;
+        state.PipePlacementSummary = new PipePlacementSummary();
+
+        WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.Hydraulics);
+
+        Assert.True(access.IsUnlocked);
+        Assert.Equal(WorkflowStepStatus.Warning, access.Status);
+        Assert.Equal("Place pipes", access.StatusLabel);
+    }
+
+    [Fact]
+    public void Evaluate_Hydraulics_ShowsReRunWarning_WhenPipesPlacedButResultIsStale()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.SessionProgress.HydraulicsComplete = true;
+        state.PipePlacementSummary = new PipePlacementSummary { PlacedSegmentCount = 5 };
+        state.HydraulicResult = new HydraulicCalculationResult
+        {
+            TotalFlowGpm = 95,
+            UsesPlacedPipeLengths = false,
+            UsesPlacedPipeTopology = false
+        };
+
+        WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.Hydraulics);
+
+        Assert.True(access.IsUnlocked);
+        Assert.False(access.IsComplete);
+        Assert.Equal(WorkflowStepStatus.Warning, access.Status);
+        Assert.Equal("Re-run hydraulics", access.StatusLabel);
     }
 
     private static SprinkSnapProjectState CreateReadyForPlacementState()

@@ -119,7 +119,8 @@ public sealed class DownstreamOutputsStaleServiceTests
             includeNodeDiagram: false,
             includeMaterialTakeoff: false);
 
-        Assert.Equal(HydraulicWorkflowGuidanceService.SchematicOnlyHydraulicsMessage, message);
+        Assert.Contains(HydraulicWorkflowGuidanceService.SchematicOnlyHydraulicsMessage, message);
+        Assert.Contains(HydraulicWorkflowGuidanceService.HydraulicsPlacePipesActionMessage, message);
     }
 
     [Fact]

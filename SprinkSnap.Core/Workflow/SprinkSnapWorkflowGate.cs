@@ -172,6 +172,17 @@ public static class SprinkSnapWorkflowGate
                         "Reconcile");
                 }
 
+                if (HydraulicWorkflowGuidanceService.ShouldWarnPipePlacementNeeded(state))
+                {
+                    return CreateAccess(
+                        step,
+                        true,
+                        placementComplete,
+                        string.Empty,
+                        WorkflowStepStatus.Warning,
+                        "Place pipes");
+                }
+
                 return CreateAccess(step, true, placementComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.Hydraulics:
@@ -211,6 +222,28 @@ public static class SprinkSnapWorkflowGate
                         "Complete model reconciliation before running hydraulics.",
                         WorkflowStepStatus.Blocked,
                         "Reconcile");
+                }
+
+                if (HydraulicWorkflowGuidanceService.ShouldWarnReRunHydraulicsAfterPipePlacement(state))
+                {
+                    return CreateAccess(
+                        step,
+                        true,
+                        false,
+                        string.Empty,
+                        WorkflowStepStatus.Warning,
+                        "Re-run hydraulics");
+                }
+
+                if (HydraulicWorkflowGuidanceService.IsSchematicOnlyHydraulicsComplete(state))
+                {
+                    return CreateAccess(
+                        step,
+                        true,
+                        true,
+                        string.Empty,
+                        WorkflowStepStatus.Warning,
+                        "Place pipes");
                 }
 
                 return CreateAccess(step, true, hydraulicsComplete, string.Empty);
