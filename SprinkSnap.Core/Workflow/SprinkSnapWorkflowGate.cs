@@ -213,6 +213,17 @@ public static class SprinkSnapWorkflowGate
                         "Reconcile");
                 }
 
+                if (HydraulicWorkflowGuidanceService.IsSchematicOnlyHydraulicsComplete(state))
+                {
+                    return CreateAccess(
+                        step,
+                        true,
+                        true,
+                        string.Empty,
+                        WorkflowStepStatus.Warning,
+                        "Place pipes");
+                }
+
                 return CreateAccess(step, true, hydraulicsComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.Materials:
@@ -254,6 +265,17 @@ public static class SprinkSnapWorkflowGate
                         string.Empty,
                         WorkflowStepStatus.Warning,
                         "Refresh needed");
+                }
+
+                if (HydraulicWorkflowGuidanceService.ShouldWarnMaterialsMissingHydraulics(state))
+                {
+                    return CreateAccess(
+                        step,
+                        true,
+                        materialsComplete,
+                        string.Empty,
+                        WorkflowStepStatus.Warning,
+                        "Run hydraulics");
                 }
 
                 return CreateAccess(step, true, materialsComplete, string.Empty);
