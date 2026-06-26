@@ -114,6 +114,23 @@
                         CornerRadius="8"
                         Padding="10"
                         Margin="0,0,0,8"
+                        Visibility="{Binding IsPipePlacementGuidanceActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding PipePlacementBannerTitle}"
+                                   FontWeight="SemiBold"
+                                   Foreground="#92400E"
+                                   Margin="0,0,0,6" />
+                        <TextBlock Text="{Binding PipePlacementBannerMessage}"
+                                   TextWrapping="Wrap"
+                                   Foreground="#92400E" />
+                    </StackPanel>
+                </Border>
+                <Border Background="#FEF3C7"
+                        BorderBrush="#F59E0B"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="10"
+                        Margin="0,0,0,8"
                         Visibility="{Binding HasConnectionWarnings, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock Text="{Binding ConnectionWarningMessage}"
                                TextWrapping="Wrap"

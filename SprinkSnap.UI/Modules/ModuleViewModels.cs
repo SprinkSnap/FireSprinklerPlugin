@@ -484,6 +484,8 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             ValidationSummary += " " + DownstreamOutputsStaleService.PostHydraulicsRefreshPrompt;
         }
 
+        AppendHydraulicWorkflowGuidance(demand);
+
         OnPropertyChanged(nameof(SupplyCurve));
         OnPropertyChanged(nameof(ShowSupplyChart));
         OnPropertyChanged(nameof(DemandFlowGpm));
@@ -496,6 +498,17 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             context.ProjectState.SessionProgress.WaterSupplyComplete = true;
             context.RequestPersistToRevit();
             context.RequestWorkflowRefresh();
+        }
+    }
+
+    private void AppendHydraulicWorkflowGuidance(HydraulicCalculationResult hydraulicResult)
+    {
+        string guidance = HydraulicWorkflowGuidanceService.GetHydraulicWorkflowActionMessage(
+            context.ProjectState,
+            hydraulicResult);
+        if (!string.IsNullOrWhiteSpace(guidance))
+        {
+            ValidationSummary += " " + guidance;
         }
     }
 
@@ -723,6 +736,14 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         if (DownstreamOutputsStaleService.IsMaterialsTakeoffStale(context.ProjectState))
         {
             StatusMessage += " " + DownstreamOutputsStaleService.PostHydraulicsRefreshPrompt;
+        }
+
+        string workflowGuidance = HydraulicWorkflowGuidanceService.GetHydraulicWorkflowActionMessage(
+            context.ProjectState,
+            result);
+        if (!string.IsNullOrWhiteSpace(workflowGuidance))
+        {
+            StatusMessage += " " + workflowGuidance;
         }
 
         NotifyResultChanged();
@@ -1449,6 +1470,7 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
     public PlaceSprinklersModuleViewModel(SprinkSnapShellContext context)
     {
         this.context = context;
+        context.WorkflowChanged += OnWorkflowChanged;
         RoomResults = new ObservableCollection<SprinklerPlacementRoomResult>();
         PreflightRooms = new ObservableCollection<PlacementPreflightRoomResult>();
         ValidateCommand = new ModuleRelayCommand(_ => RunPreflightValidation());
@@ -1496,6 +1518,15 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
     public string ConnectionWarningMessage => HasConnectionWarnings
         ? SkippedConnectionCount + " routing connection(s) were skipped in Revit. Load matching pipe fitting families and review placement messages."
         : string.Empty;
+
+    public bool IsPipePlacementGuidanceActive =>
+        HydraulicWorkflowGuidanceService.IsPipePlacementGuidanceActive(context.ProjectState);
+
+    public string PipePlacementBannerTitle =>
+        HydraulicWorkflowGuidanceService.GetPipePlacementBannerTitle(context.ProjectState);
+
+    public string PipePlacementBannerMessage =>
+        HydraulicWorkflowGuidanceService.GetPipePlacementBannerMessage(context.ProjectState);
 
     public int SchematicFittingCount => context.ProjectState.SchematicPipeRouting?.TotalSegmentCount > 0
         ? SchematicPipeJointBuilder.BuildFromRouting(context.ProjectState.SchematicPipeRouting).Count
@@ -1552,6 +1583,18 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
             statusMessage = value;
             OnPropertyChanged();
         }
+    }
+
+    private void OnWorkflowChanged(object sender, EventArgs e)
+    {
+        RefreshPipePlacementGuidanceBindings();
+    }
+
+    private void RefreshPipePlacementGuidanceBindings()
+    {
+        OnPropertyChanged(nameof(IsPipePlacementGuidanceActive));
+        OnPropertyChanged(nameof(PipePlacementBannerTitle));
+        OnPropertyChanged(nameof(PipePlacementBannerMessage));
     }
 
     private void RunPreflightValidation()
@@ -1729,6 +1772,7 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(ConnectionWarningMessage));
         OnPropertyChanged(nameof(SchematicPipeSegmentCount));
         OnPropertyChanged(nameof(SchematicFittingCount));
+        RefreshPipePlacementGuidanceBindings();
     }
 
     private void ApplyPreflight(PlacementPreflightSummary summary)
@@ -1780,6 +1824,7 @@ public sealed class PlaceSprinklersModuleViewModel : ModuleViewModelBase
 
         OnPropertyChanged(nameof(SchematicPipeSegmentCount));
         OnPropertyChanged(nameof(SchematicFittingCount));
+        RefreshPipePlacementGuidanceBindings();
     }
 }
 
