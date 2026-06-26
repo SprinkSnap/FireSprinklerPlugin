@@ -51,6 +51,7 @@
             </Border>
 
             <controls:WaterSupplyCurveChart SupplyCurve="{Binding SupplyCurve}"
+                                          DemandCurve="{Binding DemandCurve}"
                                           DemandFlowGpm="{Binding DemandFlowGpm}"
                                           DemandPressurePsi="{Binding DemandPressurePsi}"
                                           Visibility="{Binding ShowSupplyChart, Converter={StaticResource BooleanToVisibilityConverter}}"

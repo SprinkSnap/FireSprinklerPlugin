@@ -68,6 +68,7 @@ public sealed class WaterSupplyEngine : IWaterSupplyEngine
         }
 
         result.Curve = WaterSupplyCurveCalculator.BuildCurve(input);
+        result.DemandCurve = demand.DemandCurve?.ToList() ?? new List<WaterSupplyCurvePoint>();
         double availableAtDemand = WaterSupplyCurveCalculator.GetPressureAtFlow(input, demand.TotalFlowGpm);
         result.SafetyMarginPsi = availableAtDemand - demand.SystemDemandPsi;
         result.IsAdequate = result.SafetyMarginPsi >= 0;
@@ -193,6 +194,17 @@ public sealed class HydraulicEngine : IHydraulicEngine
             ? layoutPath.CalculatedSprinklerFlowGpm / layoutPath.OperatingSprinklers.Count
             : result.FlowPerOperatingSprinklerGpm;
         result.CriticalPath = layoutPath.CriticalPath?.ToList() ?? new List<HydraulicNode>();
+        result.SprinklerDemandPressurePsi = Nfpa13HydraulicGraphCalculator.ComputeSprinklerDemandPressureAtSource(
+            result.SystemDemandPsi,
+            result.SprinklerDemandFlowGpm,
+            result.TotalFlowGpm,
+            layoutPath.MainDiameterInches > 0 ? layoutPath.MainDiameterInches : mainDiameterInches,
+            layoutPath.MainLengthFeet);
+        result.DemandCurve = Nfpa13HydraulicGraphCalculator.BuildDemandCurve(
+            result.SprinklerDemandFlowGpm,
+            result.SprinklerDemandPressurePsi,
+            result.TotalFlowGpm,
+            result.SystemDemandPsi);
         result.DemandFlowGpm = result.TotalFlowGpm;
         result.DemandPressurePsi = result.SystemDemandPsi;
         result.SupplyCurve = WaterSupplyCurveCalculator.BuildCurve(waterSupply);

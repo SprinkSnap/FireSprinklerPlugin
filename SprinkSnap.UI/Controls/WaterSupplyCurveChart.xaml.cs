@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Controls;
@@ -14,6 +15,13 @@ public partial class WaterSupplyCurveChart : UserControl
     public static readonly DependencyProperty SupplyCurveProperty =
         DependencyProperty.Register(
             nameof(SupplyCurve),
+            typeof(IEnumerable),
+            typeof(WaterSupplyCurveChart),
+            new PropertyMetadata(null, OnChartDataChanged));
+
+    public static readonly DependencyProperty DemandCurveProperty =
+        DependencyProperty.Register(
+            nameof(DemandCurve),
             typeof(IEnumerable),
             typeof(WaterSupplyCurveChart),
             new PropertyMetadata(null, OnChartDataChanged));
@@ -44,6 +52,12 @@ public partial class WaterSupplyCurveChart : UserControl
         set => SetValue(SupplyCurveProperty, value);
     }
 
+    public IEnumerable DemandCurve
+    {
+        get => (IEnumerable)GetValue(DemandCurveProperty);
+        set => SetValue(DemandCurveProperty, value);
+    }
+
     public double DemandFlowGpm
     {
         get => (double)GetValue(DemandFlowGpmProperty);
@@ -72,11 +86,10 @@ public partial class WaterSupplyCurveChart : UserControl
         }
 
         ChartCanvas.Children.Clear();
-        List<WaterSupplyCurvePoint> points = (SupplyCurve as IEnumerable<WaterSupplyCurvePoint>)?.ToList()
-            ?? SupplyCurve?.Cast<WaterSupplyCurvePoint>().ToList()
-            ?? new List<WaterSupplyCurvePoint>();
+        List<WaterSupplyCurvePoint> supplyPoints = ToPointList(SupplyCurve);
+        List<WaterSupplyCurvePoint> demandPoints = ToPointList(DemandCurve);
 
-        if (points.Count < 2 || ActualWidth < 40 || ActualHeight < 40)
+        if (supplyPoints.Count < 2 || ActualWidth < 40 || ActualHeight < 40)
         {
             return;
         }
@@ -84,13 +97,29 @@ public partial class WaterSupplyCurveChart : UserControl
         const double margin = 36.0;
         double width = ActualWidth - margin * 2;
         double height = ActualHeight - margin * 2;
-        double maxFlow = points.Max(point => point.FlowGpm);
+        double maxFlow = supplyPoints.Max(point => point.FlowGpm);
+        foreach (WaterSupplyCurvePoint point in demandPoints)
+        {
+            if (point.FlowGpm > maxFlow)
+            {
+                maxFlow = point.FlowGpm;
+            }
+        }
+
         if (DemandFlowGpm > maxFlow)
         {
             maxFlow = DemandFlowGpm;
         }
 
-        double maxPressure = points.Max(point => point.PressurePsi);
+        double maxPressure = supplyPoints.Max(point => point.PressurePsi);
+        foreach (WaterSupplyCurvePoint point in demandPoints)
+        {
+            if (point.PressurePsi > maxPressure)
+            {
+                maxPressure = point.PressurePsi;
+            }
+        }
+
         if (DemandPressurePsi > maxPressure)
         {
             maxPressure = DemandPressurePsi;
@@ -98,13 +127,36 @@ public partial class WaterSupplyCurveChart : UserControl
 
         maxFlow = maxFlow <= 0 ? 1 : maxFlow * 1.05;
         maxPressure = maxPressure <= 0 ? 1 : maxPressure * 1.05;
+        double maxScaledFlow = Nfpa13HydraulicGraphCalculator.ScaleFlowForGraph(maxFlow);
 
-        DrawAxes(margin, width, height, maxFlow, maxPressure);
+        DrawSupplyLine(supplyPoints, margin, width, height, maxScaledFlow, maxPressure);
+        DrawDemandLine(demandPoints, margin, width, height, maxScaledFlow, maxPressure);
 
+        if (demandPoints.Count == 0 && DemandFlowGpm > 0 && DemandPressurePsi > 0)
+        {
+            DrawDemandMarker(DemandFlowGpm, DemandPressurePsi, margin, width, height, maxScaledFlow, maxPressure);
+        }
+    }
+
+    private static List<WaterSupplyCurvePoint> ToPointList(IEnumerable points)
+    {
+        return (points as IEnumerable<WaterSupplyCurvePoint>)?.ToList()
+            ?? points?.Cast<WaterSupplyCurvePoint>().ToList()
+            ?? new List<WaterSupplyCurvePoint>();
+    }
+
+    private void DrawSupplyLine(
+        IList<WaterSupplyCurvePoint> points,
+        double margin,
+        double width,
+        double height,
+        double maxScaledFlow,
+        double maxPressure)
+    {
         PointCollection supplyPoints = new PointCollection();
         foreach (WaterSupplyCurvePoint point in points)
         {
-            supplyPoints.Add(ToCanvas(point.FlowGpm, point.PressurePsi, margin, width, height, maxFlow, maxPressure));
+            supplyPoints.Add(ToCanvas(point.FlowGpm, point.PressurePsi, margin, width, height, maxScaledFlow, maxPressure));
         }
 
         Polyline supplyLine = new Polyline
@@ -114,35 +166,60 @@ public partial class WaterSupplyCurveChart : UserControl
             StrokeThickness = 2.5
         };
         ChartCanvas.Children.Add(supplyLine);
+    }
 
-        if (DemandFlowGpm > 0 && DemandPressurePsi > 0)
+    private void DrawDemandLine(
+        IList<WaterSupplyCurvePoint> points,
+        double margin,
+        double width,
+        double height,
+        double maxScaledFlow,
+        double maxPressure)
+    {
+        if (points.Count >= 2)
         {
-            Point demandPoint = ToCanvas(
-                DemandFlowGpm,
-                DemandPressurePsi,
-                margin,
-                width,
-                height,
-                maxFlow,
-                maxPressure);
-
-            Ellipse marker = new Ellipse
+            PointCollection demandLinePoints = new PointCollection();
+            foreach (WaterSupplyCurvePoint point in points)
             {
-                Width = 12,
-                Height = 12,
-                Fill = new SolidColorBrush(Color.FromRgb(220, 38, 38)),
-                Stroke = Brushes.White,
-                StrokeThickness = 1.5
+                demandLinePoints.Add(ToCanvas(point.FlowGpm, point.PressurePsi, margin, width, height, maxScaledFlow, maxPressure));
+            }
+
+            Polyline demandLine = new Polyline
+            {
+                Points = demandLinePoints,
+                Stroke = new SolidColorBrush(Color.FromRgb(220, 38, 38)),
+                StrokeThickness = 2.5
             };
-            Canvas.SetLeft(marker, demandPoint.X - 6);
-            Canvas.SetTop(marker, demandPoint.Y - 6);
-            ChartCanvas.Children.Add(marker);
+            ChartCanvas.Children.Add(demandLine);
+        }
+
+        foreach (WaterSupplyCurvePoint point in points)
+        {
+            DrawDemandMarker(point.FlowGpm, point.PressurePsi, margin, width, height, maxScaledFlow, maxPressure);
         }
     }
 
-    private static void DrawAxes(double margin, double width, double height, double maxFlow, double maxPressure)
+    private void DrawDemandMarker(
+        double flowGpm,
+        double pressurePsi,
+        double margin,
+        double width,
+        double height,
+        double maxScaledFlow,
+        double maxPressure)
     {
-        // Axes are drawn implicitly by chart border; labels rendered via parent module text.
+        Point demandPoint = ToCanvas(flowGpm, pressurePsi, margin, width, height, maxScaledFlow, maxPressure);
+        Ellipse marker = new Ellipse
+        {
+            Width = 10,
+            Height = 10,
+            Fill = new SolidColorBrush(Color.FromRgb(220, 38, 38)),
+            Stroke = Brushes.White,
+            StrokeThickness = 1.5
+        };
+        Canvas.SetLeft(marker, demandPoint.X - 5);
+        Canvas.SetTop(marker, demandPoint.Y - 5);
+        ChartCanvas.Children.Add(marker);
     }
 
     private static Point ToCanvas(
@@ -151,10 +228,11 @@ public partial class WaterSupplyCurveChart : UserControl
         double margin,
         double width,
         double height,
-        double maxFlow,
+        double maxScaledFlow,
         double maxPressure)
     {
-        double x = margin + (flow / maxFlow) * width;
+        double scaledFlow = Nfpa13HydraulicGraphCalculator.ScaleFlowForGraph(flow);
+        double x = margin + (scaledFlow / maxScaledFlow) * width;
         double y = margin + height - (pressure / maxPressure) * height;
         return new Point(x, y);
     }

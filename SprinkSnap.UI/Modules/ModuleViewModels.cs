@@ -234,6 +234,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
     private string importedSourcePath = string.Empty;
     private string validationSummary = "Enter hydrant test data and click Validate Supply, or import a CSV file.";
     private IList<WaterSupplyCurvePoint> supplyCurve = new List<WaterSupplyCurvePoint>();
+    private IList<WaterSupplyCurvePoint> demandCurve = new List<WaterSupplyCurvePoint>();
     private double demandFlowGpm;
     private double demandPressurePsi;
 
@@ -331,6 +332,8 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 
     public IList<WaterSupplyCurvePoint> SupplyCurve => supplyCurve;
 
+    public IList<WaterSupplyCurvePoint> DemandCurve => demandCurve;
+
     public double DemandFlowGpm => demandFlowGpm;
 
     public double DemandPressurePsi => demandPressurePsi;
@@ -354,6 +357,9 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         if (context.ProjectState.WaterSupplyValidation?.Curve?.Count > 0)
         {
             supplyCurve = context.ProjectState.WaterSupplyValidation.Curve.ToList();
+            demandCurve = context.ProjectState.WaterSupplyValidation.DemandCurve?.ToList()
+                ?? context.ProjectState.HydraulicResult?.DemandCurve?.ToList()
+                ?? new List<WaterSupplyCurvePoint>();
             if (context.ProjectState.HydraulicResult?.TotalFlowGpm > 0)
             {
                 demandFlowGpm = context.ProjectState.HydraulicResult.DemandFlowGpm;
@@ -361,6 +367,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             }
 
             OnPropertyChanged(nameof(SupplyCurve));
+            OnPropertyChanged(nameof(DemandCurve));
             OnPropertyChanged(nameof(ShowSupplyChart));
             OnPropertyChanged(nameof(DemandFlowGpm));
             OnPropertyChanged(nameof(DemandPressurePsi));
@@ -463,6 +470,9 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 
         context.ProjectState.WaterSupplyValidation = result;
         supplyCurve = result.Curve?.ToList() ?? new List<WaterSupplyCurvePoint>();
+        demandCurve = result.DemandCurve?.Count > 0
+            ? result.DemandCurve.ToList()
+            : demand.DemandCurve?.ToList() ?? new List<WaterSupplyCurvePoint>();
         demandFlowGpm = demand.DemandFlowGpm;
         demandPressurePsi = demand.DemandPressurePsi;
 
@@ -487,6 +497,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         AppendHydraulicWorkflowGuidance(demand);
 
         OnPropertyChanged(nameof(SupplyCurve));
+        OnPropertyChanged(nameof(DemandCurve));
         OnPropertyChanged(nameof(ShowSupplyChart));
         OnPropertyChanged(nameof(DemandFlowGpm));
         OnPropertyChanged(nameof(DemandPressurePsi));
@@ -584,6 +595,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
     public double FlowPerOperatingSprinklerGpm => result.FlowPerOperatingSprinklerGpm;
 
     public IList<WaterSupplyCurvePoint> SupplyCurve => result.SupplyCurve;
+
+    public IList<WaterSupplyCurvePoint> DemandCurve => result.DemandCurve;
 
     public double DemandFlowGpm => result.DemandFlowGpm;
 
@@ -764,6 +777,7 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(OperatingSprinklerCount));
         OnPropertyChanged(nameof(FlowPerOperatingSprinklerGpm));
         OnPropertyChanged(nameof(SupplyCurve));
+        OnPropertyChanged(nameof(DemandCurve));
         OnPropertyChanged(nameof(DemandFlowGpm));
         OnPropertyChanged(nameof(DemandPressurePsi));
         OnPropertyChanged(nameof(ShowSupplyChart));
