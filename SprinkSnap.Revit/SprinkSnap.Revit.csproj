@@ -6,6 +6,8 @@
     <Nullable>disable</Nullable>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <RevitApiAvailable Condition="'$(RevitApiAvailable)' == 'true'">true</RevitApiAvailable>
+    <RevitApiAvailable Condition="'$(RevitApiAvailable)' != 'true'">false</RevitApiAvailable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,15 +15,22 @@
     <ProjectReference Include="..\SprinkSnap.UI\SprinkSnap.UI.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(RevitApiAvailable)' == 'true'">
     <Reference Include="RevitAPI">
-      <HintPath>$(REVIT_2027_API)\RevitAPI.dll</HintPath>
+      <HintPath>$(RevitApiRoot)\RevitAPI.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="RevitAPIUI">
-      <HintPath>$(REVIT_2027_API)\RevitAPIUI.dll</HintPath>
+      <HintPath>$(RevitApiRoot)\RevitAPIUI.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
-</Project>
 
+  <ItemGroup Condition="'$(RevitApiAvailable)' != 'true'">
+    <Compile Remove="**\*.cs" />
+  </ItemGroup>
+
+  <Target Name="ReportRevitBuildSkipped" BeforeTargets="Build" Condition="'$(RevitApiAvailable)' != 'true'">
+    <Message Importance="high" Text="Skipping SprinkSnap.Revit compile: Revit 2027 API not found. Set REVIT_2027_API or install Revit 2027 under 'C:\Program Files\Autodesk\Revit 2027' on Windows." />
+  </Target>
+</Project>

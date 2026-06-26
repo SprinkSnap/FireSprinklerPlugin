@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <RevitApiRoot Condition="'$(REVIT_2027_API)' != ''">$(REVIT_2027_API)</RevitApiRoot>
+    <RevitApiRoot Condition="'$(REVIT_2027_API)' == '' AND '$(OS)' == 'Windows_NT'">C:\Program Files\Autodesk\Revit 2027</RevitApiRoot>
+    <RevitApiAvailable Condition="Exists('$(RevitApiRoot)\RevitAPI.dll') AND Exists('$(RevitApiRoot)\RevitAPIUI.dll')">true</RevitApiAvailable>
+  </PropertyGroup>
+</Project>
