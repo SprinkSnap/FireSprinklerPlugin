@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FireSprinklerPlugin.SprinkSnap.Core.Data;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
@@ -17,9 +18,9 @@ public sealed class HydraulicVelocityCheck
 
 public static class HydraulicVelocityValidator
 {
-    public const double BranchVelocityLimitFeetPerSecond = 15.0;
+    public const double BranchVelocityLimitFeetPerSecond = VelocityLimitDefaults.DefaultBranchVelocityLimitFeetPerSecond;
 
-    public const double MainVelocityLimitFeetPerSecond = 20.0;
+    public const double MainVelocityLimitFeetPerSecond = VelocityLimitDefaults.DefaultMainVelocityLimitFeetPerSecond;
 
     public static double CalculateVelocityFeetPerSecond(double flowGpm, double diameterInches)
     {
@@ -31,20 +32,26 @@ public static class HydraulicVelocityValidator
         return 0.408 * flowGpm / (diameterInches * diameterInches);
     }
 
-    public static double ResolveVelocityLimitFeetPerSecond(string segmentType)
+    public static double ResolveVelocityLimitFeetPerSecond(
+        string segmentType,
+        SprinkSnapProjectPreferences preferences = null)
     {
         if (string.Equals(segmentType, PipeSegmentTypes.Branch, StringComparison.OrdinalIgnoreCase))
         {
-            return BranchVelocityLimitFeetPerSecond;
+            return VelocityLimitDefaults.ResolveBranchVelocityLimitFeetPerSecond(preferences);
         }
 
-        return MainVelocityLimitFeetPerSecond;
+        return VelocityLimitDefaults.ResolveMainVelocityLimitFeetPerSecond(preferences);
     }
 
-    public static HydraulicVelocityCheck Evaluate(double flowGpm, double diameterInches, string segmentType)
+    public static HydraulicVelocityCheck Evaluate(
+        double flowGpm,
+        double diameterInches,
+        string segmentType,
+        SprinkSnapProjectPreferences preferences = null)
     {
         double velocityFeetPerSecond = CalculateVelocityFeetPerSecond(flowGpm, diameterInches);
-        double velocityLimitFeetPerSecond = ResolveVelocityLimitFeetPerSecond(segmentType);
+        double velocityLimitFeetPerSecond = ResolveVelocityLimitFeetPerSecond(segmentType, preferences);
         return new HydraulicVelocityCheck
         {
             VelocityFeetPerSecond = velocityFeetPerSecond,
@@ -53,7 +60,9 @@ public static class HydraulicVelocityValidator
         };
     }
 
-    public static int ValidateSegmentChain(LayoutLinkedHydraulicPath path)
+    public static int ValidateSegmentChain(
+        LayoutLinkedHydraulicPath path,
+        SprinkSnapProjectPreferences preferences = null)
     {
         if (path == null)
         {
@@ -67,11 +76,13 @@ public static class HydraulicVelocityValidator
             return 0;
         }
 
+        double branchLimit = VelocityLimitDefaults.ResolveBranchVelocityLimitFeetPerSecond(preferences);
+        double mainLimit = VelocityLimitDefaults.ResolveMainVelocityLimitFeetPerSecond(preferences);
         int violationCount = 0;
         double maxVelocityFeetPerSecond = 0.0;
         foreach (HydraulicGraphSegment segment in path.SegmentChain)
         {
-            HydraulicVelocityCheck check = Evaluate(segment.FlowGpm, segment.DiameterInches, segment.SegmentType);
+            HydraulicVelocityCheck check = Evaluate(segment.FlowGpm, segment.DiameterInches, segment.SegmentType, preferences);
             segment.VelocityFeetPerSecond = check.VelocityFeetPerSecond;
             segment.VelocityLimitFeetPerSecond = check.VelocityLimitFeetPerSecond;
             segment.ExceedsVelocityLimit = check.ExceedsLimit;
@@ -103,10 +114,10 @@ public static class HydraulicVelocityValidator
         {
             path.Warnings.Add(
                 violationCount
-                + " critical-path segment(s) exceed NFPA 13 velocity limits ("
-                + BranchVelocityLimitFeetPerSecond.ToString("N0")
+                + " critical-path segment(s) exceed velocity limits ("
+                + branchLimit.ToString("N0")
                 + " ft/s branch, "
-                + MainVelocityLimitFeetPerSecond.ToString("N0")
+                + mainLimit.ToString("N0")
                 + " ft/s main/riser).");
         }
 
@@ -116,7 +127,8 @@ public static class HydraulicVelocityValidator
     public static int ValidateFallbackCriticalPath(
         LayoutLinkedHydraulicPath path,
         double totalSprinklerFlowGpm,
-        double hoseStreamAllowanceGpm)
+        double hoseStreamAllowanceGpm,
+        SprinkSnapProjectPreferences preferences = null)
     {
         if (path?.CriticalPath == null || path.CriticalPath.Count == 0)
         {
@@ -140,7 +152,7 @@ public static class HydraulicVelocityValidator
                 continue;
             }
 
-            HydraulicVelocityCheck check = Evaluate(node.FlowGpm, node.DiameterInches, node.SegmentType);
+            HydraulicVelocityCheck check = Evaluate(node.FlowGpm, node.DiameterInches, node.SegmentType, preferences);
             ApplyVelocityToNode(node, check);
             maxVelocityFeetPerSecond = Math.Max(maxVelocityFeetPerSecond, check.VelocityFeetPerSecond);
             if (!check.ExceedsLimit)
