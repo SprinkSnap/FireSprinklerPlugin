@@ -118,6 +118,34 @@ public sealed class SprinkSnapWorkflowGateTests
         Assert.Equal("Refresh materials", access.StatusLabel);
     }
 
+    [Fact]
+    public void Evaluate_Hydraulics_ShowsWarning_WhenCompleteWithoutPlacedPipeGeometry()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.SessionProgress.HydraulicsComplete = true;
+
+        WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.Hydraulics);
+
+        Assert.True(access.IsUnlocked);
+        Assert.True(access.IsComplete);
+        Assert.Equal(WorkflowStepStatus.Warning, access.Status);
+        Assert.Equal("Place pipes", access.StatusLabel);
+    }
+
+    [Fact]
+    public void Evaluate_Materials_ShowsWarning_WhenHydraulicsHasNotBeenRun()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.SessionProgress.HydraulicsComplete = false;
+        state.SessionProgress.MaterialsComplete = true;
+
+        WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.Materials);
+
+        Assert.True(access.IsUnlocked);
+        Assert.Equal(WorkflowStepStatus.Warning, access.Status);
+        Assert.Equal("Run hydraulics", access.StatusLabel);
+    }
+
     private static SprinkSnapProjectState CreateReadyForPlacementState()
     {
         return new SprinkSnapProjectState

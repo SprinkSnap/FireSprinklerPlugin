@@ -484,6 +484,15 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             ValidationSummary += " " + DownstreamOutputsStaleService.PostHydraulicsRefreshPrompt;
         }
 
+        if (HydraulicWorkflowGuidanceService.ShouldWarnPipeSizingWithoutPlacement(demand, context.ProjectState))
+        {
+            ValidationSummary += " " + HydraulicWorkflowGuidanceService.PipeSizingWithoutPlacementMessage;
+        }
+        else if (HydraulicWorkflowGuidanceService.IsSchematicOnlyHydraulicsComplete(context.ProjectState))
+        {
+            ValidationSummary += " " + HydraulicWorkflowGuidanceService.SchematicOnlyHydraulicsMessage;
+        }
+
         OnPropertyChanged(nameof(SupplyCurve));
         OnPropertyChanged(nameof(ShowSupplyChart));
         OnPropertyChanged(nameof(DemandFlowGpm));
@@ -723,6 +732,15 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         if (DownstreamOutputsStaleService.IsMaterialsTakeoffStale(context.ProjectState))
         {
             StatusMessage += " " + DownstreamOutputsStaleService.PostHydraulicsRefreshPrompt;
+        }
+
+        if (HydraulicWorkflowGuidanceService.ShouldWarnPipeSizingWithoutPlacement(result, context.ProjectState))
+        {
+            StatusMessage += " " + HydraulicWorkflowGuidanceService.PipeSizingWithoutPlacementMessage;
+        }
+        else if (HydraulicWorkflowGuidanceService.IsSchematicOnlyHydraulicsComplete(context.ProjectState))
+        {
+            StatusMessage += " " + HydraulicWorkflowGuidanceService.SchematicOnlyHydraulicsMessage;
         }
 
         NotifyResultChanged();
