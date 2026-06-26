@@ -256,6 +256,17 @@ public static class SprinkSnapWorkflowGate
                         "Refresh needed");
                 }
 
+                if (HydraulicWorkflowGuidanceService.ShouldWarnMaterialsMissingHydraulics(state))
+                {
+                    return CreateAccess(
+                        step,
+                        true,
+                        materialsComplete,
+                        string.Empty,
+                        WorkflowStepStatus.Warning,
+                        "Run hydraulics");
+                }
+
                 return CreateAccess(step, true, materialsComplete, string.Empty);
 
             case SprinkSnapWorkflowStep.Reports:
