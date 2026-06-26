@@ -167,8 +167,6 @@ public static class SprinkSnapPdfReportExporter
         HydraulicCalculationResult hydraulicResult,
         string outputPath)
     {
-        WaterSupplyInput supply = projectState.WaterSupply ?? new WaterSupplyInput();
-
         Document.Create(container =>
         {
             container.Page(page =>
@@ -189,46 +187,10 @@ public static class SprinkSnapPdfReportExporter
                             columns.RelativeColumn();
                         });
 
-                        AddRow(table, "Design density", hydraulicResult.DesignDensityGpmPerSqFt.ToString("N2") + " gpm/sq ft");
-                        AddRow(table, "Remote area", hydraulicResult.RemoteAreaSquareFeet.ToString("N0") + " sq ft");
-                        AddRow(table, "Operating sprinklers", hydraulicResult.OperatingSprinklerCount.ToString());
-                        AddRow(table, "Flow per operating sprinkler", hydraulicResult.FlowPerOperatingSprinklerGpm.ToString("N1") + " GPM");
-                        AddRow(table, "Max coverage per head", hydraulicResult.MaxCoverageSquareFeet.ToString("N0") + " sq ft");
-                        AddRow(table, "Sprinkler demand", hydraulicResult.SprinklerDemandFlowGpm.ToString("N1") + " GPM");
-                        AddRow(table, "Hose stream allowance", hydraulicResult.HoseStreamAllowanceGpm.ToString("N0") + " GPM");
-                        AddRow(table, "Total calculated flow", hydraulicResult.TotalFlowGpm.ToString("N1") + " GPM");
-                        AddRow(table, "Equivalent K-factor", hydraulicResult.EquivalentKFactor.ToString("N1"));
-                        AddRow(table, "Layout-linked hydraulics", hydraulicResult.UsesLayoutLinkedHydraulics ? "Yes" : "Estimated");
-                        AddRow(table, "Pipe length source", string.IsNullOrWhiteSpace(hydraulicResult.PipeLengthDataSource)
-                            ? "Geometry"
-                            : hydraulicResult.PipeLengthDataSource);
-                        AddRow(table, "Uses placed pipe lengths", hydraulicResult.UsesPlacedPipeLengths ? "Yes" : "No");
-                        AddRow(table, "Remote sprinkler", string.IsNullOrWhiteSpace(hydraulicResult.RemoteSprinklerLabel)
-                            ? "Not available"
-                            : hydraulicResult.RemoteSprinklerLabel);
-                        AddRow(table, "Branch length", hydraulicResult.BranchLengthFeet.ToString("N0") + " ft");
-                        AddRow(table, "Main length", hydraulicResult.MainLengthFeet.ToString("N0") + " ft");
-                        AddRow(table, "Total pipe length", hydraulicResult.TotalPipeLengthFeet.ToString("N0") + " ft");
-                        AddRow(table, "Fitting friction loss", hydraulicResult.FittingFrictionPsi.ToString("N1") + " PSI");
-                        AddRow(table, "Max critical-path velocity", hydraulicResult.MaxCriticalPathVelocityFeetPerSecond.ToString("N1") + " ft/s");
-                        AddRow(table, "Velocity violations", hydraulicResult.CriticalPathVelocityViolationCount.ToString());
-                        AddRow(table, "Diameter suggestions", hydraulicResult.CriticalPathDiameterSuggestionCount.ToString());
-                        AddRow(table, "Applied pipe sizing", hydraulicResult.UsesAppliedPipeSizing ? "Yes" : "No");
-                        AddRow(table, "Upsized segments", hydraulicResult.AppliedPipeSizingSegmentCount.ToString());
-                        AddRow(table, "Schematic writeback", hydraulicResult.UsesSchematicPipeSizingWriteback ? "Yes" : "No");
-                        AddRow(table, "Schematic segments updated", hydraulicResult.SchematicWritebackSegmentCount.ToString());
-                        AddRow(table, "Revit diameter sync", hydraulicResult.UsesRevitPipeDiameterSync ? "Yes" : "No");
-                        AddRow(table, "Revit pipes updated", hydraulicResult.RevitPipeDiameterSyncCount.ToString());
-                        AddRow(table, "Revit fitting sync", hydraulicResult.UsesRevitFittingDiameterSync ? "Yes" : "No");
-                        AddRow(table, "Revit fittings updated", hydraulicResult.RevitFittingDiameterSyncCount.ToString());
-                        AddRow(table, "Post-sync re-solve", hydraulicResult.UsesPostSyncHydraulicReSolve ? "Yes" : "No");
-                        AddRow(table, "System demand pressure", hydraulicResult.SystemDemandPsi.ToString("N1") + " PSI");
-                        AddRow(table, "Demand flow (chart)", hydraulicResult.DemandFlowGpm.ToString("N1") + " GPM");
-                        AddRow(table, "Available pressure at demand flow", hydraulicResult.AvailablePressurePsi.ToString("N1") + " PSI");
-                        AddRow(table, "Safety margin", hydraulicResult.SafetyMarginPsi.ToString("N1") + " PSI");
-                        AddRow(table, "Static pressure (test)", FormatNullable(supply.StaticPressurePsi, "PSI"));
-                        AddRow(table, "Residual pressure (test)", FormatNullable(supply.ResidualPressurePsi, "PSI"));
-                        AddRow(table, "Flow at residual", FormatNullable(supply.FlowAtResidualGpm, "GPM"));
+                        foreach (KeyValuePair<string, string> row in HydraulicReportSummaryBuilder.BuildRows(projectState, hydraulicResult))
+                        {
+                            AddRow(table, row.Key, row.Value);
+                        }
                     });
 
                     if (hydraulicResult.Warnings.Count > 0)
@@ -257,6 +219,9 @@ public static class SprinkSnapPdfReportExporter
                 page.Content().Column(column =>
                 {
                     column.Item().Text("Layout-linked critical path from remote sprinkler to source.").Italic();
+                    column.Item().Text(HydraulicReportSummaryBuilder.BuildNodeDiagramMethodologySummary(hydraulicResult))
+                        .FontSize(9)
+                        .FontColor(Colors.Grey.Darken1);
                     column.Item().PaddingTop(8).Table(table =>
                     {
                         table.ColumnsDefinition(columns =>
@@ -376,11 +341,6 @@ public static class SprinkSnapPdfReportExporter
     {
         table.Cell().Element(CellStyle).Text(label).SemiBold();
         table.Cell().Element(CellStyle).Text(value);
-    }
-
-    private static string FormatNullable(double? value, string unit)
-    {
-        return value.HasValue ? value.Value.ToString("N1") + " " + unit : "Not entered";
     }
 
     private static IContainer CellStyle(IContainer container)
