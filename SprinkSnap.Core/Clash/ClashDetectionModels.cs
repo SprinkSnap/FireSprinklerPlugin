@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
+
 namespace FireSprinklerPlugin.SprinkSnap.Core.Clash;
 
 public sealed class LinkedModelScanOption
@@ -44,7 +46,7 @@ public sealed class SprinklerClashRecord
 
     public string LinkedModelName { get; set; } = string.Empty;
 
-    public string NfpaReference { get; set; } = "NFPA 13 Section 10.2.6";
+    public string NfpaReference { get; set; } = Nfpa13Edition.References.ObstructionsToDischarge;
 
     public bool Resolved { get; set; }
 

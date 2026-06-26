@@ -6,7 +6,7 @@ internal static class HazenWilliamsCalculator
 {
     /// <summary>
     /// US Hazen-Williams friction loss (PSI) for a pipe segment.
-    /// Q in GPM, D in inches, L in feet, C is Hazen-Williams coefficient.
+    /// Q in GPM, D in inches, L in feet, C is Hazen-Williams coefficient (default 120 per Table 28.2.3.2.1).
     /// </summary>
     public static double FrictionLossPsi(double flowGpm, double diameterInches, double lengthFeet, double hazenWilliamsC = 120.0)
     {

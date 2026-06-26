@@ -6,8 +6,8 @@ using FireSprinklerPlugin.SprinkSnap.Core.Models;
 namespace FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 
 /// <summary>
-/// Builds NFPA 13 hydraulic graph curves for N^1.85 semi-log graph paper
-/// (flow raised to the 1.85 power on the horizontal axis, pressure on the vertical axis).
+/// Builds NFPA 13 (2025) hydraulic graph curves for N^1.85 semi-log graph paper
+/// per Section 28.4.1.4 (flow raised to the 1.85 power on the horizontal axis, pressure on the vertical axis).
 /// </summary>
 public static class Nfpa13HydraulicGraphCalculator
 {

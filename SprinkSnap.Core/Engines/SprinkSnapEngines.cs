@@ -258,7 +258,7 @@ public sealed class HydraulicEngine : IHydraulicEngine
         }
         else if (designRooms.Sum(room => room.ProposedSprinklers.Count) == 0)
         {
-            result.Warnings.Add("No proposed sprinkler locations found. Remote area demand uses NFPA 13 minimum area only.");
+            result.Warnings.Add("No proposed sprinkler locations found. Remote area demand uses " + Nfpa13Edition.ShortLabel + " minimum area only.");
         }
         else
         {

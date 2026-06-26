@@ -80,7 +80,7 @@ public sealed class DefaultLightHazardRule : IHazardClassificationRule
 
 public static class NFPA13Rules
 {
-    // NFPA 13 classifications remain suggestion-only here. Designer approval is mandatory before
+    // NFPA 13 (2025) classifications remain suggestion-only here. Designer approval is mandatory before
     // sprinkler placement because actual hazard classification depends on contents, heat release,
     // storage height, process hazards, and owner-specific use.
     public static IReadOnlyList<IHazardClassificationRule> DefaultHazardRules { get; } = new List<IHazardClassificationRule>

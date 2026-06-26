@@ -8,7 +8,7 @@
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <TextBlock Text="NFPA 13 N^1.85 hydraulic graph — supply curve (blue), system demand curve (red)"
+            <TextBlock Text="NFPA 13 (2025) N^1.85 hydraulic graph — supply curve (blue), system demand curve (red)"
                        Foreground="#6B7280"
                        Margin="0,0,0,8" />
             <Canvas x:Name="ChartCanvas" Grid.Row="1" MinHeight="220" />

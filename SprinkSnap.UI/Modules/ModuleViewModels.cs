@@ -23,6 +23,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Reports;
 using FireSprinklerPlugin.SprinkSnap.Core.WaterSupply;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Modules;
@@ -535,7 +536,7 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
     private readonly IHydraulicEngine hydraulicEngine = new HydraulicEngine();
     private readonly HydraulicCalculationPipelineRunner pipelineRunner = new HydraulicCalculationPipelineRunner();
     private HydraulicCalculationResult result = new HydraulicCalculationResult();
-    private string statusMessage = "Run NFPA 13 remote-area hydraulics after clash resolution and water supply entry.";
+    private string statusMessage = "Run " + Nfpa13Edition.ShortLabel + " remote-area hydraulics after clash resolution and water supply entry.";
 
     public HydraulicsModuleViewModel(SprinkSnapShellContext context)
     {

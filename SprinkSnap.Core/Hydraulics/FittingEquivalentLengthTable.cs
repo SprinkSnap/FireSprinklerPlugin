@@ -3,6 +3,9 @@ using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Hydraulics;
 
+/// <summary>
+/// Interpolated fitting equivalent lengths aligned with NFPA 13 (2025) Table 28.2.3.1.1 anchor values.
+/// </summary>
 public static class FittingEquivalentLengthTable
 {
     public static double GetEquivalentLengthFeet(string jointType, double diameterInches)

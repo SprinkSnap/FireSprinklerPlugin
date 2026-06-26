@@ -24,7 +24,7 @@
                 </StackPanel>
                 <StackPanel>
                     <TextBlock Text="Hazard Review" Foreground="White" FontSize="22" FontWeight="SemiBold" />
-                    <TextBlock Text="Approve NFPA 13 hazard classifications room by room. SprinkSnap suggests — you decide."
+                    <TextBlock Text="Approve NFPA 13 (2025) hazard classifications room by room. SprinkSnap suggests — you decide."
                                Foreground="#CBD5E1" TextWrapping="Wrap" Margin="0,6,0,0" />
                 </StackPanel>
             </DockPanel>
@@ -71,7 +71,7 @@
             </Border>
             <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12">
                 <StackPanel>
-                    <TextBlock Text="NFPA 13 Reference" Foreground="#6B7280" FontSize="12" />
+                    <TextBlock Text="NFPA 13 (2025) Reference" Foreground="#6B7280" FontSize="12" />
                     <TextBlock Text="{Binding ActiveCodeReferenceSection}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
@@ -90,7 +90,7 @@
                         <ColumnDefinition Width="160" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Review each room hazard. Select a row to see the NFPA 13 code reference in the right panel."
+                    <TextBlock Text="Review each room hazard. Select a row to see the NFPA 13 (2025) code reference in the right panel."
                                TextWrapping="Wrap" VerticalAlignment="Center" Foreground="#4B5563" />
                     <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="12,0,8,0" />
                     <ComboBox Grid.Column="2" ItemsSource="{Binding HazardFilters}" SelectedItem="{Binding HazardFilter}" Height="34" Margin="0,0,8,0" />
