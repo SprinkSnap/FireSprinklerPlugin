@@ -543,8 +543,14 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         this.context = context;
         context.WorkflowChanged += OnWorkflowChanged;
         CalculateCommand = new ModuleRelayCommand(_ => Calculate());
+        ComparePipingScenariosCommand = new ModuleRelayCommand(_ => ComparePipingScenarios());
+        ApplyRecommendedPipingScenarioCommand = new ModuleRelayCommand(
+            _ => ApplyRecommendedPipingScenario(),
+            _ => RecommendedPipingScenario != null);
+        ApplyPipingScenarioCommand = new ModuleRelayCommand(ApplyPipingScenario, parameter => parameter is PipingScenarioComparisonRowViewModel);
         PickSupplyAnchorCommand = new ModuleRelayCommand(_ => PickSupplyAnchor(), _ => CanPickSupplyAnchor);
         ClearSupplyAnchorCommand = new ModuleRelayCommand(_ => ClearSupplyAnchor(), _ => HasUserSupplyAnchor);
+        PipingScenarioRows = new ObservableCollection<PipingScenarioComparisonRowViewModel>();
         if (context.ProjectState.HydraulicResult != null
             && context.ProjectState.HydraulicResult.TotalFlowGpm > 0)
         {
@@ -553,9 +559,30 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         }
 
         RefreshDownstreamStaleBindings();
+        LoadPipingComparisonFromState();
     }
 
     public ICommand CalculateCommand { get; }
+
+    public ICommand ComparePipingScenariosCommand { get; }
+
+    public ICommand ApplyRecommendedPipingScenarioCommand { get; }
+
+    public ICommand ApplyPipingScenarioCommand { get; }
+
+    public ObservableCollection<PipingScenarioComparisonRowViewModel> PipingScenarioRows { get; }
+
+    public bool HasPipingScenarioComparison => PipingScenarioRows.Count > 0;
+
+    public string PipingComparisonSummary =>
+        context.ProjectState.PipingSystemComparison?.ComparisonSummary ?? string.Empty;
+
+    public string PipingComparisonNfpaReference =>
+        context.ProjectState.PipingSystemComparison?.NfpaReference
+        ?? Nfpa13Edition.References.PipingSystemHydraulicComparison;
+
+    public string ActivePipingSystemSummary =>
+        PipeScheduleDefaults.BuildSystemSummary(context.ProjectState.Preferences);
 
     public ICommand PickSupplyAnchorCommand { get; }
 
@@ -887,6 +914,88 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         StatusMessage = "Cleared user supply anchor. Re-run hydraulics to use automatic source resolution.";
         OnPropertyChanged(nameof(HasUserSupplyAnchor));
         OnPropertyChanged(nameof(SupplyAnchorSummary));
+    }
+
+    private PipingScenarioComparisonRowViewModel RecommendedPipingScenario =>
+        PipingScenarioRows.FirstOrDefault(row => row.IsRecommended)
+        ?? PipingScenarioRows.FirstOrDefault();
+
+    private void ComparePipingScenarios()
+    {
+        if (SprinkSnapWorkflowGate.IsModelStale(context.ProjectState))
+        {
+            StatusMessage = SprinkSnapWorkflowGate.StaleModelBlockReason;
+            return;
+        }
+
+        PipingSystemHydraulicComparisonResult comparison = PipingSystemHydraulicComparisonService.CompareTreeAndGrid(
+            context.ProjectState,
+            hydraulicEngine);
+        context.ProjectState.PipingSystemComparison = comparison;
+        RefreshPipingScenarioRows(comparison);
+        context.RequestPersistToRevit();
+        StatusMessage = string.IsNullOrWhiteSpace(comparison.ComparisonSummary)
+            ? "Piping scenario comparison complete."
+            : comparison.ComparisonSummary;
+        RefreshPipingComparisonBindings();
+    }
+
+    private void ApplyRecommendedPipingScenario()
+    {
+        PipingScenarioComparisonRowViewModel recommended = RecommendedPipingScenario;
+        if (recommended == null)
+        {
+            StatusMessage = "Run Compare Tree vs Grid before applying a recommended piping scenario.";
+            return;
+        }
+
+        ApplyPipingScenario(recommended);
+    }
+
+    private void ApplyPipingScenario(object parameter)
+    {
+        if (parameter is not PipingScenarioComparisonRowViewModel row || row.Scenario == null)
+        {
+            return;
+        }
+
+        PipingSystemHydraulicComparisonService.ApplyScenario(
+            context.ProjectState,
+            row.Scenario,
+            hydraulicEngine);
+        result = context.ProjectState.HydraulicResult;
+        context.RequestPersistToRevit();
+        context.RequestWorkflowRefresh();
+        NotifyResultChanged();
+        RefreshPipingComparisonBindings();
+        StatusMessage = "Applied "
+            + row.PipingSystemType
+            + " / "
+            + row.PipeSchedule
+            + " routing to the project. Hydraulics and schematic pipe routing were updated.";
+    }
+
+    private void LoadPipingComparisonFromState()
+    {
+        RefreshPipingScenarioRows(context.ProjectState.PipingSystemComparison);
+        RefreshPipingComparisonBindings();
+    }
+
+    private void RefreshPipingScenarioRows(PipingSystemHydraulicComparisonResult comparison)
+    {
+        PipingScenarioRows.Clear();
+        foreach (PipingSystemScenarioResult scenario in comparison?.Scenarios ?? Enumerable.Empty<PipingSystemScenarioResult>())
+        {
+            PipingScenarioRows.Add(new PipingScenarioComparisonRowViewModel(scenario));
+        }
+    }
+
+    private void RefreshPipingComparisonBindings()
+    {
+        OnPropertyChanged(nameof(HasPipingScenarioComparison));
+        OnPropertyChanged(nameof(PipingComparisonSummary));
+        OnPropertyChanged(nameof(PipingComparisonNfpaReference));
+        OnPropertyChanged(nameof(ActivePipingSystemSummary));
     }
 }
 
@@ -2054,6 +2163,8 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
     private string catalogPath = string.Empty;
     private string catalogSourceKind = string.Empty;
     private string catalogLibraryName = string.Empty;
+    private string selectedPipingSystemType = PipingSystemTypes.Tree;
+    private string selectedPipeSchedule = PipeScheduleTypes.Schedule40;
     private int catalogFamilyCount;
     private string statusMessage = "Configure project standards, map catalog families to loaded Revit types, and save.";
 
@@ -2063,6 +2174,8 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         FamilyMappingRows = new ObservableCollection<FamilyMappingRowViewModel>();
         LoadedRevitSymbols = new ObservableCollection<LoadedRevitSymbolOption>();
         LinkedModelScanOptions = new ObservableCollection<LinkedModelScanOptionViewModel>();
+        PipingSystemTypeOptions = new ObservableCollection<string>(PipingSystemTypes.All);
+        PipeScheduleOptions = new ObservableCollection<string>(PipeScheduleTypes.All);
         SaveCommand = new ModuleRelayCommand(_ => Save());
         BrowseCatalogCommand = new ModuleRelayCommand(_ => BrowseCatalog());
         ReloadCatalogCommand = new ModuleRelayCommand(_ => ReloadCatalog());
@@ -2089,6 +2202,10 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
     public ObservableCollection<LoadedRevitSymbolOption> LoadedRevitSymbols { get; }
 
     public ObservableCollection<string> ManufacturerOptions { get; } = new ObservableCollection<string>();
+
+    public ObservableCollection<string> PipingSystemTypeOptions { get; }
+
+    public ObservableCollection<string> PipeScheduleOptions { get; }
 
     public string CatalogPath
     {
@@ -2192,6 +2309,35 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         }
     }
 
+    public string SelectedPipingSystemType
+    {
+        get => selectedPipingSystemType;
+        set
+        {
+            selectedPipingSystemType = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PipingSystemSummary));
+        }
+    }
+
+    public string SelectedPipeSchedule
+    {
+        get => selectedPipeSchedule;
+        set
+        {
+            selectedPipeSchedule = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PipingSystemSummary));
+        }
+    }
+
+    public string PipingSystemSummary =>
+        PipeScheduleDefaults.BuildSystemSummary(new SprinkSnapProjectPreferences
+        {
+            PipingSystemType = SelectedPipingSystemType,
+            DefaultPipeSchedule = SelectedPipeSchedule
+        });
+
     public string AiServiceEndpoint
     {
         get => aiServiceEndpoint;
@@ -2242,6 +2388,8 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         mainVelocityLimitFeetPerSecond = VelocityLimitDefaults
             .ResolveMainVelocityLimitFeetPerSecond(preferences)
             .ToString("0.##", CultureInfo.CurrentCulture);
+        selectedPipingSystemType = PipeScheduleDefaults.ResolvePipingSystemType(preferences);
+        selectedPipeSchedule = PipeScheduleDefaults.ResolvePipeSchedule(preferences);
     }
 
     private void RefreshManufacturerOptions()
@@ -2388,6 +2536,18 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         context.ProjectState.Preferences.DefaultMainDiameterInches = mainDiameterInches.Value;
         context.ProjectState.Preferences.BranchVelocityLimitFeetPerSecond = branchVelocityLimit.Value;
         context.ProjectState.Preferences.MainVelocityLimitFeetPerSecond = mainVelocityLimit.Value;
+        bool pipingSystemChanged = !string.Equals(
+            PipeScheduleDefaults.ResolvePipingSystemType(preferences),
+            PipingSystemTypes.Normalize(SelectedPipingSystemType),
+            StringComparison.Ordinal)
+            || !string.Equals(
+                PipeScheduleDefaults.ResolvePipeSchedule(preferences),
+                PipeScheduleTypes.Normalize(SelectedPipeSchedule),
+                StringComparison.Ordinal);
+        context.ProjectState.Preferences.PipingSystemType = PipingSystemTypes.Normalize(SelectedPipingSystemType);
+        context.ProjectState.Preferences.DefaultPipeSchedule = PipeScheduleTypes.Normalize(SelectedPipeSchedule);
+        context.ProjectState.Preferences.HazenWilliamsC = PipeScheduleDefaults.ResolveHazenWilliamsC(context.ProjectState.Preferences);
+        PipeScheduleDefaults.ApplyRecommendedDefaults(context.ProjectState.Preferences);
 
         HazardClassificationViewModel hazardViewModel = context.GetOrCreateHazardViewModel();
         hazardViewModel.SelectedManufacturer = DefaultManufacturer;
@@ -2423,13 +2583,13 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         context.ProjectState.SessionProgress.SprinklerReviewComplete =
             SprinkSnapWorkflowGate.IsSprinklerReviewComplete(context.ProjectState);
 
-        if (pipeDiametersChanged
+        if ((pipeDiametersChanged || pipingSystemChanged)
             && context.ProjectState.Rooms.Any(room => room.ProposedSprinklers.Count > 0))
         {
             SchematicPipeRoutingService.RefreshProjectRouting(context.ProjectState);
         }
 
-        if ((pipeDiametersChanged || velocityLimitsChanged)
+        if ((pipeDiametersChanged || velocityLimitsChanged || pipingSystemChanged)
             && context.ProjectState.Rooms.Any(room => room.ProposedSprinklers.Count > 0))
         {
             DownstreamDesignInvalidationService.InvalidateHydraulicResults(
@@ -2455,6 +2615,10 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         {
             StatusMessage += " Velocity limits changed — re-run hydraulics and refresh material takeoff.";
         }
+        else if (pipingSystemChanged)
+        {
+            StatusMessage += " Piping system standard changed — schematic routing refreshed. Compare Tree vs Grid in Hydraulics, then re-run hydraulics.";
+        }
     }
 
     private static double? TryParsePositiveDiameter(string value)
@@ -2463,6 +2627,34 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
             ? parsed
             : null;
     }
+}
+
+public sealed class PipingScenarioComparisonRowViewModel
+{
+    public PipingScenarioComparisonRowViewModel(PipingSystemScenarioResult scenario)
+    {
+        Scenario = scenario;
+    }
+
+    public PipingSystemScenarioResult Scenario { get; }
+
+    public string PipingSystemType => Scenario?.PipingSystemType ?? string.Empty;
+
+    public string PipeSchedule => Scenario?.PipeSchedule ?? string.Empty;
+
+    public double SystemDemandPsi => Scenario?.HydraulicResult?.SystemDemandPsi ?? 0.0;
+
+    public double SafetyMarginPsi => Scenario?.HydraulicResult?.SafetyMarginPsi ?? 0.0;
+
+    public double SchematicPipeLengthFeet => Scenario?.SchematicPipeLengthFeet ?? 0.0;
+
+    public bool IsRecommended => Scenario?.IsRecommended == true;
+
+    public string StatusLabel => Scenario == null
+        ? string.Empty
+        : Scenario.MeetsSupplyDemand
+            ? (IsRecommended ? "Recommended" : "Meets demand")
+            : "Review margin";
 }
 
 public sealed class ModuleRelayCommand : ICommand

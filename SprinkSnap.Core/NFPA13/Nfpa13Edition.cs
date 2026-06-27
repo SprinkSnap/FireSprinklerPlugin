@@ -79,5 +79,10 @@ public static class Nfpa13Edition
         public static readonly string HighCeilingDesignCriteria = Section("19.2.3.2.5.2");
 
         public static readonly string HighCeilingSprinklerSelection = Section("19.2.3.2.5.1");
+
+        public static readonly string PipingSystemHydraulicComparison = Section("28.2")
+            + " with "
+            + Section("10.2.4.2")
+            + " layout routing";
     }
 }

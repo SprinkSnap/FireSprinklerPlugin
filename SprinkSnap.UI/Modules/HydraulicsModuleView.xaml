@@ -36,7 +36,46 @@
                 </StackPanel>
             </Border>
 
-            <Button Content="Run Hydraulics" Command="{Binding CalculateCommand}" Padding="14,8" HorizontalAlignment="Left" Margin="0,0,0,16" />
+            <Button Content="Run Hydraulics" Command="{Binding CalculateCommand}" Padding="14,8" HorizontalAlignment="Left" Margin="0,0,0,8" />
+
+            <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="Piping system comparison (Tree vs Grid)" FontWeight="SemiBold" Margin="0,0,0,6" />
+                    <TextBlock Text="{Binding PipingComparisonNfpaReference}" Foreground="#6B7280" TextWrapping="Wrap" Margin="0,0,0,8" />
+                    <TextBlock Text="{Binding PipingComparisonSummary}" TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,10" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="Compare Tree vs Grid" Command="{Binding ComparePipingScenariosCommand}" Padding="12,6" Margin="0,0,8,0" />
+                        <Button Content="Apply Recommended" Command="{Binding ApplyRecommendedPipingScenarioCommand}" Padding="12,6" />
+                    </StackPanel>
+                    <DataGrid ItemsSource="{Binding PipingScenarioRows}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              RowHeight="56"
+                              RowHeaderWidth="0"
+                              GridLinesVisibility="Horizontal"
+                              AlternatingRowBackground="#FFFFFF"
+                              Visibility="{Binding HasPipingScenarioComparison, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="System" Binding="{Binding PipingSystemType}" Width="80" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Schedule" Binding="{Binding PipeSchedule}" Width="110" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Demand (PSI)" Binding="{Binding SystemDemandPsi, StringFormat=N1}" Width="100" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Margin (PSI)" Binding="{Binding SafetyMarginPsi, StringFormat=N1}" Width="100" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Pipe (ft)" Binding="{Binding SchematicPipeLengthFeet, StringFormat=N0}" Width="80" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Status" Binding="{Binding StatusLabel}" Width="120" IsReadOnly="True" />
+                            <DataGridTemplateColumn Header="Apply" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Apply"
+                                                Command="{Binding DataContext.ApplyPipingScenarioCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Padding="8,4" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
 
             <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16">
                 <StackPanel>

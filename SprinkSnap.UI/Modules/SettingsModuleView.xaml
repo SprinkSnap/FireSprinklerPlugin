@@ -46,6 +46,33 @@
                 </TextBlock>
             </StackPanel>
 
+            <TextBlock Text="Piping system standard" FontSize="18" FontWeight="SemiBold" Margin="0,8,0,6" />
+            <TextBlock Text="Choose the schematic routing topology used for layout, hydraulics, and takeoff. Tree / Schedule 40 and Grid / Schedule 10 are compared side-by-side in Hydraulics using the same NFPA 13 (2025) remote-area demand and water supply test data."
+                       TextWrapping="Wrap"
+                       Foreground="#4B5563"
+                       Margin="0,0,0,10" />
+
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                    <TextBlock Text="System type" Margin="0,0,0,4" />
+                    <ComboBox ItemsSource="{Binding PipingSystemTypeOptions}"
+                              SelectedItem="{Binding SelectedPipingSystemType}"
+                              Height="34" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                    <TextBlock Text="Pipe schedule" Margin="0,0,0,4" />
+                    <ComboBox ItemsSource="{Binding PipeScheduleOptions}"
+                              SelectedItem="{Binding SelectedPipeSchedule}"
+                              Height="34" />
+                </StackPanel>
+            </Grid>
+
+            <TextBlock Text="{Binding PipingSystemSummary}" Foreground="#6B7280" TextWrapping="Wrap" Margin="0,0,0,16" />
+
             <TextBlock Text="Default pipe diameters" FontSize="18" FontWeight="SemiBold" Margin="0,8,0,6" />
             <TextBlock Text="Starting branch and main diameters used for schematic routing, hydraulics, sizing, and takeoff before velocity upsizing."
                        TextWrapping="Wrap"

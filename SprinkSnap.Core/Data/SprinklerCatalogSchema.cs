@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Data;
 
@@ -85,5 +86,11 @@ public sealed class SprinkSnapProjectPreferences
     public bool AllowAlternateManufacturers { get; set; } = true;
 
     public string CatalogPath { get; set; } = string.Empty;
+
+    public string PipingSystemType { get; set; } = PipingSystemTypes.Tree;
+
+    public string DefaultPipeSchedule { get; set; } = PipeScheduleTypes.Schedule40;
+
+    public double HazenWilliamsC { get; set; }
 }
 
