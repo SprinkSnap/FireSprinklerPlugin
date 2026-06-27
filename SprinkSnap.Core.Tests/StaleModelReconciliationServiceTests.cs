@@ -85,7 +85,8 @@ public sealed class StaleModelReconciliationServiceTests
                 }
             },
             ClashSummary = new ClashDetectionSummary { TotalClashes = 0 },
-            ModelChangeAssessment = new ModelChangeAssessment { IsStale = false }
+            ModelChangeAssessment = new ModelChangeAssessment { IsStale = false },
+            WaterSupplyValidation = new WaterSupplyValidationResult { InputIsCompliant = true, IsAdequate = true }
         };
     }
 

@@ -8,8 +8,14 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="4" MaxWidth="720">
             <TextBlock Text="Water Supply" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
-            <TextBlock Text="Enter hydrant test data used for the water supply curve and adequacy check, or import a hydrant flow test CSV."
-                       TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,12" />
+            <TextBlock Text="Enter the current hydrant flow test used for this design. Fields start empty until you type values or import a CSV, then click Validate Supply."
+                       TextWrapping="Wrap" Foreground="#4B5563" Margin="0,0,0,8" />
+            <TextBlock Text="{Binding NfpaReferenceSummary}" TextWrapping="Wrap" Foreground="#6B7280" Margin="0,0,0,12" />
+
+            <Border Background="#FFFBEB" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,12"
+                    Visibility="{Binding RequiresValidation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="{Binding RequiresValidationMessage}" TextWrapping="Wrap" Foreground="#92400E" />
+            </Border>
 
             <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                 <Button Content="Import CSV"
@@ -26,16 +32,16 @@
                        Margin="0,0,0,16" />
 
             <TextBlock Text="Static pressure (PSI)" Margin="0,0,0,4" />
-            <TextBox Text="{Binding StaticPressurePsi, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,12" />
+            <TextBox Text="{Binding StaticPressurePsi, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,12" Tag="Required" />
 
             <TextBlock Text="Residual pressure (PSI)" Margin="0,0,0,4" />
-            <TextBox Text="{Binding ResidualPressurePsi, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,12" />
+            <TextBox Text="{Binding ResidualPressurePsi, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,12" Tag="Required" />
 
             <TextBlock Text="Flow at residual (GPM)" Margin="0,0,0,4" />
-            <TextBox Text="{Binding FlowGpm, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,12" />
+            <TextBox Text="{Binding FlowGpm, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,12" Tag="Required" />
 
-            <TextBlock Text="Hydrant test date" Margin="0,0,0,4" />
-            <TextBox Text="{Binding HydrantTestDate, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,16" />
+            <TextBlock Text="Hydrant test date (required)" Margin="0,0,0,4" />
+            <TextBox Text="{Binding HydrantTestDate, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,16" Tag="Required" />
 
             <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16">
                 <StackPanel>

@@ -59,11 +59,37 @@ public sealed class WaterSupplyEngine : IWaterSupplyEngine
 {
     public WaterSupplyValidationResult Validate(WaterSupplyInput input, HydraulicCalculationResult demand)
     {
-        WaterSupplyValidationResult result = new WaterSupplyValidationResult();
-
-        if (!input.StaticPressurePsi.HasValue || !input.ResidualPressurePsi.HasValue || !input.FlowAtResidualGpm.HasValue)
+        WaterSupplyValidationResult result = new WaterSupplyValidationResult
         {
-            result.Warnings.Add("Static pressure, residual pressure, and flow at residual are required.");
+            NfpaReference = Nfpa13Edition.References.WaterSupplyInformation
+                + " and "
+                + Nfpa13Edition.References.HydraulicGraphSheet
+        };
+
+        Nfpa13WaterSupplyInputValidationResult inputValidation = Nfpa13WaterSupplyValidator.ValidateInput(input);
+        result.InputIsCompliant = inputValidation.IsCompliant;
+        foreach (string warning in inputValidation.Warnings)
+        {
+            result.Warnings.Add(warning);
+        }
+
+        if (!inputValidation.IsCompliant)
+        {
+            foreach (string error in inputValidation.Errors)
+            {
+                result.Warnings.Add(error);
+            }
+
+            result.IsAdequate = false;
+            return result;
+        }
+
+        demand ??= new HydraulicCalculationResult();
+        if (demand.TotalFlowGpm <= 0)
+        {
+            result.Warnings.Add(
+                "System demand is not available. Approve hazards and generate layout before comparing supply to demand.");
+            result.IsAdequate = false;
             return result;
         }
 
@@ -78,7 +104,11 @@ public sealed class WaterSupplyEngine : IWaterSupplyEngine
             result.Warnings.Add(
                 "Available supply pressure at "
                 + demand.TotalFlowGpm.ToString("N0")
-                + " GPM is below calculated system demand.");
+                + " GPM is below calculated system demand by "
+                + Math.Abs(result.SafetyMarginPsi).ToString("N1")
+                + " PSI ("
+                + Nfpa13Edition.References.HydraulicGraphSheet
+                + ").");
         }
 
         return result;

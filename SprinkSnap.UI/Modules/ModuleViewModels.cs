@@ -228,16 +228,18 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
     private readonly IWaterSupplyEngine waterSupplyEngine = new WaterSupplyEngine();
     private readonly IHydraulicEngine hydraulicEngine = new HydraulicEngine();
     private readonly HydraulicCalculationPipelineRunner pipelineRunner = new HydraulicCalculationPipelineRunner();
+    private bool isLoadingFromState;
     private string staticPressurePsi = string.Empty;
     private string residualPressurePsi = string.Empty;
     private string flowGpm = string.Empty;
     private string hydrantTestDate = string.Empty;
     private string importedSourcePath = string.Empty;
-    private string validationSummary = "Enter hydrant test data and click Validate Supply, or import a CSV file.";
+    private string validationSummary = "Enter current hydrant test data, then click Validate Supply or import a CSV file.";
     private IList<WaterSupplyCurvePoint> supplyCurve = new List<WaterSupplyCurvePoint>();
     private IList<WaterSupplyCurvePoint> demandCurve = new List<WaterSupplyCurvePoint>();
     private double demandFlowGpm;
     private double demandPressurePsi;
+    private bool requiresValidation = true;
 
     public WaterSupplyModuleViewModel(SprinkSnapShellContext context)
     {
@@ -270,6 +272,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         {
             staticPressurePsi = value;
             OnPropertyChanged();
+            MarkWaterSupplyDirty();
         }
     }
 
@@ -280,6 +283,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         {
             residualPressurePsi = value;
             OnPropertyChanged();
+            MarkWaterSupplyDirty();
         }
     }
 
@@ -290,6 +294,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         {
             flowGpm = value;
             OnPropertyChanged();
+            MarkWaterSupplyDirty();
         }
     }
 
@@ -300,8 +305,27 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         {
             hydrantTestDate = value;
             OnPropertyChanged();
+            MarkWaterSupplyDirty();
         }
     }
+
+    public string NfpaReferenceSummary =>
+        Nfpa13CodeReferenceLibrary.GetWaterSupplyReference().Section
+        + " — "
+        + Nfpa13CodeReferenceLibrary.GetWaterSupplyReference().Summary;
+
+    public bool RequiresValidation
+    {
+        get => requiresValidation;
+        private set
+        {
+            requiresValidation = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string RequiresValidationMessage =>
+        "Current hydrant test data has not been validated for this session. Click Validate Supply after entering static pressure, residual pressure, flow at residual, and test date.";
 
     public string ValidationSummary
     {
@@ -349,12 +373,64 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 
     private void LoadFromState()
     {
-        WaterSupplyInput input = context.ProjectState.WaterSupply;
-        StaticPressurePsi = input.StaticPressurePsi?.ToString() ?? string.Empty;
-        ResidualPressurePsi = input.ResidualPressurePsi?.ToString() ?? string.Empty;
-        FlowGpm = input.FlowAtResidualGpm?.ToString() ?? string.Empty;
+        isLoadingFromState = true;
+        try
+        {
+            if (context.ProjectState.SessionProgress.WaterSupplyComplete
+                && context.ProjectState.WaterSupplyValidation?.InputIsCompliant == true)
+            {
+                ApplyInputToFields(context.ProjectState.WaterSupply);
+                LoadValidationChartFromState();
+                RequiresValidation = false;
+                ValidationSummary = BuildValidatedSummary(context.ProjectState.WaterSupplyValidation);
+            }
+            else
+            {
+                ClearInputFields(resetProjectInput: true);
+                ClearValidationChart();
+                RequiresValidation = true;
+            }
+        }
+        finally
+        {
+            isLoadingFromState = false;
+        }
+    }
+
+    private void ApplyInputToFields(WaterSupplyInput input)
+    {
+        StaticPressurePsi = input.StaticPressurePsi?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;
+        ResidualPressurePsi = input.ResidualPressurePsi?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;
+        FlowGpm = input.FlowAtResidualGpm?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;
         HydrantTestDate = input.HydrantTestDate?.ToShortDateString() ?? string.Empty;
         ImportedSourcePath = input.ImportedSourcePath ?? string.Empty;
+    }
+
+    private void ClearInputFields(bool resetProjectInput)
+    {
+        staticPressurePsi = string.Empty;
+        residualPressurePsi = string.Empty;
+        flowGpm = string.Empty;
+        hydrantTestDate = string.Empty;
+        importedSourcePath = string.Empty;
+        OnPropertyChanged(nameof(StaticPressurePsi));
+        OnPropertyChanged(nameof(ResidualPressurePsi));
+        OnPropertyChanged(nameof(FlowGpm));
+        OnPropertyChanged(nameof(HydrantTestDate));
+        OnPropertyChanged(nameof(ImportedSourcePath));
+        OnPropertyChanged(nameof(HasImportedSource));
+        OnPropertyChanged(nameof(ImportedSourceSummary));
+
+        if (resetProjectInput)
+        {
+            context.ProjectState.WaterSupply = new WaterSupplyInput();
+            context.ProjectState.WaterSupplyValidation = new WaterSupplyValidationResult();
+            context.ProjectState.SessionProgress.WaterSupplyComplete = false;
+        }
+    }
+
+    private void LoadValidationChartFromState()
+    {
         if (context.ProjectState.WaterSupplyValidation?.Curve?.Count > 0)
         {
             supplyCurve = context.ProjectState.WaterSupplyValidation.Curve.ToList();
@@ -367,12 +443,59 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
                 demandPressurePsi = context.ProjectState.HydraulicResult.DemandPressurePsi;
             }
 
-            OnPropertyChanged(nameof(SupplyCurve));
-            OnPropertyChanged(nameof(DemandCurve));
-            OnPropertyChanged(nameof(ShowSupplyChart));
-            OnPropertyChanged(nameof(DemandFlowGpm));
-            OnPropertyChanged(nameof(DemandPressurePsi));
+            NotifyChartChanged();
         }
+    }
+
+    private void ClearValidationChart()
+    {
+        supplyCurve = new List<WaterSupplyCurvePoint>();
+        demandCurve = new List<WaterSupplyCurvePoint>();
+        demandFlowGpm = 0;
+        demandPressurePsi = 0;
+        NotifyChartChanged();
+    }
+
+    private void NotifyChartChanged()
+    {
+        OnPropertyChanged(nameof(SupplyCurve));
+        OnPropertyChanged(nameof(DemandCurve));
+        OnPropertyChanged(nameof(ShowSupplyChart));
+        OnPropertyChanged(nameof(DemandFlowGpm));
+        OnPropertyChanged(nameof(DemandPressurePsi));
+    }
+
+    private void MarkWaterSupplyDirty()
+    {
+        if (isLoadingFromState)
+        {
+            return;
+        }
+
+        RequiresValidation = true;
+        context.ProjectState.SessionProgress.WaterSupplyComplete = false;
+        context.ProjectState.WaterSupplyValidation = new WaterSupplyValidationResult();
+        ClearValidationChart();
+        context.RequestWorkflowRefresh();
+    }
+
+    private static string BuildValidatedSummary(WaterSupplyValidationResult validation)
+    {
+        if (validation == null)
+        {
+            return "Enter current hydrant test data, then click Validate Supply or import a CSV file.";
+        }
+
+        return validation.IsAdequate
+            ? "Validated "
+              + validation.NfpaReference
+              + ". Water supply is adequate with "
+              + validation.SafetyMarginPsi.ToString("N1")
+              + " PSI margin."
+            : "Validated "
+              + validation.NfpaReference
+              + ". Review supply warnings: "
+              + string.Join(" ", validation.Warnings);
     }
 
     private void ImportCsv()
@@ -438,7 +561,26 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             input.ImportedSourcePath = ImportedSourcePath;
         }
 
-        ValidationSummary = "Running unified hydraulic pipeline for supply validation...";
+        Nfpa13WaterSupplyInputValidationResult inputValidation = Nfpa13WaterSupplyValidator.ValidateInput(input);
+        if (!inputValidation.IsCompliant)
+        {
+            context.ProjectState.SessionProgress.WaterSupplyComplete = false;
+            context.ProjectState.WaterSupplyValidation = new WaterSupplyValidationResult
+            {
+                InputIsCompliant = false,
+                NfpaReference = inputValidation.NfpaReference,
+                Warnings = inputValidation.Errors.ToList()
+            };
+            RequiresValidation = true;
+            ValidationSummary = inputValidation.Summary;
+            ClearValidationChart();
+            context.RequestWorkflowRefresh();
+            return;
+        }
+
+        ValidationSummary = "Running "
+            + Nfpa13Edition.References.HydraulicGraphSheet
+            + " supply-versus-demand validation...";
         pipelineRunner.Run(
             context,
             hydraulicEngine,
@@ -482,6 +624,8 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             : string.Empty;
 
         ValidationSummary = pipelinePrefix
+            + result.NfpaReference
+            + ": "
             + (result.IsAdequate
                 ? "Water supply is adequate at "
                   + demand.TotalFlowGpm.ToString("N0")
@@ -497,19 +641,19 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 
         AppendHydraulicWorkflowGuidance(demand);
 
-        OnPropertyChanged(nameof(SupplyCurve));
-        OnPropertyChanged(nameof(DemandCurve));
-        OnPropertyChanged(nameof(ShowSupplyChart));
-        OnPropertyChanged(nameof(DemandFlowGpm));
-        OnPropertyChanged(nameof(DemandPressurePsi));
+        NotifyChartChanged();
 
-        if (input.StaticPressurePsi.HasValue
-            && input.ResidualPressurePsi.HasValue
-            && input.FlowAtResidualGpm.HasValue)
+        if (result.InputIsCompliant)
         {
             context.ProjectState.SessionProgress.WaterSupplyComplete = true;
+            RequiresValidation = false;
             context.RequestPersistToRevit();
             context.RequestWorkflowRefresh();
+        }
+        else
+        {
+            context.ProjectState.SessionProgress.WaterSupplyComplete = false;
+            RequiresValidation = true;
         }
     }
 
