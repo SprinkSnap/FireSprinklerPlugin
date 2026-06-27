@@ -2220,34 +2220,38 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
     public string CatalogSourceKind
     {
         get => catalogSourceKind;
-        private set
+        set
         {
-            catalogSourceKind = value;
-            OnPropertyChanged();
+            // Display-only binding compatibility for WPF Run/Text bindings that attempt source updates.
         }
     }
 
     public string CatalogLibraryName
     {
         get => catalogLibraryName;
-        private set
+        set
         {
-            catalogLibraryName = value;
-            OnPropertyChanged();
+            // Display-only binding compatibility for WPF Run/Text bindings that attempt source updates.
         }
     }
 
     public int CatalogFamilyCount
     {
         get => catalogFamilyCount;
-        private set
+        set
         {
-            catalogFamilyCount = value;
-            OnPropertyChanged();
+            // Display-only binding compatibility for WPF Run/Text bindings that attempt source updates.
         }
     }
 
-    public int LoadedRevitSymbolCount => LoadedRevitSymbols.Count(option => !string.IsNullOrWhiteSpace(option.RevitFamilySymbolId));
+    public int LoadedRevitSymbolCount
+    {
+        get => LoadedRevitSymbols.Count(option => !string.IsNullOrWhiteSpace(option.RevitFamilySymbolId));
+        set
+        {
+            // Display-only binding compatibility for WPF Run/Text bindings that attempt source updates.
+        }
+    }
 
     public string DefaultManufacturer
     {
@@ -2331,12 +2335,18 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
         }
     }
 
-    public string PipingSystemSummary =>
-        PipeScheduleDefaults.BuildSystemSummary(new SprinkSnapProjectPreferences
+    public string PipingSystemSummary
+    {
+        get => PipeScheduleDefaults.BuildSystemSummary(new SprinkSnapProjectPreferences
         {
             PipingSystemType = SelectedPipingSystemType,
             DefaultPipeSchedule = SelectedPipeSchedule
         });
+        set
+        {
+            // Display-only binding compatibility for WPF controls that attempt source updates.
+        }
+    }
 
     public string AiServiceEndpoint
     {
@@ -2412,9 +2422,12 @@ public sealed class SettingsModuleViewModel : ModuleViewModelBase
 
     private void RefreshCatalogSummary()
     {
-        CatalogSourceKind = SprinklerCatalogService.Default.CatalogSourceKind;
-        CatalogLibraryName = SprinklerCatalogService.Default.LibraryName;
-        CatalogFamilyCount = SprinklerCatalogService.Default.GetAvailableFamilies().Count;
+        catalogSourceKind = SprinklerCatalogService.Default.CatalogSourceKind;
+        catalogLibraryName = SprinklerCatalogService.Default.LibraryName;
+        catalogFamilyCount = SprinklerCatalogService.Default.GetAvailableFamilies().Count;
+        OnPropertyChanged(nameof(CatalogSourceKind));
+        OnPropertyChanged(nameof(CatalogLibraryName));
+        OnPropertyChanged(nameof(CatalogFamilyCount));
         if (string.IsNullOrWhiteSpace(catalogPath))
         {
             CatalogPath = SprinklerCatalogLoader.GetDefaultCatalogPath() ?? string.Empty;

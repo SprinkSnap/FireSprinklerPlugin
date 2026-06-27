@@ -36,13 +36,13 @@
 
             <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                 <TextBlock Foreground="#6B7280" Margin="0,0,16,0">
-                    <Run Text="Source: " /><Run Text="{Binding CatalogSourceKind}" FontWeight="SemiBold" />
+                    <Run Text="Source: " /><Run Text="{Binding CatalogSourceKind, Mode=OneWay}" FontWeight="SemiBold" />
                 </TextBlock>
                 <TextBlock Foreground="#6B7280" Margin="0,0,16,0">
-                    <Run Text="Library: " /><Run Text="{Binding CatalogLibraryName}" FontWeight="SemiBold" />
+                    <Run Text="Library: " /><Run Text="{Binding CatalogLibraryName, Mode=OneWay}" FontWeight="SemiBold" />
                 </TextBlock>
                 <TextBlock Foreground="#6B7280">
-                    <Run Text="Families: " /><Run Text="{Binding CatalogFamilyCount}" FontWeight="SemiBold" />
+                    <Run Text="Families: " /><Run Text="{Binding CatalogFamilyCount, Mode=OneWay}" FontWeight="SemiBold" />
                 </TextBlock>
             </StackPanel>
 
@@ -71,7 +71,7 @@
                 </StackPanel>
             </Grid>
 
-            <TextBlock Text="{Binding PipingSystemSummary}" Foreground="#6B7280" TextWrapping="Wrap" Margin="0,0,0,16" />
+            <TextBlock Text="{Binding PipingSystemSummary, Mode=OneWay}" Foreground="#6B7280" TextWrapping="Wrap" Margin="0,0,0,16" />
 
             <TextBlock Text="Default pipe diameters" FontSize="18" FontWeight="SemiBold" Margin="0,8,0,6" />
             <TextBlock Text="Starting branch and main diameters used for schematic routing, hydraulics, sizing, and takeoff before velocity upsizing."
@@ -136,7 +136,7 @@
 
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                 <TextBlock Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,16,0">
-                    <Run Text="Loaded Revit types: " /><Run Text="{Binding LoadedRevitSymbolCount}" FontWeight="SemiBold" />
+                    <Run Text="Loaded Revit types: " /><Run Text="{Binding LoadedRevitSymbolCount, Mode=OneWay}" FontWeight="SemiBold" />
                 </TextBlock>
                 <Button Content="Refresh Loaded Types"
                         Command="{Binding RefreshLoadedSymbolsCommand}"
