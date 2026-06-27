@@ -11,15 +11,6 @@ public sealed class WaterSupplyEngineTests
     private readonly WaterSupplyEngine engine = new WaterSupplyEngine();
 
     [Fact]
-    public void ValidateInput_ReturnsNotCompliant_WhenHydrantTestIsIncomplete()
-    {
-        WaterSupplyInputValidationResult result = engine.ValidateInput(new WaterSupplyInput());
-
-        Assert.False(result.IsCompliant);
-        Assert.NotEmpty(result.Errors);
-    }
-
-    [Fact]
     public void Validate_ReturnsInputNotCompliant_WhenHydrantTestIsIncomplete()
     {
         WaterSupplyValidationResult result = engine.Validate(new WaterSupplyInput(), CreateDemand(100, 50));

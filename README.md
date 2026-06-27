@@ -19,6 +19,26 @@ dotnet build FireSprinklerPlugin.sln -c Release
 
 If you see **NETSDK1004** (`project.assets.json` not found), NuGet packages have not been restored yet. Run `dotnet restore` before building.
 
+### Water supply / NFPA 13 build errors in Visual Studio
+
+If you see errors such as `InputIsCompliant` not found, `NfpaReference` not found, or `SprinkSnapCoreBuildSchema` not found, your `SprinkSnap.Core` and `SprinkSnap.UI` projects are out of sync. All water supply validation lives in the same solution — **Core must build before UI**.
+
+From the repo root:
+
+```powershell
+git checkout main
+git pull
+dotnet clean FireSprinklerPlugin.sln
+dotnet restore FireSprinklerPlugin.sln
+dotnet build FireSprinklerPlugin.sln
+```
+
+In Visual Studio use **Build → Rebuild Solution** (not Build only UI). Confirm these files exist and are up to date:
+
+- `SprinkSnap.Core/WaterSupply/WaterSupplyInputValidator.cs`
+- `SprinkSnap.Core/Models/WorkflowModels.cs` (contains `InputIsCompliant` on `WaterSupplyValidationResult`)
+- `SprinkSnap.Core/SprinkSnapCoreBuildSchema.cs` (schema version `WaterSupplyValidation = 3`)
+
 `SprinkSnap.Revit` compiles only when Revit 2027 API DLLs are found. Other projects build without Revit installed.
 
 ### WPF preview only

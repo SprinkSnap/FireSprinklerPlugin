@@ -30,8 +30,6 @@ public interface IManufacturerRecommendationEngine
 
 public interface IWaterSupplyEngine
 {
-    WaterSupplyInputValidationResult ValidateInput(WaterSupplyInput input);
-
     WaterSupplyValidationResult Validate(WaterSupplyInput input, HydraulicCalculationResult demand);
 }
 
