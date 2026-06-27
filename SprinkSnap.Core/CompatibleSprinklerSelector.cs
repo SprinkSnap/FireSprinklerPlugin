@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core;
 
@@ -103,7 +104,7 @@ public sealed class CompatibleSprinklerSelector : ICompatibleSprinklerSelector
             return false;
         }
 
-        return true;
+        return Nfpa13HighCeilingSprinklerSelectionValidator.IsCompliant(room, family);
     }
 
     private static int PreferenceScore(SprinklerFamilyInfo family, ProjectSprinklerStandard projectStandard)

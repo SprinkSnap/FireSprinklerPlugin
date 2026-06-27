@@ -49,6 +49,23 @@ public sealed class HydraulicReportSummaryBuilderTests
     }
 
     [Fact]
+    public void BuildRows_IncludesHighCeilingSprinklerSelectionFields()
+    {
+        SprinkSnapProjectState state = new SprinkSnapProjectState();
+        HydraulicCalculationResult result = new HydraulicCalculationResult
+        {
+            HighCeilingSprinklerSelectionCompliant = false,
+            HighCeilingSprinklerViolationSummary = "1 controlling room(s) violate NFPA 13 (2025) Section 19.2.3.2.5.1."
+        };
+
+        Dictionary<string, string> rows = HydraulicReportSummaryBuilder.BuildRows(state, result)
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+
+        Assert.Equal("Review required", rows["High-ceiling sprinkler selection"]);
+        Assert.Contains("19.2.3.2.5.1", rows["High-ceiling sprinkler notes"]);
+    }
+
+    [Fact]
     public void BuildNodeDiagramMethodologySummary_IncludesParityFlags()
     {
         HydraulicCalculationResult result = new HydraulicCalculationResult

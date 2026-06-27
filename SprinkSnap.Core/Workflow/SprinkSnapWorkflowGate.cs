@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Linq;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Workflow;
 
@@ -114,7 +116,11 @@ public static class SprinkSnapWorkflowGate
 
                 if (!sprinklerComplete)
                 {
-                    return CreateAccess(step, false, designComplete, "Complete sprinkler review before generating design.");
+                    string blockReason = AllRoomsHaveSprinklerSelections(state)
+                        && !IsHighCeilingSprinklerSelectionComplete(state)
+                        ? Nfpa13HighCeilingSprinklerSelectionService.ProjectViolationBlockReason
+                        : "Complete sprinkler review before generating design.";
+                    return CreateAccess(step, false, designComplete, blockReason);
                 }
 
                 if (!waterSupplyComplete)
@@ -352,12 +358,31 @@ public static class SprinkSnapWorkflowGate
 
     public static bool IsSprinklerReviewComplete(SprinkSnapProjectState state)
     {
-        if (state.SessionProgress.SprinklerReviewComplete)
+        if (!AllRoomsHaveSprinklerSelections(state))
+        {
+            return false;
+        }
+
+        return IsHighCeilingSprinklerSelectionComplete(state);
+    }
+
+    public static bool IsHighCeilingSprinklerSelectionComplete(SprinkSnapProjectState state)
+    {
+        if (state?.Rooms == null || state.Rooms.Count == 0)
         {
             return true;
         }
 
-        return state.Rooms.Count > 0
+        IList<Models.SprinklerFamilyInfo> catalog = new SprinklerFamilySelector().GetAvailableFamilies().ToList();
+        return Nfpa13HighCeilingSprinklerSelectionService.IsProjectCompliant(
+            state.Rooms,
+            room => Nfpa13HighCeilingSprinklerSelectionService.ResolveSelectedFamily(room, catalog));
+    }
+
+    private static bool AllRoomsHaveSprinklerSelections(SprinkSnapProjectState state)
+    {
+        return state?.Rooms != null
+            && state.Rooms.Count > 0
             && state.Rooms.All(room => !string.IsNullOrWhiteSpace(room.SelectedSprinklerFamilyName));
     }
 

@@ -591,6 +591,7 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             room.Room.ExceptionReason = selection.Reason;
         }
 
+        room.RefreshHighCeilingSprinklerStatus();
         room.RefreshAssistantState();
     }
 
@@ -865,6 +866,21 @@ public sealed class HazardClassificationViewModel : INotifyPropertyChanged
             return;
         }
 
+        List<RoomHazardReviewItem> highCeilingViolations = Rooms
+            .Where(room => room.AppliesHighCeilingSprinklerRules && !room.HighCeilingSprinklerCompliant)
+            .ToList();
+
+        if (highCeilingViolations.Count > 0)
+        {
+            ValidationMessage =
+                "Sprinkler selections for "
+                + highCeilingViolations.Count
+                + " high-ceiling room(s) violate "
+                + Nfpa13Edition.References.HighCeilingSprinklerSelection
+                + ". Choose compliant listed heads before saving.";
+            return;
+        }
+
         if (!IsEmbeddedInShell)
         {
             if (!TryCreateWaterDemandInfo(out WaterDemandInfo waterDemandInfo))
@@ -1067,6 +1083,7 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
             ? room.SuggestedHazardClassification
             : room.ApprovedHazardClassification;
         isApproved = room.DesignerApproved;
+        RefreshHighCeilingSprinklerStatus();
     }
 
     public event PropertyChangedEventHandler PropertyChanged;
@@ -1259,7 +1276,103 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AutoSelectedSprinklerName)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SprinklerSelectionStatus)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SprinklerSelectionReason)));
+            RefreshHighCeilingSprinklerStatus();
+            workflowSyncRequested?.Invoke();
         }
+    }
+
+    public bool AppliesHighCeilingSprinklerRules
+    {
+        get => appliesHighCeilingSprinklerRules;
+        private set
+        {
+            if (appliesHighCeilingSprinklerRules == value)
+            {
+                return;
+            }
+
+            appliesHighCeilingSprinklerRules = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AppliesHighCeilingSprinklerRules)));
+        }
+    }
+
+    private bool appliesHighCeilingSprinklerRules;
+
+    public bool HighCeilingSprinklerCompliant
+    {
+        get => highCeilingSprinklerCompliant;
+        private set
+        {
+            if (highCeilingSprinklerCompliant == value)
+            {
+                return;
+            }
+
+            highCeilingSprinklerCompliant = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HighCeilingSprinklerCompliant)));
+        }
+    }
+
+    private bool highCeilingSprinklerCompliant = true;
+
+    public string HighCeilingSprinklerStatus
+    {
+        get => highCeilingSprinklerStatus;
+        private set
+        {
+            if (string.Equals(highCeilingSprinklerStatus, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            highCeilingSprinklerStatus = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HighCeilingSprinklerStatus)));
+        }
+    }
+
+    private string highCeilingSprinklerStatus = "N/A";
+
+    public string HighCeilingSprinklerSummary
+    {
+        get => highCeilingSprinklerSummary;
+        private set
+        {
+            if (string.Equals(highCeilingSprinklerSummary, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            highCeilingSprinklerSummary = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HighCeilingSprinklerSummary)));
+        }
+    }
+
+    private string highCeilingSprinklerSummary = string.Empty;
+
+    public void RefreshHighCeilingSprinklerStatus()
+    {
+        Nfpa13HighCeilingSprinklerSelectionResult validation =
+            Nfpa13HighCeilingSprinklerSelectionValidator.Validate(Room, SelectedRoomSprinklerFamily);
+
+        AppliesHighCeilingSprinklerRules = validation.AppliesHighCeilingRules;
+        HighCeilingSprinklerCompliant = validation.IsCompliant;
+
+        if (!validation.AppliesHighCeilingRules)
+        {
+            HighCeilingSprinklerStatus = "N/A";
+            HighCeilingSprinklerSummary = "Ceiling height 30 ft or below.";
+            return;
+        }
+
+        if (validation.IsCompliant)
+        {
+            HighCeilingSprinklerStatus = "Compliant";
+            HighCeilingSprinklerSummary = validation.Summary;
+            return;
+        }
+
+        HighCeilingSprinklerStatus = "Review";
+        HighCeilingSprinklerSummary = string.Join("; ", validation.Violations);
     }
 
     public string SprinklerSelectionStatus
@@ -1437,6 +1550,7 @@ public sealed class RoomHazardReviewItem : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AlternateSprinklerSummary)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ProposedSprinklerCount)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewMarkers)));
+        RefreshHighCeilingSprinklerStatus();
     }
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string propertyName = null)

@@ -58,6 +58,16 @@ public sealed class LayoutComplianceValidator : ILayoutComplianceValidator
             AddFailure(result, room.ExceptionReason);
         }
 
+        Nfpa13HighCeilingSprinklerSelectionResult highCeilingResult =
+            Nfpa13HighCeilingSprinklerSelectionValidator.Validate(room, family);
+        if (highCeilingResult.AppliesHighCeilingRules && !highCeilingResult.IsCompliant)
+        {
+            foreach (string violation in highCeilingResult.Violations)
+            {
+                AddFailure(result, violation);
+            }
+        }
+
         return result;
     }
 

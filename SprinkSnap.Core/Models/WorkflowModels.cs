@@ -252,6 +252,10 @@ public sealed class HydraulicCalculationResult
 
     public string HighCeilingAdjustmentSummary { get; set; } = string.Empty;
 
+    public bool HighCeilingSprinklerSelectionCompliant { get; set; } = true;
+
+    public string HighCeilingSprinklerViolationSummary { get; set; } = string.Empty;
+
     public double DemandFlowGpm { get; set; }
 
     public double DemandPressurePsi { get; set; }

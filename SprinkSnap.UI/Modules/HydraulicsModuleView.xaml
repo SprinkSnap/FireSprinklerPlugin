@@ -56,6 +56,11 @@
                 <TextBlock Text="{Binding MissingControllingCeilingHeightMessage}" TextWrapping="Wrap" Foreground="#92400E" />
             </Border>
 
+            <Border Background="#FEE2E2" BorderBrush="#F87171" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16"
+                    Visibility="{Binding HasHighCeilingSprinklerSelectionViolation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="{Binding HighCeilingSprinklerSelectionViolationSummary}" TextWrapping="Wrap" Foreground="#991B1B" />
+            </Border>
+
             <UniformGrid Columns="3" Margin="0,0,0,8">
                 <Border Background="#F8FAFC" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,8,8">
                     <StackPanel>
