@@ -104,6 +104,8 @@ public sealed class SprinkSnapProjectState
 
     public SchematicPipeRoutingSummary SchematicPipeRouting { get; set; } = new SchematicPipeRoutingSummary();
 
+    public PipingSystemHydraulicComparisonResult PipingSystemComparison { get; set; } = new PipingSystemHydraulicComparisonResult();
+
     public PipePlacementSummary PipePlacementSummary { get; set; } = new PipePlacementSummary();
 
     public bool PlaceSchematicFittingsWithPipes { get; set; } = true;

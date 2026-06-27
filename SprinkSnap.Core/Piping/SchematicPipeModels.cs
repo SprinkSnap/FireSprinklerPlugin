@@ -60,4 +60,8 @@ public sealed class SchematicPipeRoutingSummary
     public bool UsesAppliedPipeSizing { get; set; }
 
     public int AppliedPipeSizingSegmentCount { get; set; }
+
+    public string PipingSystemType { get; set; } = PipingSystemTypes.Tree;
+
+    public string PipeSchedule { get; set; } = PipeScheduleTypes.Schedule40;
 }

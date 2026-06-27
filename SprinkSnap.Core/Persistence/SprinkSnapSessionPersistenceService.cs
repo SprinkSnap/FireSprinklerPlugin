@@ -346,7 +346,10 @@ public static class SprinkSnapSessionPersistenceService
             BranchVelocityLimitFeetPerSecond = preferences.BranchVelocityLimitFeetPerSecond,
             MainVelocityLimitFeetPerSecond = preferences.MainVelocityLimitFeetPerSecond,
             AllowAlternateManufacturers = preferences.AllowAlternateManufacturers,
-            CatalogPath = preferences.CatalogPath
+            CatalogPath = preferences.CatalogPath,
+            PipingSystemType = preferences.PipingSystemType,
+            DefaultPipeSchedule = preferences.DefaultPipeSchedule,
+            HazenWilliamsC = preferences.HazenWilliamsC
         };
     }
 
