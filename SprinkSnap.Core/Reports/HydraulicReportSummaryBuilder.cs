@@ -20,6 +20,14 @@ public static class HydraulicReportSummaryBuilder
                 ? hydraulicResult.ControllingCeilingHeightFeet.ToString("N1") + " ft"
                 : "Not available"),
             new KeyValuePair<string, string>("High-ceiling adjustment", hydraulicResult.UsesHighCeilingAdjustment ? "Yes" : "No"),
+            new KeyValuePair<string, string>(
+                "High-ceiling sprinkler selection",
+                hydraulicResult.HighCeilingSprinklerSelectionCompliant ? "Compliant" : "Review required"),
+            new KeyValuePair<string, string>(
+                "High-ceiling sprinkler notes",
+                string.IsNullOrWhiteSpace(hydraulicResult.HighCeilingSprinklerViolationSummary)
+                    ? "No Section 19.2.3.2.5.1 violations in controlling rooms."
+                    : hydraulicResult.HighCeilingSprinklerViolationSummary),
             new KeyValuePair<string, string>("Operating sprinklers", hydraulicResult.OperatingSprinklerCount.ToString()),
             new KeyValuePair<string, string>("Flow per operating sprinkler", hydraulicResult.FlowPerOperatingSprinklerGpm.ToString("N1") + " GPM"),
             new KeyValuePair<string, string>("Max coverage per head", hydraulicResult.MaxCoverageSquareFeet.ToString("N0") + " sq ft"),

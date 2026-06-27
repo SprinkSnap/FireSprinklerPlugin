@@ -670,6 +670,13 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         + result.ControllingHazardClassification
         + ". NFPA 13 (2025) Section 19.2.3.2.5.2 high-ceiling adjustments were not applied — verify Analyze Model ceiling data.";
 
+    public bool HasHighCeilingSprinklerSelectionViolation => !result.HighCeilingSprinklerSelectionCompliant;
+
+    public string HighCeilingSprinklerSelectionViolationSummary =>
+        string.IsNullOrWhiteSpace(result.HighCeilingSprinklerViolationSummary)
+            ? "One or more controlling rooms with ceilings above 30 ft have sprinkler selections that violate NFPA 13 (2025) Section 19.2.3.2.5.1."
+            : result.HighCeilingSprinklerViolationSummary;
+
     public string StatusMessage
     {
         get => statusMessage;
@@ -826,6 +833,8 @@ public sealed class HydraulicsModuleViewModel : ModuleViewModelBase
         OnPropertyChanged(nameof(HighCeilingAdjustmentSummary));
         OnPropertyChanged(nameof(MissingControllingCeilingHeight));
         OnPropertyChanged(nameof(MissingControllingCeilingHeightMessage));
+        OnPropertyChanged(nameof(HasHighCeilingSprinklerSelectionViolation));
+        OnPropertyChanged(nameof(HighCeilingSprinklerSelectionViolationSummary));
         OnPropertyChanged(nameof(WarningSummary));
         OnPropertyChanged(nameof(UsesUserSupplyAnchor));
         OnPropertyChanged(nameof(UserSupplyAnchorLabel));

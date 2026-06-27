@@ -148,6 +148,8 @@ public sealed class HydraulicEngine : IHydraulicEngine
             result.Warnings.Add(result.HighCeilingAdjustmentSummary + " (" + Nfpa13Edition.References.HighCeilingDesignCriteria + ").");
         }
 
+        AppendHighCeilingSprinklerSelectionWarnings(result, controllingRooms);
+
         SprinklerFamilyInfo representativeFamily = controllingRooms
             .Select(RemoteAreaHydraulicCalculator.ResolveRepresentativeFamily)
             .FirstOrDefault(family => family != null);
@@ -434,7 +436,55 @@ public sealed class HydraulicEngine : IHydraulicEngine
     private static double ResolveRoomKFactor(RoomInfo room)
     {
         SprinklerFamilyInfo family = ResolveRoomSprinklerFamily(room);
-        return family?.KFactor > 0 ? family.KFactor : 0.0;
+        return family?.KFactor > 0 ? family.KFactor : DefaultKFactor;
+    }
+
+    private static void AppendHighCeilingSprinklerSelectionWarnings(
+        HydraulicCalculationResult result,
+        IEnumerable<RoomInfo> controllingRooms)
+    {
+        IList<Nfpa13HighCeilingSprinklerSelectionResult> violations =
+            Nfpa13HighCeilingSprinklerSelectionService.FindViolations(
+                controllingRooms,
+                ResolveRoomSprinklerFamily);
+
+        result.HighCeilingSprinklerSelectionCompliant = violations.Count == 0;
+        if (violations.Count == 0)
+        {
+            result.HighCeilingSprinklerViolationSummary = string.Empty;
+            return;
+        }
+
+        result.HighCeilingSprinklerViolationSummary =
+            violations.Count
+            + " controlling room(s) violate "
+            + Nfpa13Edition.References.HighCeilingSprinklerSelection
+            + ".";
+
+        foreach (RoomInfo room in controllingRooms ?? Enumerable.Empty<RoomInfo>())
+        {
+            if (room.CeilingHeightFeet <= Nfpa13HighCeilingDesignCriteriaAdjuster.HighCeilingThresholdFeet)
+            {
+                continue;
+            }
+
+            Nfpa13HighCeilingSprinklerSelectionResult validation =
+                Nfpa13HighCeilingSprinklerSelectionValidator.Validate(room, ResolveRoomSprinklerFamily(room));
+            if (!validation.IsCompliant)
+            {
+                string roomLabel = string.IsNullOrWhiteSpace(room.Number) ? room.Name : room.Number;
+                foreach (string violation in validation.Violations)
+                {
+                    result.Warnings.Add("Room " + roomLabel + ": " + violation);
+                }
+            }
+        }
+
+        result.Warnings.Add(
+            Nfpa13HighCeilingSprinklerSelectionService.ProjectViolationBlockReason
+            + " ("
+            + Nfpa13Edition.References.HighCeilingSprinklerSelection
+            + ").");
     }
 }
 

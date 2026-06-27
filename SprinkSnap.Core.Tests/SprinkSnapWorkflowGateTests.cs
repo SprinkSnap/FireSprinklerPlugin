@@ -1,6 +1,7 @@
 using FireSprinklerPlugin.SprinkSnap.Core;
 using FireSprinklerPlugin.SprinkSnap.Core.Clash;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 using FireSprinklerPlugin.SprinkSnap.Core.Persistence;
 using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
@@ -179,6 +180,31 @@ public sealed class SprinkSnapWorkflowGateTests
         Assert.False(access.IsComplete);
         Assert.Equal(WorkflowStepStatus.Warning, access.Status);
         Assert.Equal("Re-run hydraulics", access.StatusLabel);
+    }
+
+    [Fact]
+    public void IsSprinklerReviewComplete_ReturnsFalse_WhenHighCeilingSelectionViolatesNfpa13()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.Rooms[0].CeilingHeightFeet = 35;
+        state.Rooms[0].ApprovedHazardClassification = HazardClassification.OrdinaryHazardGroup2;
+        state.Rooms[0].SelectedSprinklerFamilyName = "VK302";
+
+        Assert.False(SprinkSnapWorkflowGate.IsSprinklerReviewComplete(state));
+    }
+
+    [Fact]
+    public void Evaluate_GenerateDesign_BlocksWithHighCeilingReason_WhenSelectionsViolateNfpa13()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.Rooms[0].CeilingHeightFeet = 35;
+        state.Rooms[0].ApprovedHazardClassification = HazardClassification.OrdinaryHazardGroup2;
+        state.Rooms[0].SelectedSprinklerFamilyName = "VK302";
+
+        WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.GenerateDesign);
+
+        Assert.False(access.IsUnlocked);
+        Assert.Equal(Nfpa13HighCeilingSprinklerSelectionService.ProjectViolationBlockReason, access.BlockReason);
     }
 
     private static SprinkSnapProjectState CreateReadyForPlacementState()
