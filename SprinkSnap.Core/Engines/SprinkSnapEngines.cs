@@ -9,6 +9,7 @@ using FireSprinklerPlugin.SprinkSnap.Core.Piping;
 using FireSprinklerPlugin.SprinkSnap.Core.Placement;
 using FireSprinklerPlugin.SprinkSnap.Core.Reports;
 using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
+using FireSprinklerPlugin.SprinkSnap.Core.WaterSupply;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Engines;
 
@@ -57,19 +58,6 @@ public sealed class ManufacturerRecommendationEngine : IManufacturerRecommendati
 
 public sealed class WaterSupplyEngine : IWaterSupplyEngine
 {
-    public WaterSupplyInputValidationResult ValidateInput(WaterSupplyInput input)
-    {
-        Nfpa13WaterSupplyInputValidationResult validation = Nfpa13WaterSupplyValidator.ValidateInput(input);
-        return new WaterSupplyInputValidationResult
-        {
-            IsCompliant = validation.IsCompliant,
-            NfpaReference = validation.NfpaReference,
-            Errors = validation.Errors.ToList(),
-            Warnings = validation.Warnings.ToList(),
-            Summary = validation.Summary
-        };
-    }
-
     public WaterSupplyValidationResult Validate(WaterSupplyInput input, HydraulicCalculationResult demand)
     {
         WaterSupplyValidationResult result = new WaterSupplyValidationResult
@@ -79,7 +67,7 @@ public sealed class WaterSupplyEngine : IWaterSupplyEngine
                 + Nfpa13Edition.References.HydraulicGraphSheet
         };
 
-        Nfpa13WaterSupplyInputValidationResult inputValidation = Nfpa13WaterSupplyValidator.ValidateInput(input);
+        WaterSupplyInputValidationResult inputValidation = WaterSupplyInputValidator.Validate(input);
         result.InputIsCompliant = inputValidation.IsCompliant;
         foreach (string warning in inputValidation.Warnings)
         {

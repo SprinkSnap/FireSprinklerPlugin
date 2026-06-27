@@ -224,6 +224,7 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
 
 public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 {
+    private const int RequiredCoreBuildSchema = SprinkSnapCoreBuildSchema.WaterSupplyValidation;
     private readonly SprinkSnapShellContext context;
     private readonly IWaterSupplyEngine waterSupplyEngine = new WaterSupplyEngine();
     private readonly IHydraulicEngine hydraulicEngine = new HydraulicEngine();
@@ -243,6 +244,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 
     public WaterSupplyModuleViewModel(SprinkSnapShellContext context)
     {
+        _ = RequiredCoreBuildSchema;
         this.context = context;
         context.WorkflowChanged += OnWorkflowChanged;
         LoadFromState();
@@ -561,18 +563,16 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             input.ImportedSourcePath = ImportedSourcePath;
         }
 
-        WaterSupplyInputValidationResult inputValidation = waterSupplyEngine.ValidateInput(input);
-        if (!inputValidation.IsCompliant)
+        WaterSupplyValidationResult inputValidation = waterSupplyEngine.Validate(
+            input,
+            new HydraulicCalculationResult());
+
+        if (!inputValidation.InputIsCompliant)
         {
             context.ProjectState.SessionProgress.WaterSupplyComplete = false;
-            context.ProjectState.WaterSupplyValidation = new WaterSupplyValidationResult
-            {
-                InputIsCompliant = false,
-                NfpaReference = inputValidation.NfpaReference,
-                Warnings = inputValidation.Errors.ToList()
-            };
+            context.ProjectState.WaterSupplyValidation = inputValidation;
             RequiresValidation = true;
-            ValidationSummary = inputValidation.Summary;
+            ValidationSummary = string.Join(" ", inputValidation.Warnings);
             ClearValidationChart();
             context.RequestWorkflowRefresh();
             return;

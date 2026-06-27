@@ -178,19 +178,6 @@ public sealed class WaterSupplyCurvePoint
     public double PressurePsi { get; set; }
 }
 
-public sealed class WaterSupplyInputValidationResult
-{
-    public bool IsCompliant { get; set; }
-
-    public string NfpaReference { get; set; } = string.Empty;
-
-    public IList<string> Errors { get; set; } = new List<string>();
-
-    public IList<string> Warnings { get; set; } = new List<string>();
-
-    public string Summary { get; set; } = string.Empty;
-}
-
 public sealed class WaterSupplyValidationResult
 {
     public bool InputIsCompliant { get; set; }

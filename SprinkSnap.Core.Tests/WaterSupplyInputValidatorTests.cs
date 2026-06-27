@@ -1,18 +1,18 @@
-using System;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
+using FireSprinklerPlugin.SprinkSnap.Core.WaterSupply;
 using Xunit;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Tests;
 
-public sealed class Nfpa13WaterSupplyValidatorTests
+public sealed class WaterSupplyInputValidatorTests
 {
     [Fact]
-    public void ValidateInput_IsCompliant_ForCompleteHydrantTest()
+    public void Validate_IsCompliant_ForCompleteHydrantTest()
     {
         WaterSupplyInput input = CreateValidInput();
 
-        Nfpa13WaterSupplyInputValidationResult result = Nfpa13WaterSupplyValidator.ValidateInput(input);
+        WaterSupplyInputValidationResult result = WaterSupplyInputValidator.Validate(input);
 
         Assert.True(result.IsCompliant);
         Assert.Empty(result.Errors);
@@ -21,46 +21,46 @@ public sealed class Nfpa13WaterSupplyValidatorTests
     }
 
     [Fact]
-    public void ValidateInput_RejectsMissingRequiredFields()
+    public void Validate_RejectsMissingRequiredFields()
     {
-        Nfpa13WaterSupplyInputValidationResult result = Nfpa13WaterSupplyValidator.ValidateInput(new WaterSupplyInput());
+        WaterSupplyInputValidationResult result = WaterSupplyInputValidator.Validate(new WaterSupplyInput());
 
         Assert.False(result.IsCompliant);
         Assert.Equal(4, result.Errors.Count);
     }
 
     [Fact]
-    public void ValidateInput_RejectsResidualPressureAboveStatic()
+    public void Validate_RejectsResidualPressureAboveStatic()
     {
         WaterSupplyInput input = CreateValidInput();
         input.StaticPressurePsi = 60;
         input.ResidualPressurePsi = 75;
 
-        Nfpa13WaterSupplyInputValidationResult result = Nfpa13WaterSupplyValidator.ValidateInput(input);
+        WaterSupplyInputValidationResult result = WaterSupplyInputValidator.Validate(input);
 
         Assert.False(result.IsCompliant);
         Assert.Contains(result.Errors, error => error.Contains("Residual pressure"));
     }
 
     [Fact]
-    public void ValidateInput_RejectsFutureTestDate()
+    public void Validate_RejectsFutureTestDate()
     {
         WaterSupplyInput input = CreateValidInput();
         input.HydrantTestDate = DateTime.Today.AddDays(1);
 
-        Nfpa13WaterSupplyInputValidationResult result = Nfpa13WaterSupplyValidator.ValidateInput(input);
+        WaterSupplyInputValidationResult result = WaterSupplyInputValidator.Validate(input);
 
         Assert.False(result.IsCompliant);
         Assert.Contains(result.Errors, error => error.Contains("future"));
     }
 
     [Fact]
-    public void ValidateInput_WarnsWhenTestDateIsOlderThanTwelveMonths()
+    public void Validate_WarnsWhenTestDateIsOlderThanTwelveMonths()
     {
         WaterSupplyInput input = CreateValidInput();
         input.HydrantTestDate = DateTime.Today.AddMonths(-13);
 
-        Nfpa13WaterSupplyInputValidationResult result = Nfpa13WaterSupplyValidator.ValidateInput(input);
+        WaterSupplyInputValidationResult result = WaterSupplyInputValidator.Validate(input);
 
         Assert.True(result.IsCompliant);
         Assert.Single(result.Warnings);

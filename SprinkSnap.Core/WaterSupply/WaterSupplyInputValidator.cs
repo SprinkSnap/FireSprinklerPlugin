@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 
-namespace FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
+namespace FireSprinklerPlugin.SprinkSnap.Core.WaterSupply;
 
-public sealed class Nfpa13WaterSupplyInputValidationResult
+public sealed class WaterSupplyInputValidationResult
 {
     public bool IsCompliant { get; set; }
 
@@ -17,13 +18,13 @@ public sealed class Nfpa13WaterSupplyInputValidationResult
     public string Summary { get; set; } = string.Empty;
 }
 
-public static class Nfpa13WaterSupplyValidator
+public static class WaterSupplyInputValidator
 {
     public const int StaleTestAgeWarningMonths = 12;
 
-    public static Nfpa13WaterSupplyInputValidationResult ValidateInput(WaterSupplyInput input)
+    public static WaterSupplyInputValidationResult Validate(WaterSupplyInput input)
     {
-        Nfpa13WaterSupplyInputValidationResult result = new Nfpa13WaterSupplyInputValidationResult();
+        WaterSupplyInputValidationResult result = new WaterSupplyInputValidationResult();
 
         if (input == null)
         {
@@ -78,7 +79,7 @@ public static class Nfpa13WaterSupplyValidator
         return result;
     }
 
-    private static string BuildSummary(Nfpa13WaterSupplyInputValidationResult result)
+    private static string BuildSummary(WaterSupplyInputValidationResult result)
     {
         if (result.IsCompliant)
         {
