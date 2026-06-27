@@ -36,8 +36,9 @@ dotnet build FireSprinklerPlugin.sln
 In Visual Studio use **Build → Rebuild Solution** (not Build only UI). Confirm these files exist and are up to date:
 
 - `SprinkSnap.Core/WaterSupply/WaterSupplyInputValidator.cs`
+- `SprinkSnap.Core/NFPA13/Nfpa13WaterSupplyValidator.cs` (compatibility shim for older references)
 - `SprinkSnap.Core/Models/WorkflowModels.cs` (contains `InputIsCompliant` on `WaterSupplyValidationResult`)
-- `SprinkSnap.Core/SprinkSnapCoreBuildSchema.cs` (schema version `WaterSupplyValidation = 3`)
+- `SprinkSnap.Core/SprinkSnapCoreBuildSchema.cs` (schema version `WaterSupplyValidation = 4`)
 
 `SprinkSnap.Revit` compiles only when Revit 2027 API DLLs are found. Other projects build without Revit installed.
 
