@@ -561,7 +561,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             input.ImportedSourcePath = ImportedSourcePath;
         }
 
-        Nfpa13WaterSupplyInputValidationResult inputValidation = Nfpa13WaterSupplyValidator.ValidateInput(input);
+        WaterSupplyInputValidationResult inputValidation = waterSupplyEngine.ValidateInput(input);
         if (!inputValidation.IsCompliant)
         {
             context.ProjectState.SessionProgress.WaterSupplyComplete = false;
