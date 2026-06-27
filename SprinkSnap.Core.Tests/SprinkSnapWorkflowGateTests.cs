@@ -74,11 +74,26 @@ public sealed class SprinkSnapWorkflowGateTests
         SprinkSnapProjectState state = CreateReadyForPlacementState();
         state.SessionProgress.WaterSupplyComplete = false;
         state.WaterSupply = new WaterSupplyInput();
+        state.WaterSupplyValidation = new WaterSupplyValidationResult();
 
         WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(state, SprinkSnapWorkflowStep.Hydraulics);
 
         Assert.False(access.IsUnlocked);
         Assert.Contains("water supply", access.BlockReason, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void IsWaterSupplyComplete_RequiresValidatedNfpaCompliantInput()
+    {
+        SprinkSnapProjectState state = CreateReadyForPlacementState();
+        state.SessionProgress.WaterSupplyComplete = true;
+        state.WaterSupplyValidation = new WaterSupplyValidationResult { InputIsCompliant = false };
+
+        Assert.False(SprinkSnapWorkflowGate.IsWaterSupplyComplete(state));
+
+        state.WaterSupplyValidation.InputIsCompliant = true;
+
+        Assert.True(SprinkSnapWorkflowGate.IsWaterSupplyComplete(state));
     }
 
     [Fact]
@@ -231,7 +246,8 @@ public sealed class SprinkSnapWorkflowGateTests
                 }
             },
             ClashSummary = new ClashDetectionSummary { TotalClashes = 0 },
-            ModelChangeAssessment = new ModelChangeAssessment { IsStale = false }
+            ModelChangeAssessment = new ModelChangeAssessment { IsStale = false },
+            WaterSupplyValidation = new WaterSupplyValidationResult { InputIsCompliant = true, IsAdequate = true }
         };
     }
 }

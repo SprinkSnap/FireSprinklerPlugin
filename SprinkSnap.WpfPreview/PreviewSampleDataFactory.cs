@@ -17,10 +17,6 @@ public static class PreviewSampleDataFactory
             state.Rooms.Add(room);
         }
 
-        state.WaterSupply.StaticPressurePsi = 85;
-        state.WaterSupply.ResidualPressurePsi = 65;
-        state.WaterSupply.FlowAtResidualGpm = 1200;
-        state.WaterSupply.HydrantTestDate = System.DateTime.Today.AddMonths(-2);
         state.ModelAnalysis = new ModelAnalysisEngine().Analyze(state);
         state.ModelAnalysis.LinkedModelCount = 1;
         state.ModelAnalysis.ExistingSprinklerCount = 12;
