@@ -57,6 +57,19 @@ public sealed class ManufacturerRecommendationEngine : IManufacturerRecommendati
 
 public sealed class WaterSupplyEngine : IWaterSupplyEngine
 {
+    public WaterSupplyInputValidationResult ValidateInput(WaterSupplyInput input)
+    {
+        Nfpa13WaterSupplyInputValidationResult validation = Nfpa13WaterSupplyValidator.ValidateInput(input);
+        return new WaterSupplyInputValidationResult
+        {
+            IsCompliant = validation.IsCompliant,
+            NfpaReference = validation.NfpaReference,
+            Errors = validation.Errors.ToList(),
+            Warnings = validation.Warnings.ToList(),
+            Summary = validation.Summary
+        };
+    }
+
     public WaterSupplyValidationResult Validate(WaterSupplyInput input, HydraulicCalculationResult demand)
     {
         WaterSupplyValidationResult result = new WaterSupplyValidationResult
