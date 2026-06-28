@@ -18,11 +18,26 @@
                 CornerRadius="10"
                 Padding="12"
                 Margin="0,0,0,8">
-            <Image Source="{x:Static branding:SprinkSnapBranding.LogoImage}"
-                   Height="44"
-                   Stretch="Uniform"
-                   HorizontalAlignment="Left"
-                   ToolTip="{x:Static branding:SprinkSnapBranding.ProductName}" />
+            <StackPanel>
+                <Border Background="{x:Static branding:SprinkSnapBranding.LogoPlateBackground}"
+                        BorderBrush="{x:Static branding:SprinkSnapBranding.LogoPlateBorder}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="10,8"
+                        HorizontalAlignment="Left">
+                    <Image Source="{x:Static branding:SprinkSnapBranding.CompactLogoImage}"
+                           Height="{x:Static branding:SprinkSnapBranding.AssistantLogoHeight}"
+                           Stretch="Uniform"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           ToolTip="{x:Static branding:SprinkSnapBranding.ProductName}" />
+                </Border>
+                <TextBlock Text="{x:Static branding:SprinkSnapBranding.Tagline}"
+                           Foreground="{x:Static branding:SprinkSnapBranding.TaglineForeground}"
+                           FontSize="10"
+                           FontWeight="SemiBold"
+                           Margin="0,6,0,0"
+                           HorizontalAlignment="Left" />
+            </StackPanel>
         </Border>
 
         <TextBlock Grid.Row="1"

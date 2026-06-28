@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using Autodesk.Revit.UI;
 using FireSprinklerPlugin.SprinkSnap.UI.Branding;
 
@@ -96,9 +95,8 @@ public sealed class SprinkSnapApplication : IExternalApplication
         public string CommandClassName { get; }
     }
 
-    private static ImageSource LoadRibbonImage(double pixelWidth)
+    private static ImageSource LoadRibbonImage(int pixelSize)
     {
-        return SprinkSnapBranding.LoadIcon(pixelWidth);
+        return SprinkSnapBranding.LoadRevitRibbonImage(pixelSize);
     }
 }
-
