@@ -9,6 +9,7 @@ using System.Windows.Media;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
 using FireSprinklerPlugin.SprinkSnap.Core.Workflow;
+using FireSprinklerPlugin.SprinkSnap.UI.Branding;
 using FireSprinklerPlugin.SprinkSnap.UI;
 
 namespace FireSprinklerPlugin.SprinkSnap.UI.Shell;
@@ -63,7 +64,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     public SprinkSnapShellContext Context => context;
 
     public string DocumentTitle => string.IsNullOrWhiteSpace(context.DocumentTitle)
-        ? "SprinkSnap AI"
+        ? SprinkSnapBranding.ProductName
         : context.DocumentTitle;
 
     public ObservableCollection<WorkflowStepState> WorkflowSteps { get; }
@@ -138,7 +139,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         }
     }
 
-    public string MainWorkspaceTitle => selectedModulePanel?.Title ?? "SprinkSnap AI";
+    public string MainWorkspaceTitle => selectedModulePanel?.Title ?? SprinkSnapBranding.ProductName;
 
     public string MainWorkspaceDescription => selectedModulePanel?.Description ?? string.Empty;
 

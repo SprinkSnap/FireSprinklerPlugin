@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
+using FireSprinklerPlugin.SprinkSnap.UI.Branding;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 using FireSprinklerPlugin.SprinkSnap.WpfPreview;
 
@@ -53,12 +55,13 @@ public partial class WpfPreviewApplication : Application
 
             Window previewWindow = new Window
             {
-                Title = "SprinkSnap AI - WPF Preview",
+                Title = SprinkSnapBranding.ProductName + " - WPF Preview",
                 Width = 1440,
                 Height = 860,
                 MinWidth = 1180,
                 MinHeight = 720,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                Icon = SprinkSnapBranding.IconImage,
                 Content = shellView
             };
 

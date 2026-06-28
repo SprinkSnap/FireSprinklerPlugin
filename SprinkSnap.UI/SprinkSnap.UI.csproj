@@ -10,5 +10,10 @@
   <ItemGroup>
     <ProjectReference Include="..\SprinkSnap.Core\SprinkSnap.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\sprinksnap-ai-logo.png" />
+    <Resource Include="Assets\sprinksnap-ai-icon.png" />
+  </ItemGroup>
 </Project>
 

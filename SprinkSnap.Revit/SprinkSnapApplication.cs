@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Autodesk.Revit.UI;
+using FireSprinklerPlugin.SprinkSnap.UI.Branding;
 
 namespace FireSprinklerPlugin.SprinkSnap.Revit;
 
 public sealed class SprinkSnapApplication : IExternalApplication
 {
-    public const string RibbonTabName = "SprinkSnap AI";
+    public const string RibbonTabName = SprinkSnapBranding.ProductName;
 
     public Result OnStartup(UIControlledApplication application)
     {
@@ -69,7 +72,9 @@ public sealed class SprinkSnapApplication : IExternalApplication
                 assemblyPath,
                 definition.CommandClassName)
             {
-                ToolTip = "Open " + definition.PanelName + " in SprinkSnap AI"
+                ToolTip = "Open " + definition.PanelName + " in " + SprinkSnapBranding.ProductName,
+                LargeImage = LoadRibbonImage(32),
+                Image = LoadRibbonImage(16)
             };
             panel.AddItem(buttonData);
         }
@@ -89,6 +94,11 @@ public sealed class SprinkSnapApplication : IExternalApplication
         public string ButtonText { get; }
 
         public string CommandClassName { get; }
+    }
+
+    private static ImageSource LoadRibbonImage(double pixelWidth)
+    {
+        return SprinkSnapBranding.LoadIcon(pixelWidth);
     }
 }
 
