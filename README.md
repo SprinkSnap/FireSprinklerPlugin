@@ -19,6 +19,15 @@ dotnet build FireSprinklerPlugin.sln -c Release
 
 If you see **NETSDK1004** (`project.assets.json` not found), NuGet packages have not been restored yet. Run `dotnet restore` before building.
 
+### Brand assets
+
+SprinkSnap AI logos live in `SprinkSnap.UI/Assets/` as SVG source files and transparent PNG exports. To regenerate PNGs after editing SVG:
+
+```powershell
+pip install cairosvg
+python scripts/export-brand-assets.py
+```
+
 ### Water supply / NFPA 13 build errors in Visual Studio
 
 If you see water supply build errors, your `SprinkSnap.Core` and `SprinkSnap.UI` projects are out of sync. All water supply validation lives in the same solution — **Core must build before UI**.
