@@ -63,9 +63,9 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
     public SprinkSnapShellContext Context => context;
 
-    public string DocumentTitle => string.IsNullOrWhiteSpace(context.DocumentTitle)
-        ? SprinkSnapBranding.ProductName
-        : context.DocumentTitle;
+    public string DocumentTitle => context.DocumentTitle ?? string.Empty;
+
+    public bool HasDocumentTitle => !string.IsNullOrWhiteSpace(context.DocumentTitle);
 
     public ObservableCollection<WorkflowStepState> WorkflowSteps { get; }
 
@@ -238,6 +238,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(HazardViewModel));
         OnPropertyChanged(nameof(Context));
         OnPropertyChanged(nameof(DocumentTitle));
+        OnPropertyChanged(nameof(HasDocumentTitle));
 
         SubscribeToHazardViewModel(context.GetOrCreateHazardViewModel());
 
