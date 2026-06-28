@@ -45,7 +45,8 @@
                                        FontSize="11"
                                        FontWeight="SemiBold"
                                        Margin="0,6,0,0"
-                                       HorizontalAlignment="Left" />
+                                       HorizontalAlignment="Left"
+                                       ToolTip="{x:Static branding:SprinkSnapBranding.BrandingAssetVersion}" />
                         </StackPanel>
                     </Border>
                     <StackPanel DockPanel.Dock="Right"
