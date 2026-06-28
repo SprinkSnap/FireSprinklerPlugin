@@ -28,7 +28,15 @@ public static class SprinkSnapBranding
 
     public const string WorkflowChipSubtextForeground = "#475569";
 
-    public static ImageSource LogoImage { get; } = LoadImage(LogoResourcePath, 520);
+    public const string LogoPlateBackground = "#F0F9FF";
+
+    public const string LogoPlateBorder = "#BFDBFE";
+
+    public const double ShellLogoHeight = 92;
+
+    public const double AssistantLogoHeight = 56;
+
+    public static ImageSource LogoImage { get; } = LoadImage(LogoResourcePath, 720);
 
     public static ImageSource IconImage { get; } = LoadImage(LogoResourcePath, 96);
 
