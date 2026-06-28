@@ -26,12 +26,20 @@
                 Margin="0,0,0,12">
             <StackPanel>
                 <DockPanel Margin="0,0,0,12">
-                    <Image Source="{x:Static branding:SprinkSnapBranding.LogoImage}"
-                           Height="68"
-                           Stretch="Uniform"
-                           VerticalAlignment="Center"
-                           DockPanel.Dock="Left"
-                           ToolTip="{x:Static branding:SprinkSnapBranding.ProductName}" />
+                    <Border DockPanel.Dock="Left"
+                            Background="{x:Static branding:SprinkSnapBranding.LogoPlateBackground}"
+                            BorderBrush="{x:Static branding:SprinkSnapBranding.LogoPlateBorder}"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="14,10"
+                            VerticalAlignment="Center">
+                        <Image Source="{x:Static branding:SprinkSnapBranding.LogoImage}"
+                               Height="{x:Static branding:SprinkSnapBranding.ShellLogoHeight}"
+                               Stretch="Uniform"
+                               VerticalAlignment="Center"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               ToolTip="{x:Static branding:SprinkSnapBranding.ProductName}" />
+                    </Border>
                     <StackPanel DockPanel.Dock="Right"
                                 VerticalAlignment="Center"
                                 Visibility="{Binding HasDocumentTitle, Converter={StaticResource BoolToVis}}">
