@@ -12,10 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Assets\sprinksnap-ai-logo.png" />
-    <Resource Include="Assets\sprinksnap-ai-icon.png" />
-    <Content Include="Assets\sprinksnap-ai-logo.svg" />
-    <Content Include="Assets\sprinksnap-ai-icon.svg" />
+    <Resource Include="sprinksnap-logo-transparent.png" />
   </ItemGroup>
 </Project>
-

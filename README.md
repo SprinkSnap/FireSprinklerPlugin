@@ -21,12 +21,7 @@ If you see **NETSDK1004** (`project.assets.json` not found), NuGet packages have
 
 ### Brand assets
 
-SprinkSnap AI logos live in `SprinkSnap.UI/Assets/` as SVG source files and transparent PNG exports. To regenerate PNGs after editing SVG:
-
-```powershell
-pip install cairosvg
-python scripts/export-brand-assets.py
-```
+The official SprinkSnap logo is `SprinkSnap.UI/sprinksnap-logo-transparent.png` (RGBA transparent PNG). UI surfaces load it through `SprinkSnapBranding`.
 
 ### Water supply / NFPA 13 build errors in Visual Studio
 
