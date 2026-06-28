@@ -8,22 +8,24 @@ public static class SprinkSnapBranding
 {
     private const string UiAssemblyName = "SprinkSnap.UI";
 
+    private const string LogoResourcePath = "sprinksnap-logo-transparent.png";
+
     public const string ProductName = "SprinkSnap AI";
 
-    public const string Tagline = "NFPA 13 design workflow for Revit";
+    public const string Tagline = "SMARTER DESIGN. CODE CONFIDENT.";
 
-    public static ImageSource LogoImage { get; } = LoadImage("Assets/sprinksnap-ai-logo.png", 480);
+    public static ImageSource LogoImage { get; } = LoadImage(LogoResourcePath, 520);
 
-    public static ImageSource IconImage { get; } = LoadImage("Assets/sprinksnap-ai-icon.png", 64);
+    public static ImageSource IconImage { get; } = LoadImage(LogoResourcePath, 96);
 
     public static ImageSource LoadLogo(double decodePixelWidth = 0)
     {
-        return LoadImage("Assets/sprinksnap-ai-logo.png", decodePixelWidth);
+        return LoadImage(LogoResourcePath, decodePixelWidth);
     }
 
     public static ImageSource LoadIcon(double decodePixelWidth = 0)
     {
-        return LoadImage("Assets/sprinksnap-ai-icon.png", decodePixelWidth);
+        return LoadImage(LogoResourcePath, decodePixelWidth > 0 ? decodePixelWidth : 96);
     }
 
     private static ImageSource LoadImage(string relativePath, double decodePixelWidth)
