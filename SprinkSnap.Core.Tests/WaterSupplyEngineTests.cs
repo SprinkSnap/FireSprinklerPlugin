@@ -2,6 +2,7 @@ using System;
 using FireSprinklerPlugin.SprinkSnap.Core.Engines;
 using FireSprinklerPlugin.SprinkSnap.Core.Models;
 using FireSprinklerPlugin.SprinkSnap.Core.NFPA13;
+using FireSprinklerPlugin.SprinkSnap.Core.WaterSupply;
 using Xunit;
 
 namespace FireSprinklerPlugin.SprinkSnap.Core.Tests;
@@ -11,11 +12,11 @@ public sealed class WaterSupplyEngineTests
     private readonly WaterSupplyEngine engine = new WaterSupplyEngine();
 
     [Fact]
-    public void Validate_ReturnsInputNotCompliant_WhenHydrantTestIsIncomplete()
+    public void Validate_ReturnsInputErrors_WhenHydrantTestIsIncomplete()
     {
         WaterSupplyValidationResult result = engine.Validate(new WaterSupplyInput(), CreateDemand(100, 50));
 
-        Assert.False(result.InputIsCompliant);
+        Assert.True(WaterSupplyValidationHelper.HasInputValidationErrors(result));
         Assert.False(result.IsAdequate);
         Assert.NotEmpty(result.Warnings);
     }
@@ -28,7 +29,7 @@ public sealed class WaterSupplyEngineTests
 
         WaterSupplyValidationResult result = engine.Validate(input, demand);
 
-        Assert.True(result.InputIsCompliant);
+        Assert.False(WaterSupplyValidationHelper.HasInputValidationErrors(result));
         Assert.True(result.IsAdequate);
         Assert.True(result.SafetyMarginPsi >= 0);
         Assert.NotEmpty(result.Curve);
@@ -42,7 +43,7 @@ public sealed class WaterSupplyEngineTests
 
         WaterSupplyValidationResult result = engine.Validate(input, demand);
 
-        Assert.True(result.InputIsCompliant);
+        Assert.False(WaterSupplyValidationHelper.HasInputValidationErrors(result));
         Assert.False(result.IsAdequate);
         Assert.Contains(result.Warnings, warning => warning.Contains(Nfpa13Edition.References.HydraulicGraphSheet));
     }

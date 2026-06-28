@@ -60,15 +60,9 @@ public sealed class WaterSupplyEngine : IWaterSupplyEngine
 {
     public WaterSupplyValidationResult Validate(WaterSupplyInput input, HydraulicCalculationResult demand)
     {
-        WaterSupplyValidationResult result = new WaterSupplyValidationResult
-        {
-            NfpaReference = Nfpa13Edition.References.WaterSupplyInformation
-                + " and "
-                + Nfpa13Edition.References.HydraulicGraphSheet
-        };
+        WaterSupplyValidationResult result = new WaterSupplyValidationResult();
 
-        WaterSupplyInputValidationResult inputValidation = WaterSupplyInputValidator.Validate(input);
-        result.InputIsCompliant = inputValidation.IsCompliant;
+        WaterSupplyInputValidationResult inputValidation = WaterSupplyValidationHelper.ValidateInput(input);
         foreach (string warning in inputValidation.Warnings)
         {
             result.Warnings.Add(warning);

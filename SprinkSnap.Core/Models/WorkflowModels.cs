@@ -180,13 +180,9 @@ public sealed class WaterSupplyCurvePoint
 
 public sealed class WaterSupplyValidationResult
 {
-    public bool InputIsCompliant { get; set; }
-
     public bool IsAdequate { get; set; }
 
     public double SafetyMarginPsi { get; set; }
-
-    public string NfpaReference { get; set; } = string.Empty;
 
     public IList<WaterSupplyCurvePoint> Curve { get; set; } = new List<WaterSupplyCurvePoint>();
 
