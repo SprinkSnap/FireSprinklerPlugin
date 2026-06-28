@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <g transform="translate(48 36)">
+    <rect x="56" y="0" width="48" height="10" rx="3" fill="#EF4444"/>
+    <rect x="76" y="10" width="8" height="12" fill="#EF4444"/>
+    <path d="M80 30 C80 30 64 50 64 72 C64 88 71 98 80 98 C89 98 96 88 96 72 C96 50 80 30 80 30 Z" fill="#2563EB"/>
+    <path d="M72 78 C72 70 75 64 80 61 C80 66 77 72 74 78 Z" fill="#FFFFFF" opacity="0.85"/>
+    <path d="M52 24 C46 30 43 36 43 42" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/>
+    <path d="M46 30 C40 36 37 42 37 48" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/>
+    <path d="M40 36 C34 42 31 48 31 54" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/>
+    <path d="M108 24 C114 30 117 36 117 42" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/>
+    <path d="M114 30 C120 36 123 42 123 48" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/>
+    <path d="M120 36 C126 42 129 48 129 54" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <rect x="176" y="176" width="56" height="36" rx="10" fill="#2563EB"/>
+  <text x="204" y="201" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#FFFFFF">AI</text>
+</svg>
