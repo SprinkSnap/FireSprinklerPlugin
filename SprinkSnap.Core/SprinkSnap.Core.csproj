@@ -5,6 +5,9 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="WaterSupply\WaterSupplyInputValidator.cs" Condition="Exists('WaterSupply\WaterSupplyInputValidator.cs')" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="SprinkSnap.Core.Tests" />
   </ItemGroup>
   <ItemGroup>

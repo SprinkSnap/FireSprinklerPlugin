@@ -58,6 +58,11 @@ public sealed class ManufacturerRecommendationEngine : IManufacturerRecommendati
 
 public sealed class WaterSupplyEngine : IWaterSupplyEngine
 {
+    public WaterSupplyInputValidationResult ValidateInput(WaterSupplyInput input)
+    {
+        return WaterSupplyValidationHelper.ValidateInput(input);
+    }
+
     public WaterSupplyValidationResult Validate(WaterSupplyInput input, HydraulicCalculationResult demand)
     {
         WaterSupplyValidationResult result = new WaterSupplyValidationResult();
