@@ -22,6 +22,8 @@ public static class SprinkSnapBranding
 
     public const string ProductName = "SprinkSnap AI";
 
+    public const string BrandingAssetVersion = "2025.06-header-lockup-v2";
+
     public const string Tagline = "SMARTER DESIGN. CODE CONFIDENT.";
 
     public const string HeaderBackground = "#FFFFFF";

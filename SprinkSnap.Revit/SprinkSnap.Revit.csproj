@@ -33,4 +33,30 @@
   <Target Name="ReportRevitBuildSkipped" BeforeTargets="Build" Condition="'$(RevitApiAvailable)' != 'true'">
     <Message Importance="high" Text="Skipping SprinkSnap.Revit compile: Revit 2027 API not found. Set REVIT_2027_API or install Revit 2027 under 'C:\Program Files\Autodesk\Revit 2027' on Windows." />
   </Target>
+
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <RevitAddinsDir Condition="'$(RevitAddinsDir)' == ''">$(APPDATA)\Autodesk\Revit\Addins\2027</RevitAddinsDir>
+    <DeployRevitAddin Condition="'$(DeployRevitAddin)' == '' AND '$(Configuration)' == 'Debug'">true</DeployRevitAddin>
+  </PropertyGroup>
+
+  <Target Name="DeployRevitAddinToAppData"
+          AfterTargets="Build"
+          Condition="'$(DeployRevitAddin)' == 'true' AND '$(RevitApiAvailable)' == 'true' AND '$(OS)' == 'Windows_NT'">
+    <ItemGroup>
+      <SprinkSnapAddinDlls Include="$(TargetDir)*.dll" />
+      <DataFolderFiles Include="$(TargetDir)Data\**\*.*" Condition="Exists('$(TargetDir)Data')" />
+    </ItemGroup>
+    <MakeDir Directories="$(RevitAddinsDir)" />
+    <Copy SourceFiles="@(SprinkSnapAddinDlls)"
+          DestinationFolder="$(RevitAddinsDir)"
+          SkipUnchangedFiles="false" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)..\SprinkSnap.Addin\SprinkSnapAI.addin"
+          DestinationFolder="$(RevitAddinsDir)"
+          SkipUnchangedFiles="false" />
+    <Copy SourceFiles="@(DataFolderFiles)"
+          DestinationFiles="@(DataFolderFiles->'$(RevitAddinsDir)\Data\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="false"
+          Condition="Exists('$(TargetDir)Data')" />
+    <Message Importance="high" Text="Deployed SprinkSnap add-in DLLs to $(RevitAddinsDir). Restart Revit to refresh ribbon icons." />
+  </Target>
 </Project>
