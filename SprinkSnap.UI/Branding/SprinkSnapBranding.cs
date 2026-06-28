@@ -14,6 +14,20 @@ public static class SprinkSnapBranding
 
     public const string Tagline = "SMARTER DESIGN. CODE CONFIDENT.";
 
+    public const string HeaderBackground = "#FFFFFF";
+
+    public const string HeaderBorder = "#E2E8F0";
+
+    public const string HeaderSubtitleForeground = "#64748B";
+
+    public const string WorkflowChipBackground = "#EFF6FF";
+
+    public const string WorkflowChipBorder = "#BFDBFE";
+
+    public const string WorkflowChipForeground = "#0F172A";
+
+    public const string WorkflowChipSubtextForeground = "#475569";
+
     public static ImageSource LogoImage { get; } = LoadImage(LogoResourcePath, 520);
 
     public static ImageSource IconImage { get; } = LoadImage(LogoResourcePath, 96);
