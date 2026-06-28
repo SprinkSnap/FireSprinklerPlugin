@@ -20,11 +20,11 @@ public sealed class Nfpa13WaterSupplyInputValidationResult
 
 public static class Nfpa13WaterSupplyValidator
 {
-    public const int StaleTestAgeWarningMonths = WaterSupplyInputValidator.StaleTestAgeWarningMonths;
+    public const int StaleTestAgeWarningMonths = WaterSupplyValidationHelper.StaleTestAgeWarningMonths;
 
     public static Nfpa13WaterSupplyInputValidationResult ValidateInput(WaterSupplyInput input)
     {
-        WaterSupplyInputValidationResult validation = WaterSupplyInputValidator.Validate(input);
+        WaterSupplyInputValidationResult validation = WaterSupplyValidationHelper.ValidateInput(input);
         return new Nfpa13WaterSupplyInputValidationResult
         {
             IsCompliant = validation.IsCompliant,

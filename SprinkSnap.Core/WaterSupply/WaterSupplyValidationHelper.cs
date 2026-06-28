@@ -18,11 +18,11 @@ public sealed class WaterSupplyInputValidationResult
     public string Summary { get; set; } = string.Empty;
 }
 
-public static class WaterSupplyInputValidator
+public static class WaterSupplyValidationHelper
 {
     public const int StaleTestAgeWarningMonths = 12;
 
-    public static WaterSupplyInputValidationResult Validate(WaterSupplyInput input)
+    public static WaterSupplyInputValidationResult ValidateInput(WaterSupplyInput input)
     {
         WaterSupplyInputValidationResult result = new WaterSupplyInputValidationResult();
 
@@ -77,6 +77,56 @@ public static class WaterSupplyInputValidator
         result.IsCompliant = result.Errors.Count == 0;
         result.Summary = BuildSummary(result);
         return result;
+    }
+
+    public static bool HasInputValidationErrors(IEnumerable<string> warnings)
+    {
+        if (warnings == null)
+        {
+            return false;
+        }
+
+        foreach (string warning in warnings)
+        {
+            if (IsInputValidationMessage(warning))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static bool HasInputValidationErrors(WaterSupplyValidationResult result)
+    {
+        return result != null && HasInputValidationErrors(result.Warnings);
+    }
+
+    public static bool IsHydrantInputComplete(WaterSupplyInput input)
+    {
+        return input != null
+            && input.StaticPressurePsi.HasValue
+            && input.StaticPressurePsi.Value > 0
+            && input.ResidualPressurePsi.HasValue
+            && input.ResidualPressurePsi.Value > 0
+            && input.FlowAtResidualGpm.HasValue
+            && input.FlowAtResidualGpm.Value > 0
+            && input.HydrantTestDate.HasValue;
+    }
+
+    private static bool IsInputValidationMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        return message.StartsWith("Enter the measured", StringComparison.Ordinal)
+            || message.StartsWith("Enter the hydrant", StringComparison.Ordinal)
+            || message.StartsWith("Enter the flow at residual", StringComparison.Ordinal)
+            || message.Contains("cannot be in the future", StringComparison.Ordinal)
+            || message.Contains("cannot exceed static pressure", StringComparison.Ordinal)
+            || message.Contains("Water supply input is required", StringComparison.Ordinal);
     }
 
     private static string BuildSummary(WaterSupplyInputValidationResult result)

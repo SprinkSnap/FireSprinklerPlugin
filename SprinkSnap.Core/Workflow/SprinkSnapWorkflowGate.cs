@@ -388,8 +388,7 @@ public static class SprinkSnapWorkflowGate
 
     public static bool IsWaterSupplyComplete(SprinkSnapProjectState state)
     {
-        return state.SessionProgress.WaterSupplyComplete
-            && state.WaterSupplyValidation?.InputIsCompliant == true;
+        return state.SessionProgress.WaterSupplyComplete;
     }
 
     public static bool IsDesignGenerated(SprinkSnapProjectState state)

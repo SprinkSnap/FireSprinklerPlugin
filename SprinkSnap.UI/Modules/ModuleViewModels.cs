@@ -224,7 +224,6 @@ public sealed class AnalyzeModelModuleViewModel : ModuleViewModelBase
 
 public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 {
-    private const int RequiredCoreBuildSchema = SprinkSnapCoreBuildSchema.WaterSupplyValidation;
     private readonly SprinkSnapShellContext context;
     private readonly IWaterSupplyEngine waterSupplyEngine = new WaterSupplyEngine();
     private readonly IHydraulicEngine hydraulicEngine = new HydraulicEngine();
@@ -244,7 +243,6 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 
     public WaterSupplyModuleViewModel(SprinkSnapShellContext context)
     {
-        _ = RequiredCoreBuildSchema;
         this.context = context;
         context.WorkflowChanged += OnWorkflowChanged;
         LoadFromState();
@@ -378,8 +376,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
         isLoadingFromState = true;
         try
         {
-            if (context.ProjectState.SessionProgress.WaterSupplyComplete
-                && context.ProjectState.WaterSupplyValidation?.InputIsCompliant == true)
+            if (context.ProjectState.SessionProgress.WaterSupplyComplete)
             {
                 ApplyInputToFields(context.ProjectState.WaterSupply);
                 LoadValidationChartFromState();
@@ -488,14 +485,18 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             return "Enter current hydrant test data, then click Validate Supply or import a CSV file.";
         }
 
+        string nfpaReference = Nfpa13Edition.References.WaterSupplyInformation
+            + " and "
+            + Nfpa13Edition.References.HydraulicGraphSheet;
+
         return validation.IsAdequate
             ? "Validated "
-              + validation.NfpaReference
+              + nfpaReference
               + ". Water supply is adequate with "
               + validation.SafetyMarginPsi.ToString("N1")
               + " PSI margin."
             : "Validated "
-              + validation.NfpaReference
+              + nfpaReference
               + ". Review supply warnings: "
               + string.Join(" ", validation.Warnings);
     }
@@ -567,7 +568,7 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             input,
             new HydraulicCalculationResult());
 
-        if (!inputValidation.InputIsCompliant)
+        if (WaterSupplyValidationHelper.HasInputValidationErrors(inputValidation))
         {
             context.ProjectState.SessionProgress.WaterSupplyComplete = false;
             context.ProjectState.WaterSupplyValidation = inputValidation;
@@ -623,8 +624,12 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
             ? string.Join(" ", completion.PipelineMessages) + " "
             : string.Empty;
 
+        string nfpaReference = Nfpa13Edition.References.WaterSupplyInformation
+            + " and "
+            + Nfpa13Edition.References.HydraulicGraphSheet;
+
         ValidationSummary = pipelinePrefix
-            + result.NfpaReference
+            + nfpaReference
             + ": "
             + (result.IsAdequate
                 ? "Water supply is adequate at "
@@ -643,7 +648,8 @@ public sealed class WaterSupplyModuleViewModel : ModuleViewModelBase
 
         NotifyChartChanged();
 
-        if (result.InputIsCompliant)
+        if (WaterSupplyValidationHelper.IsHydrantInputComplete(input)
+            && !WaterSupplyValidationHelper.HasInputValidationErrors(result))
         {
             context.ProjectState.SessionProgress.WaterSupplyComplete = true;
             RequiresValidation = false;

@@ -21,7 +21,7 @@ If you see **NETSDK1004** (`project.assets.json` not found), NuGet packages have
 
 ### Water supply / NFPA 13 build errors in Visual Studio
 
-If you see errors such as `InputIsCompliant` not found, `NfpaReference` not found, or `SprinkSnapCoreBuildSchema` not found, your `SprinkSnap.Core` and `SprinkSnap.UI` projects are out of sync. All water supply validation lives in the same solution — **Core must build before UI**.
+If you see water supply build errors, your `SprinkSnap.Core` and `SprinkSnap.UI` projects are out of sync. All water supply validation lives in the same solution — **Core must build before UI**.
 
 From the repo root:
 
@@ -35,10 +35,10 @@ dotnet build FireSprinklerPlugin.sln
 
 In Visual Studio use **Build → Rebuild Solution** (not Build only UI). Confirm these files exist and are up to date:
 
-- `SprinkSnap.Core/WaterSupply/WaterSupplyInputValidator.cs`
-- `SprinkSnap.Core/NFPA13/Nfpa13WaterSupplyValidator.cs` (compatibility shim for older references)
-- `SprinkSnap.Core/Models/WorkflowModels.cs` (contains `InputIsCompliant` on `WaterSupplyValidationResult`)
-- `SprinkSnap.Core/SprinkSnapCoreBuildSchema.cs` (schema version `WaterSupplyValidation = 4`)
+- `SprinkSnap.Core/WaterSupply/WaterSupplyValidationHelper.cs`
+- `SprinkSnap.Core/NFPA13/Nfpa13WaterSupplyValidator.cs` (compatibility shim)
+- `SprinkSnap.Core/Models/WorkflowModels.cs`
+- `SprinkSnap.Core/Engines/SprinkSnapEngines.cs`
 
 `SprinkSnap.Revit` compiles only when Revit 2027 API DLLs are found. Other projects build without Revit installed.
 

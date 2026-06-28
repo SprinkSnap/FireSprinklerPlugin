@@ -7,7 +7,7 @@ namespace FireSprinklerPlugin.SprinkSnap.Core.Tests;
 public sealed class Nfpa13WaterSupplyValidatorCompatibilityTests
 {
     [Fact]
-    public void ValidateInput_DelegatesToWaterSupplyInputValidator()
+    public void ValidateInput_DelegatesToWaterSupplyValidationHelper()
     {
         WaterSupplyInput input = new WaterSupplyInput
         {

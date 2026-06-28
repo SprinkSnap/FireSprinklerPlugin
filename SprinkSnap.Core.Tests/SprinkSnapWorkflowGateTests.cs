@@ -83,15 +83,14 @@ public sealed class SprinkSnapWorkflowGateTests
     }
 
     [Fact]
-    public void IsWaterSupplyComplete_RequiresValidatedNfpaCompliantInput()
+    public void IsWaterSupplyComplete_RequiresSessionValidationFlag()
     {
         SprinkSnapProjectState state = CreateReadyForPlacementState();
-        state.SessionProgress.WaterSupplyComplete = true;
-        state.WaterSupplyValidation = new WaterSupplyValidationResult { InputIsCompliant = false };
+        state.SessionProgress.WaterSupplyComplete = false;
 
         Assert.False(SprinkSnapWorkflowGate.IsWaterSupplyComplete(state));
 
-        state.WaterSupplyValidation.InputIsCompliant = true;
+        state.SessionProgress.WaterSupplyComplete = true;
 
         Assert.True(SprinkSnapWorkflowGate.IsWaterSupplyComplete(state));
     }
@@ -246,8 +245,7 @@ public sealed class SprinkSnapWorkflowGateTests
                 }
             },
             ClashSummary = new ClashDetectionSummary { TotalClashes = 0 },
-            ModelChangeAssessment = new ModelChangeAssessment { IsStale = false },
-            WaterSupplyValidation = new WaterSupplyValidationResult { InputIsCompliant = true, IsAdequate = true }
+            ModelChangeAssessment = new ModelChangeAssessment { IsStale = false }
         };
     }
 }
