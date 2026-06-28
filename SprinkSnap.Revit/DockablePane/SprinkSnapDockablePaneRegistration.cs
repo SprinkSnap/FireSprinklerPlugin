@@ -1,6 +1,7 @@
 using System;
 using Autodesk.Revit.UI;
 using FireSprinklerPlugin.SprinkSnap.Revit.Session;
+using FireSprinklerPlugin.SprinkSnap.UI.Branding;
 using FireSprinklerPlugin.SprinkSnap.UI.Shell;
 
 namespace FireSprinklerPlugin.SprinkSnap.Revit;
@@ -12,7 +13,7 @@ public static class SprinkSnapDockablePaneRegistration
 
     public static void Register(UIControlledApplication application)
     {
-        application.RegisterDockablePane(PaneId, "SprinkSnap AI", new SprinkSnapPaneProvider());
+        application.RegisterDockablePane(PaneId, SprinkSnapBranding.ProductName, new SprinkSnapPaneProvider());
     }
 }
 
