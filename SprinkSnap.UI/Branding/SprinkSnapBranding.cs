@@ -26,25 +26,25 @@ public static class SprinkSnapBranding
 
     public const string Tagline = "SMARTER DESIGN. CODE CONFIDENT.";
 
-    public const string HeaderBackground = "#FFFFFF";
+    public static readonly Brush HeaderBackground = CreateBrush("#FFFFFF");
 
-    public const string HeaderBorder = "#E2E8F0";
+    public static readonly Brush HeaderBorder = CreateBrush("#E2E8F0");
 
-    public const string HeaderSubtitleForeground = "#64748B";
+    public static readonly Brush HeaderSubtitleForeground = CreateBrush("#64748B");
 
-    public const string TaglineForeground = "#475569";
+    public static readonly Brush TaglineForeground = CreateBrush("#475569");
 
-    public const string WorkflowChipBackground = "#EFF6FF";
+    public static readonly Brush WorkflowChipBackground = CreateBrush("#EFF6FF");
 
-    public const string WorkflowChipBorder = "#BFDBFE";
+    public static readonly Brush WorkflowChipBorder = CreateBrush("#BFDBFE");
 
-    public const string WorkflowChipForeground = "#0F172A";
+    public static readonly Brush WorkflowChipForeground = CreateBrush("#0F172A");
 
-    public const string WorkflowChipSubtextForeground = "#475569";
+    public static readonly Brush WorkflowChipSubtextForeground = CreateBrush("#475569");
 
-    public const string LogoPlateBackground = "#F0F9FF";
+    public static readonly Brush LogoPlateBackground = CreateBrush("#F0F9FF");
 
-    public const string LogoPlateBorder = "#BFDBFE";
+    public static readonly Brush LogoPlateBorder = CreateBrush("#BFDBFE");
 
     public const double ShellHeaderLogoHeight = 72;
 
@@ -102,5 +102,13 @@ public static class SprinkSnapBranding
         image.EndInit();
         image.Freeze();
         return image;
+    }
+
+    private static SolidColorBrush CreateBrush(string hexColor)
+    {
+        SolidColorBrush brush = new SolidColorBrush(
+            (Color)ColorConverter.ConvertFromString(hexColor));
+        brush.Freeze();
+        return brush;
     }
 }
