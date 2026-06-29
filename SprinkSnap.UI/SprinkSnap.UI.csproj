@@ -13,8 +13,6 @@
 
   <ItemGroup>
     <Resource Include="sprinksnap-logo-transparent.png" />
-    <Resource Include="sprinksnap-logo-header.png" />
-    <Resource Include="sprinksnap-logo-compact.png" />
     <Resource Include="sprinksnap-icon-mark.png" />
     <Resource Include="sprinksnap-revit-icon-16.png" />
     <Resource Include="sprinksnap-revit-icon-32.png" />
