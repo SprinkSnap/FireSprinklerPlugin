@@ -12,18 +12,21 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="White"
-                BorderBrush="#E2E8F0"
+                Background="{x:Static branding:SprinkSnapBranding.HeaderBackground}"
+                BorderBrush="{x:Static branding:SprinkSnapBranding.HeaderBorder}"
                 BorderThickness="1"
                 CornerRadius="10"
                 Padding="12"
                 Margin="0,0,0,8">
-            <Image Source="{x:Static branding:SprinkSnapBranding.LogoImage}"
-                   Height="{x:Static branding:SprinkSnapBranding.AssistantLogoHeight}"
-                   Stretch="Uniform"
-                   HorizontalAlignment="Left"
-                   RenderOptions.BitmapScalingMode="HighQuality"
-                   ToolTip="{x:Static branding:SprinkSnapBranding.ProductName}" />
+            <Border Background="{x:Static branding:SprinkSnapBranding.LogoBackground}"
+                    Padding="2,0"
+                    HorizontalAlignment="Left">
+                <Image Source="{x:Static branding:SprinkSnapBranding.LogoImage}"
+                       Height="{x:Static branding:SprinkSnapBranding.AssistantLogoHeight}"
+                       Stretch="Uniform"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       ToolTip="{x:Static branding:SprinkSnapBranding.ProductName}" />
+            </Border>
         </Border>
 
         <TextBlock Grid.Row="1"

@@ -18,11 +18,17 @@ public static class SprinkSnapBranding
 
     public const string ProductName = "SprinkSnap AI";
 
-    public const string BrandingAssetVersion = "2025.06-official-master-logo";
+    public const string BrandingAssetVersion = "2025.06-official-logo-white-bg";
 
     public const string Tagline = "SMARTER DESIGN. CODE CONFIDENT.";
 
-    public static readonly Brush HeaderBackground = CreateBrush("#FFFFFF");
+    /// <summary>
+    /// Pure white — recommended logo background. The master PNG uses navy gradient text
+    /// and a gray tagline; white gives correct contrast without tinting brand colors.
+    /// </summary>
+    public static readonly Brush LogoBackground = CreateBrush("#FFFFFF");
+
+    public static readonly Brush HeaderBackground = LogoBackground;
 
     public static readonly Brush HeaderBorder = CreateBrush("#E2E8F0");
 
@@ -38,11 +44,11 @@ public static class SprinkSnapBranding
 
     public static readonly Brush WorkflowChipSubtextForeground = CreateBrush("#475569");
 
-    public const double ShellHeaderLogoHeight = 96;
+    public const double ShellHeaderLogoHeight = 104;
 
-    public const double AssistantLogoHeight = 56;
+    public const double AssistantLogoHeight = 64;
 
-    public static ImageSource LogoImage { get; } = LoadImage(MasterLogoResourcePath, 900);
+    public static ImageSource LogoImage { get; } = LoadImage(MasterLogoResourcePath, 1000);
 
     public static ImageSource IconImage { get; } = LoadImage(IconMarkResourcePath, 128);
 

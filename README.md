@@ -21,7 +21,9 @@ If you see **NETSDK1004** (`project.assets.json` not found), NuGet packages have
 
 ### Brand assets
 
-The official SprinkSnap logo is `SprinkSnap.UI/sprinksnap-logo-transparent.png` (RGBA transparent PNG). Shell and assistant panels display this file directly so the icon, **SprinkSnap** wordmark, and tagline match company branding exactly (tagline under the wordmark).
+The official SprinkSnap logo is `SprinkSnap.UI/sprinksnap-logo-transparent.png` (RGBA transparent PNG). Shell and assistant panels display this file directly so the icon, **SprinkSnap** wordmark, and tagline match company branding exactly (tagline directly under the wordmark, as in the master asset).
+
+**Recommended logo background:** pure white (`#FFFFFF`). The logo uses a navy-to-blue gradient on “SprinkSnap” and a gray tagline — white preserves those colors accurately. Avoid dark headers (they wash out the tagline) and tinted plates (they shift brand blues). The app chrome around the header card stays light gray (`#EEF2F7`) for depth.
 
 Revit ribbon buttons use square icon marks derived from the same master logo:
 
@@ -57,7 +59,7 @@ dotnet build FireSprinklerPlugin.sln -c Debug
 
 Debug builds of `SprinkSnap.Revit` on Windows also auto-deploy to the Revit add-ins folder when Revit 2027 API is installed (`DeployRevitAddin=true` by default). Set `/p:DeployRevitAddin=false` to skip.
 
-After deploying, **restart Revit completely** so ribbon icons and the dockable pane reload. Hover the shell header logo — tooltip should show `2025.06-official-master-logo` when the new branding is loaded.
+After deploying, **restart Revit completely** so ribbon icons and the dockable pane reload. Hover the shell header logo — tooltip should show `2025.06-official-logo-white-bg` when the new branding is loaded.
 
 Verify deployment: `%AppData%\Autodesk\Revit\Addins\2027\SprinkSnap.UI.dll` should be ~1.3 MB and recently timestamped after a logo update build.
 
