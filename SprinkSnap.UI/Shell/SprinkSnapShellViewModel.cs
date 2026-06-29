@@ -52,6 +52,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         selectedModulePanel = ModulePanels[0];
         ModuleCapabilities = new ObservableCollection<string>();
         OpenModuleCommand = new ShellRelayCommand(OpenModule, CanOpenModule);
+        OpenWorkflowStepCommand = new ShellRelayCommand(OpenWorkflowStepFromChip);
         ShowDashboardCommand = new ShellRelayCommand(_ => ShowDashboard());
         OpenReconciliationStepCommand = new ShellRelayCommand(OpenReconciliationStep);
         ReconciliationSteps = new ObservableCollection<StaleModelReconciliationStep>();
@@ -80,6 +81,8 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
     public ObservableCollection<Nfpa13CodeReference> NfpaReferences { get; }
 
     public ICommand OpenModuleCommand { get; }
+
+    public ICommand OpenWorkflowStepCommand { get; }
 
     public ICommand ShowDashboardCommand { get; }
 
@@ -214,6 +217,29 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         }
     }
 
+    public string WorkflowProgressHeadline
+    {
+        get
+        {
+            int completeCount = ModulePanels.Count(panel => panel.IsComplete);
+            int totalCount = ModulePanels.Count;
+            SprinkSnapModulePanel currentStep = ModulePanels.FirstOrDefault(panel => panel.IsUnlocked && !panel.IsComplete)
+                ?? ModulePanels.LastOrDefault(panel => panel.IsComplete);
+
+            if (completeCount >= totalCount)
+            {
+                return completeCount + " of " + totalCount + " complete • All workflow steps finished";
+            }
+
+            if (currentStep == null)
+            {
+                return completeCount + " of " + totalCount + " complete";
+            }
+
+            return completeCount + " of " + totalCount + " complete • Current: " + currentStep.Title;
+        }
+    }
+
     public void SetActionFeedback(string feedback)
     {
         ActionFeedback = feedback;
@@ -298,6 +324,8 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
             {
                 Step = panel.Step,
                 Status = access.Status,
+                Title = panel.Title,
+                StatusLabel = access.StatusLabel,
                 Summary = panel.Title + " • " + access.StatusLabel
             });
         }
@@ -305,6 +333,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ComplianceStatus));
         OnPropertyChanged(nameof(WarningSummary));
         OnPropertyChanged(nameof(ProgressSummary));
+        OnPropertyChanged(nameof(WorkflowProgressHeadline));
         OnPropertyChanged(nameof(SelectedModulePanel));
         OnPropertyChanged(nameof(IsReconciliationActive));
         OnPropertyChanged(nameof(ReconciliationBannerTitle));
@@ -331,6 +360,14 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
         selectedModulePanel = panel;
         LoadModuleWorkspace(panel);
+    }
+
+    private void OpenWorkflowStepFromChip(object parameter)
+    {
+        if (parameter is WorkflowStepState stepState)
+        {
+            OpenWorkflowStep(stepState.Step);
+        }
     }
 
     private void OpenReconciliationStep(object parameter)

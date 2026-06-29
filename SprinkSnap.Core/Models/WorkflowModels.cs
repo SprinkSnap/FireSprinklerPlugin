@@ -40,6 +40,10 @@ public sealed class WorkflowStepState
 
     public WorkflowStepStatus Status { get; set; }
 
+    public string Title { get; set; } = string.Empty;
+
+    public string StatusLabel { get; set; } = string.Empty;
+
     public string Summary { get; set; } = string.Empty;
 }
 
