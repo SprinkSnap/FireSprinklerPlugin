@@ -18,22 +18,26 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="White"
-                BorderBrush="#E2E8F0"
+                Background="{x:Static branding:SprinkSnapBranding.HeaderBackground}"
+                BorderBrush="{x:Static branding:SprinkSnapBranding.HeaderBorder}"
                 BorderThickness="1"
                 CornerRadius="12"
                 Padding="16"
                 Margin="0,0,0,12">
             <StackPanel>
                 <DockPanel Margin="0,0,0,12">
-                    <Image Source="{x:Static branding:SprinkSnapBranding.LogoImage}"
-                           Height="{x:Static branding:SprinkSnapBranding.ShellHeaderLogoHeight}"
-                           Stretch="Uniform"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Left"
-                           DockPanel.Dock="Left"
-                           RenderOptions.BitmapScalingMode="HighQuality"
-                           ToolTip="{x:Static branding:SprinkSnapBranding.BrandingAssetVersion}" />
+                    <Border DockPanel.Dock="Left"
+                            Background="{x:Static branding:SprinkSnapBranding.LogoBackground}"
+                            Padding="4,2"
+                            VerticalAlignment="Center">
+                        <Image Source="{x:Static branding:SprinkSnapBranding.LogoImage}"
+                               Height="{x:Static branding:SprinkSnapBranding.ShellHeaderLogoHeight}"
+                               Stretch="Uniform"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               ToolTip="{x:Static branding:SprinkSnapBranding.BrandingAssetVersion}" />
+                    </Border>
                     <StackPanel DockPanel.Dock="Right"
                                 VerticalAlignment="Center"
                                 Visibility="{Binding HasDocumentTitle, Converter={StaticResource BoolToVis}}">
