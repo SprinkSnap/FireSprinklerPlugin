@@ -8,39 +8,6 @@
              Background="#EEF2F7">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
-        <Style x:Key="WorkflowStepChipButton" TargetType="Button">
-            <Setter Property="Background" Value="#EFF6FF" />
-            <Setter Property="BorderBrush" Value="#BFDBFE" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="10,6" />
-            <Setter Property="Margin" Value="0,0,8,8" />
-            <Setter Property="MinWidth" Value="108" />
-            <Setter Property="MaxWidth" Value="132" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#DBEAFE" />
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#BFDBFE" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
     </UserControl.Resources>
 
     <Grid Margin="14">
@@ -89,73 +56,49 @@
                                    Margin="0,2,0,0" />
                     </StackPanel>
                 </DockPanel>
-                <DockPanel Margin="0,0,0,8" LastChildFill="True">
-                    <TextBlock DockPanel.Dock="Right"
-                               Text="{Binding ProgressSummary, Mode=OneWay}"
-                               Foreground="#64748B"
-                               FontSize="10"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Right"
-                               TextWrapping="Wrap"
-                               MaxWidth="220"
-                               Margin="12,0,0,0" />
+                <Border Background="#F8FAFC"
+                        BorderBrush="#E2E8F0"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12,10"
+                        Margin="0,0,0,0">
                     <StackPanel>
-                        <TextBlock Text="Workflow Progress"
-                                   Foreground="#475569"
-                                   FontSize="11"
-                                   FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding WorkflowProgressHeadline, Mode=OneWay}"
-                                   Foreground="#64748B"
-                                   FontSize="10"
-                                   Margin="0,2,0,0" />
+                        <DockPanel LastChildFill="True">
+                            <TextBlock DockPanel.Dock="Right"
+                                       Text="{Binding ProgressSummary, Mode=OneWay}"
+                                       Foreground="#64748B"
+                                       FontSize="10"
+                                       VerticalAlignment="Top"
+                                       HorizontalAlignment="Right"
+                                       TextWrapping="Wrap"
+                                       MaxWidth="220"
+                                       Margin="12,0,0,0" />
+                            <StackPanel>
+                                <TextBlock Text="Project workflow status"
+                                           Foreground="#475569"
+                                           FontSize="11"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding WorkflowProgressHeadline, Mode=OneWay}"
+                                           Foreground="#0F172A"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Margin="0,4,0,0" />
+                                <TextBlock Text="{Binding WorkflowLockedSummary, Mode=OneWay}"
+                                           Foreground="#64748B"
+                                           FontSize="10"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,0,0" />
+                            </StackPanel>
+                        </DockPanel>
+                        <ProgressBar Value="{Binding WorkflowCompletedCount, Mode=OneWay}"
+                                     Maximum="{Binding WorkflowTotalCount, Mode=OneWay}"
+                                     Height="6"
+                                     Margin="0,10,0,0"
+                                     Background="#E2E8F0"
+                                     Foreground="#2563EB"
+                                     BorderThickness="0" />
                     </StackPanel>
-                </DockPanel>
-                <ItemsControl ItemsSource="{Binding WorkflowSteps}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button Style="{StaticResource WorkflowStepChipButton}"
-                                    Command="{Binding DataContext.OpenWorkflowStepCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Title, Mode=OneWay}"
-                                               Foreground="#0F172A"
-                                               FontSize="11"
-                                               FontWeight="SemiBold"
-                                               TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding StatusLabel, Mode=OneWay}"
-                                               FontSize="10"
-                                               Margin="0,2,0,0"
-                                               TextTrimming="CharacterEllipsis">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="#475569" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Status}" Value="Complete">
-                                                        <Setter Property="Foreground" Value="#15803D" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Status}" Value="InProgress">
-                                                        <Setter Property="Foreground" Value="#2563EB" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Status}" Value="Warning">
-                                                        <Setter Property="Foreground" Value="#D97706" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Status}" Value="Blocked">
-                                                        <Setter Property="Foreground" Value="#B45309" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                </Border>
             </StackPanel>
         </Border>
 
@@ -218,7 +161,7 @@
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="230" />
+                <ColumnDefinition Width="248" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="280" />
             </Grid.ColumnDefinitions>
@@ -231,15 +174,34 @@
                     Margin="0,0,12,0">
                 <DockPanel>
                     <Button DockPanel.Dock="Bottom"
-                            Content="All Modules"
-                            Command="{Binding ShowDashboardCommand}"
+                            Content="Project Overview"
+                            Command="{Binding ShowOverviewCommand}"
                             Margin="0,10,0,0"
-                            Padding="10,6" />
+                            Padding="10,6"
+                            ToolTip="Return to the project overview with module cards and guidance." />
                     <StackPanel>
-                        <TextBlock Text="Project Navigation" FontWeight="SemiBold" Margin="0,0,0,10" />
+                        <TextBlock Text="Workflow steps"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,4" />
+                        <TextBlock Text="Primary navigation — select a step to open its workspace."
+                                   Foreground="#64748B"
+                                   FontSize="10"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,10" />
                         <ListBox ItemsSource="{Binding ModulePanels}"
                                  SelectedItem="{Binding SelectedModulePanel, Mode=TwoWay}"
                                  BorderThickness="0">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="4,6" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsUnlocked}" Value="False">
+                                            <Setter Property="Opacity" Value="0.75" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Margin="0,2,0,2">
@@ -248,10 +210,28 @@
                                                        Foreground="{Binding StatusBrush, Mode=OneWay}"
                                                        FontSize="10"
                                                        FontWeight="SemiBold"
-                                                       DockPanel.Dock="Right" />
+                                                       DockPanel.Dock="Right"
+                                                       Margin="8,0,0,0" />
                                             <TextBlock Text="{Binding Title, Mode=OneWay}"
-                                                       FontWeight="SemiBold" />
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
                                         </DockPanel>
+                                        <TextBlock Text="Locked"
+                                                   Foreground="#B45309"
+                                                   FontSize="9"
+                                                   FontWeight="SemiBold"
+                                                   Margin="0,2,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsUnlocked}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                         <TextBlock Text="{Binding BlockReason, Mode=OneWay}"
                                                    Foreground="#B45309"
                                                    FontSize="10"
@@ -301,9 +281,14 @@
                                     Padding="14,8"
                                     Visibility="{Binding ShowModuleDashboard, Converter={StaticResource BoolToVis}}" />
                             <StackPanel>
-                                <TextBlock Text="{Binding MainWorkspaceTitle}"
-                                           FontSize="24"
-                                           FontWeight="SemiBold" />
+                            <TextBlock Text="Project overview"
+                                       FontSize="24"
+                                       FontWeight="SemiBold"
+                                       Visibility="{Binding ShowModuleDashboard, Converter={StaticResource BoolToVis}}" />
+                            <TextBlock Text="{Binding MainWorkspaceTitle}"
+                                       FontSize="24"
+                                       FontWeight="SemiBold"
+                                       Visibility="{Binding ShowModuleWorkspace, Converter={StaticResource BoolToVis}}" />
                                 <TextBlock Text="{Binding MainWorkspaceDescription}"
                                            Foreground="#4B5563"
                                            TextWrapping="Wrap"
