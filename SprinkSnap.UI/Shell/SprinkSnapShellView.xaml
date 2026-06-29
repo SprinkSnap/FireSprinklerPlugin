@@ -8,6 +8,39 @@
              Background="#EEF2F7">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <Style x:Key="WorkflowStepChipButton" TargetType="Button">
+            <Setter Property="Background" Value="#EFF6FF" />
+            <Setter Property="BorderBrush" Value="#BFDBFE" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="MinWidth" Value="108" />
+            <Setter Property="MaxWidth" Value="132" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#DBEAFE" />
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#BFDBFE" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="14">
@@ -56,35 +89,70 @@
                                    Margin="0,2,0,0" />
                     </StackPanel>
                 </DockPanel>
-                <TextBlock Text="Workflow Progress"
-                           Foreground="#475569"
-                           FontSize="11"
-                           FontWeight="SemiBold"
-                           Margin="0,0,0,6" />
+                <DockPanel Margin="0,0,0,8" LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Right"
+                               Text="{Binding ProgressSummary, Mode=OneWay}"
+                               Foreground="#64748B"
+                               FontSize="10"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"
+                               TextWrapping="Wrap"
+                               MaxWidth="220"
+                               Margin="12,0,0,0" />
+                    <StackPanel>
+                        <TextBlock Text="Workflow Progress"
+                                   Foreground="#475569"
+                                   FontSize="11"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding WorkflowProgressHeadline, Mode=OneWay}"
+                                   Foreground="#64748B"
+                                   FontSize="10"
+                                   Margin="0,2,0,0" />
+                    </StackPanel>
+                </DockPanel>
                 <ItemsControl ItemsSource="{Binding WorkflowSteps}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" />
+                            <WrapPanel Orientation="Horizontal" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Background="#EFF6FF"
-                                    BorderBrush="#BFDBFE"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="10,6"
-                                    Margin="0,0,8,0">
+                            <Button Style="{StaticResource WorkflowStepChipButton}"
+                                    Command="{Binding DataContext.OpenWorkflowStepCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding Summary, Mode=OneWay}"
+                                    <TextBlock Text="{Binding Title, Mode=OneWay}"
                                                Foreground="#0F172A"
                                                FontSize="11"
-                                               FontWeight="SemiBold" />
-                                    <TextBlock Text="Workflow step"
-                                               Foreground="#475569"
-                                               FontSize="10" />
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding StatusLabel, Mode=OneWay}"
+                                               FontSize="10"
+                                               Margin="0,2,0,0"
+                                               TextTrimming="CharacterEllipsis">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#475569" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Complete">
+                                                        <Setter Property="Foreground" Value="#15803D" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="InProgress">
+                                                        <Setter Property="Foreground" Value="#2563EB" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Warning">
+                                                        <Setter Property="Foreground" Value="#D97706" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Blocked">
+                                                        <Setter Property="Foreground" Value="#B45309" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </StackPanel>
-                            </Border>
+                            </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
