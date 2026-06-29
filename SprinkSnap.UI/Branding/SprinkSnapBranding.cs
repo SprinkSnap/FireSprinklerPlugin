@@ -10,10 +10,6 @@ public static class SprinkSnapBranding
 
     private const string MasterLogoResourcePath = "sprinksnap-logo-transparent.png";
 
-    private const string HeaderLogoResourcePath = "sprinksnap-logo-header.png";
-
-    private const string CompactLogoResourcePath = "sprinksnap-logo-compact.png";
-
     private const string IconMarkResourcePath = "sprinksnap-icon-mark.png";
 
     private const string RevitIcon32ResourcePath = "sprinksnap-revit-icon-32.png";
@@ -22,7 +18,7 @@ public static class SprinkSnapBranding
 
     public const string ProductName = "SprinkSnap AI";
 
-    public const string BrandingAssetVersion = "2025.06-header-lockup-v2";
+    public const string BrandingAssetVersion = "2025.06-official-master-logo";
 
     public const string Tagline = "SMARTER DESIGN. CODE CONFIDENT.";
 
@@ -42,27 +38,19 @@ public static class SprinkSnapBranding
 
     public static readonly Brush WorkflowChipSubtextForeground = CreateBrush("#475569");
 
-    public static readonly Brush LogoPlateBackground = CreateBrush("#F0F9FF");
+    public const double ShellHeaderLogoHeight = 96;
 
-    public static readonly Brush LogoPlateBorder = CreateBrush("#BFDBFE");
+    public const double AssistantLogoHeight = 56;
 
-    public const double ShellHeaderLogoHeight = 72;
-
-    public const double AssistantLogoHeight = 48;
-
-    public static ImageSource HeaderLogoImage { get; } = LoadImage(HeaderLogoResourcePath, 640);
-
-    public static ImageSource CompactLogoImage { get; } = LoadImage(CompactLogoResourcePath, 420);
+    public static ImageSource LogoImage { get; } = LoadImage(MasterLogoResourcePath, 900);
 
     public static ImageSource IconImage { get; } = LoadImage(IconMarkResourcePath, 128);
-
-    public static ImageSource LogoImage { get; } = HeaderLogoImage;
 
     public static ImageSource LoadLogo(double decodePixelWidth = 0)
     {
         return decodePixelWidth > 0
-            ? LoadImage(HeaderLogoResourcePath, decodePixelWidth)
-            : HeaderLogoImage;
+            ? LoadImage(MasterLogoResourcePath, decodePixelWidth)
+            : LogoImage;
     }
 
     public static ImageSource LoadIcon(double decodePixelWidth = 0)
@@ -77,11 +65,6 @@ public static class SprinkSnapBranding
         return pixelSize >= 24
             ? LoadImage(RevitIcon32ResourcePath, 0)
             : LoadImage(RevitIcon16ResourcePath, 0);
-    }
-
-    public static ImageSource LoadMasterLogo(double decodePixelWidth = 0)
-    {
-        return LoadImage(MasterLogoResourcePath, decodePixelWidth);
     }
 
     private static ImageSource LoadImage(string relativePath, double decodePixelWidth)
