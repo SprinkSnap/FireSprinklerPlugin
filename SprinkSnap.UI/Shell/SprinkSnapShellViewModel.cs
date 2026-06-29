@@ -29,7 +29,6 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         this.context.WorkflowChanged += OnContextWorkflowChanged;
         this.context.RequestNavigateToWorkflowStep = OpenWorkflowStep;
 
-        WorkflowSteps = new ObservableCollection<WorkflowStepState>();
         ModulePanels = new ObservableCollection<SprinkSnapModulePanel>
         {
             CreatePanel("Analyze Model", SprinkSnapWorkflowStep.AnalyzeModel, "Extract rooms, spaces, ceilings, levels, linked models, phases, obstructions, and existing sprinklers.", "Analyze Revit Model"),
@@ -52,8 +51,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         selectedModulePanel = ModulePanels[0];
         ModuleCapabilities = new ObservableCollection<string>();
         OpenModuleCommand = new ShellRelayCommand(OpenModule, CanOpenModule);
-        OpenWorkflowStepCommand = new ShellRelayCommand(OpenWorkflowStepFromChip);
-        ShowDashboardCommand = new ShellRelayCommand(_ => ShowDashboard());
+        ShowOverviewCommand = new ShellRelayCommand(_ => ShowOverview());
         OpenReconciliationStepCommand = new ShellRelayCommand(OpenReconciliationStep);
         ReconciliationSteps = new ObservableCollection<StaleModelReconciliationStep>();
         RefreshWorkflowGates();
@@ -68,8 +66,6 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
     public bool HasDocumentTitle => !string.IsNullOrWhiteSpace(context.DocumentTitle);
 
-    public ObservableCollection<WorkflowStepState> WorkflowSteps { get; }
-
     public ObservableCollection<SprinkSnapModulePanel> ModulePanels { get; }
 
     public ObservableCollection<string> ModuleCapabilities { get; }
@@ -82,9 +78,7 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
     public ICommand OpenModuleCommand { get; }
 
-    public ICommand OpenWorkflowStepCommand { get; }
-
-    public ICommand ShowDashboardCommand { get; }
+    public ICommand ShowOverviewCommand { get; }
 
     public ICommand OpenReconciliationStepCommand { get; }
 
@@ -208,6 +202,24 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         }
     }
 
+    public string WorkflowLockedSummary
+    {
+        get
+        {
+            int lockedCount = ModulePanels.Count(panel => !panel.IsUnlocked);
+            if (lockedCount == 0)
+            {
+                return "All workflow steps are unlocked.";
+            }
+
+            return lockedCount + " module(s) locked — complete earlier steps to unlock.";
+        }
+    }
+
+    public int WorkflowCompletedCount => ModulePanels.Count(panel => panel.IsComplete);
+
+    public int WorkflowTotalCount => ModulePanels.Count;
+
     public string ProgressSummary
     {
         get
@@ -315,25 +327,19 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         progress.ClashDetectionComplete = SprinkSnapWorkflowGate.IsClashDetectionComplete(context.ProjectState);
         progress.SprinklersPlacedInRevit = SprinkSnapWorkflowGate.IsSprinklersPlacedInRevit(context.ProjectState);
 
-        WorkflowSteps.Clear();
         foreach (SprinkSnapModulePanel panel in ModulePanels)
         {
             WorkflowModuleAccess access = SprinkSnapWorkflowGate.Evaluate(context.ProjectState, panel.Step);
             panel.ApplyAccess(access);
-            WorkflowSteps.Add(new WorkflowStepState
-            {
-                Step = panel.Step,
-                Status = access.Status,
-                Title = panel.Title,
-                StatusLabel = access.StatusLabel,
-                Summary = panel.Title + " • " + access.StatusLabel
-            });
         }
 
         OnPropertyChanged(nameof(ComplianceStatus));
         OnPropertyChanged(nameof(WarningSummary));
         OnPropertyChanged(nameof(ProgressSummary));
         OnPropertyChanged(nameof(WorkflowProgressHeadline));
+        OnPropertyChanged(nameof(WorkflowLockedSummary));
+        OnPropertyChanged(nameof(WorkflowCompletedCount));
+        OnPropertyChanged(nameof(WorkflowTotalCount));
         OnPropertyChanged(nameof(SelectedModulePanel));
         OnPropertyChanged(nameof(IsReconciliationActive));
         OnPropertyChanged(nameof(ReconciliationBannerTitle));
@@ -360,14 +366,6 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
 
         selectedModulePanel = panel;
         LoadModuleWorkspace(panel);
-    }
-
-    private void OpenWorkflowStepFromChip(object parameter)
-    {
-        if (parameter is WorkflowStepState stepState)
-        {
-            OpenWorkflowStep(stepState.Step);
-        }
     }
 
     private void OpenReconciliationStep(object parameter)
@@ -448,10 +446,10 @@ public sealed class SprinkSnapShellViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ActionFeedback));
     }
 
-    private void ShowDashboard()
+    private void ShowOverview()
     {
         ShowModuleDashboard = true;
-        actionFeedback = "Select an unlocked workflow panel to open the module workspace.";
+        actionFeedback = "Select a workflow step in the left panel, or open a module card below.";
         OnPropertyChanged(nameof(ActionFeedback));
     }
 
